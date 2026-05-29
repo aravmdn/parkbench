@@ -17,6 +17,10 @@
    decision is made or reversed.
 4. **No silent scope creep.** v1 scope is deliberately narrow (see `docs/01-v1-scope.md`). Anything
    outside it goes to `docs/03-roadmap.md` or `docs/04-open-questions.md`, not into the build.
+5. **Leave it resumable.** Before ending a set of tasks, update the **Current status** section below
+   (where things stand · what's next · how to verify), ensure decisions are logged and open threads
+   are in `docs/04-open-questions.md`, and commit/push so `main` reflects reality. A fresh session
+   should be able to resume from `CLAUDE.md` + `docs/` alone.
 
 ## What this project is (one-liner)
 
@@ -39,11 +43,14 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 
 ## Current status (2026-05-29)
 
-**v1 core built** (branch `feat/v1-negotiation-core`). The negotiation ride runs end-to-end: engine,
-seeded scenario generator, objective-payoff scoring, scripted house cast, baseline/heuristic agents,
-and a `parkbench` CLI — all reproducible (14 passing tests). See [`docs/06-v1-architecture.md`](docs/06-v1-architecture.md)
-and the Quickstart in [`README.md`](README.md). Next: HTTP server for external agents, the static
-replay viewer, nudge controls, and a real LLM reference agent.
+**v1 core is on `main`** (PR #1 merged). The negotiation ride runs end-to-end: engine, seeded
+scenario generator, objective-payoff scoring, scripted house cast, baseline/heuristic agents, and a
+`parkbench` CLI — all reproducible (14 passing tests). Design + formulas: `docs/06-v1-architecture.md`.
+
+- **Next** (from `docs/04-open-questions.md`): HTTP/JSON server so external agents connect over the
+  wire → static replay viewer over the JSON run logs → nudge controls → a real LLM reference agent.
+- **Verify the current state:** `uv venv && uv pip install -e ".[dev]"`, then `pytest` (14 pass) and
+  `parkbench run --agent heuristic --seed 1`.
 
 ## Conventions for growing the docs
 
