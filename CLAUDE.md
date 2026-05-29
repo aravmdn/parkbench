@@ -39,8 +39,11 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 
 ## Current status (2026-05-29)
 
-**Pre-implementation.** The non-coding scope and v1 have been defined through a discussion with the
-owner; no code exists yet. Next step is a technical/architecture planning session for the v1 ride.
+**v1 core built** (branch `feat/v1-negotiation-core`). The negotiation ride runs end-to-end: engine,
+seeded scenario generator, objective-payoff scoring, scripted house cast, baseline/heuristic agents,
+and a `parkbench` CLI — all reproducible (14 passing tests). See [`docs/06-v1-architecture.md`](docs/06-v1-architecture.md)
+and the Quickstart in [`README.md`](README.md). Next: HTTP server for external agents, the static
+replay viewer, nudge controls, and a real LLM reference agent.
 
 ## Conventions for growing the docs
 

@@ -1,0 +1,10 @@
+{
+  "name": "v1_negotiation",
+  "seed": 1,
+  "n_scenarios": 12,
+  "n_issues": 4,
+  "n_levels": 3,
+  "round_cap": 8,
+  "personas": ["tough", "fair", "cooperative", "slippery"],
+  "notes": "Canonical v1 suite spec. Scenarios are generated deterministically from seeds seed..seed+n_scenarios-1; the CLI mirrors these defaults (parkbench run --seed 1 --scenarios 12). 12 scenarios x 4 personas = 48 matches."
+}

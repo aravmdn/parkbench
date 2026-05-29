@@ -153,3 +153,33 @@ object — a bench in a park). Repo: `github.com/aravmdn/parkbench`, **public**.
 Naming is identity, not lore, so it doesn't conflict with "mechanics first, theme later" (D-012).
 Public matches the open/free ethos (D-013).
 **Rejected:** descriptive slug (`theme-park-for-ai-agents`); Midway; Arcade; Funhouse; private visibility.
+
+### D-023 · 2026-05-29 · Stack = Python 3.11+, `src/` layout
+**Decision:** Implement the engine, scenarios, scoring, agents, and CLI in Python 3.11+ with a `src/`
+layout and zero runtime dependencies. The replay viewer (later) will be static HTML/JS over the JSON
+run logs.
+**Why:** Best ecosystem for eval/LLM/data work; zero deps keeps install/run trivial.
+**Rejected:** Python + FastAPI web app (more than v1 needs); TypeScript/Node full-stack.
+
+### D-024 · 2026-05-29 · House cast = scripted deterministic personas (refines D-018)
+**Decision:** The four house personas (tough / fair / cooperative / slippery) are scripted
+deterministic strategies (a shared time-based concession + logrolling strategy), **not** temp-0 LLMs.
+**Why:** Determinism removes the largest source of score variance — exactly the reproducibility v1
+exists to prove. This **refines D-018**, which had assumed temp-0 LLM personas; LLM personas become
+a fast-follow.
+**Rejected:** LLM personas at temp 0; hybrid scripted+LLM.
+
+### D-025 · 2026-05-29 · LLM provider deferred; ship a stubbed provider-agnostic seam
+**Decision:** Ship a `Provider` interface + `LLMAgent` stub; v1 validation uses non-LLM agents
+(random, greedy, heuristic). No provider/key is wired yet.
+**Why:** A real LLM isn't needed to prove reproducibility + discrimination, and staying
+provider-agnostic keeps BYO open.
+**Rejected:** committing to Anthropic or OpenAI now.
+
+### D-026 · 2026-05-29 · This build = core only (engine + scoring + CLI)
+**Decision:** Build the engine, seeded scenario generator, scoring, scripted cast, baseline/heuristic
+agents, JSON run logs, and a CLI. Defer the HTTP server, replay viewer, nudge, and LLM reference agent.
+**Why:** Prove the hard part (a trustworthy, reproducible social score) on the smallest runnable slice.
+**Validation:** 14 passing tests incl. a determinism check; the CLI shows clean separation
+(efficiency: heuristic 0.978 > random 0.840 > greedy 0.412) with tight CIs and exact reproducibility.
+Full design + formulas in [`06-v1-architecture.md`](06-v1-architecture.md).
