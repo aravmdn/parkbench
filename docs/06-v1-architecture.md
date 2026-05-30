@@ -112,8 +112,9 @@ their original positions** (additions only). Fields added by D-029:
 | `off_record` | `bool` | each entry of `matches[]` (appended last) | Per-match off-record flag (mirrors the run flag in v1). |
 
 Existing top-level keys remain `suite`, `profile`, `matches`; existing per-match keys
-(`scenario_seed`, `persona`, `agreed`, `outcome`, `efficiency`, `own_value`, `turns_used`,
-`transcript`, `analysis`) are untouched. Off-record runs also get a `__off_record` directory suffix.
+(`scenario_seed`, `n_issues`, `n_levels`, `persona`, `agreed`, `outcome`, `efficiency`, `own_value`,
+`turns_used`, `transcript`, `analysis`) are untouched (`n_issues`/`n_levels` log the per-scenario
+shape, which varies under D-032). Off-record runs also get a `__off_record` directory suffix.
 
 ## Agents & personas
 

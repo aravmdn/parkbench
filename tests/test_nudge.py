@@ -169,12 +169,13 @@ def test_runlog_emits_schema_version_and_off_record(tmp_path):
     assert payload["off_record"] is True
     # Existing top-level fields remain present and in place.
     assert list(payload.keys())[-3:] == ["suite", "profile", "matches"]
-    # Existing per-match fields remain present and ahead of the new one.
+    # Existing per-match fields remain present; off_record is appended last (D-029).
+    # (n_issues/n_levels were added by D-032 when scenario shapes began to vary.)
     keys = list(payload["matches"][0].keys())
-    assert keys[:9] == [
+    assert {
         "scenario_seed", "persona", "agreed", "outcome", "efficiency",
         "own_value", "turns_used", "transcript", "analysis",
-    ]
+    }.issubset(keys)
     assert keys[-1] == "off_record"
 
 
