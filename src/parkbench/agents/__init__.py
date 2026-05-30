@@ -11,6 +11,7 @@ AGENT_REGISTRY: dict[str, type[Agent]] = {
     "random": RandomAgent,
     "greedy": GreedyAgent,
     "heuristic": HeuristicNegotiator,
+    "llm": LLMAgent,
 }
 
 

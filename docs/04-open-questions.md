@@ -1,6 +1,6 @@
 # 04 — Open Questions
 
-**Status:** Living · **Last updated:** 2026-05-29
+**Status:** Living · **Last updated:** 2026-05-30
 
 Questions still genuinely open. When one is resolved it becomes an entry in the decision log
 ([`02-decisions.md`](02-decisions.md)) and is listed under "Resolved" below.
@@ -19,8 +19,6 @@ Questions still genuinely open. When one is resolved it becomes an entry in the 
 - **Static replay viewer** over the JSON run logs; the log schema's minimum feature set for replay.
 - **Nudge** controls (inject scenario / swap persona) + off-record flagging so nudged runs don't
   pollute canonical profiles (D-021).
-- **LLM provider** wiring for a real reference agent (implement `Provider.complete` + `LLMAgent.act`)
-  (D-025).
 
 ## Open — cross-cutting (post-v1)
 
@@ -38,3 +36,6 @@ Questions still genuinely open. When one is resolved it becomes an entry in the 
     (D-016; see [`06-v1-architecture.md`](06-v1-architecture.md)).
   - *Round cap* → 8 exchanges per side (D-017).
   - *Persona prompts* → replaced by scripted strategies (D-024).
+- **2026-05-30** — **LLM provider** wiring resolved as **D-030**: a real LLM reference agent
+  (`agents/llm.py`) via OpenRouter's OpenAI-compatible API using stdlib only (no SDK, no new
+  runtime dep), with graceful heuristic fallback. Registered as the `llm` CLI agent.
