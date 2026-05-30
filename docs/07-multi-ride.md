@@ -26,7 +26,32 @@ whatever ride results exist for an agent.
 
 ## Economic ride (D-036)
 
-_Slice in progress (`feat/economic-ride`) — this section is filled in by that work._
+The second ride and the first on the **economic** axis (D-005) — a **solo, deterministic 0/1
+knapsack**. It is the clean solo contrast (D-006) to the multi-agent negotiation ride, and gives the
+radar (D-037) its second axis. Lives in `src/parkbench/economic/`.
+
+- **Scenario** (`scenario.py`): `generate_scenario(seed)` builds `N` items, each with an integer
+  `value` and `weight`, plus an integer budget `B`. Defaults: `N=12`, budget ≈ 45% of total weight —
+  the regime where value/weight greedy can miss the optimum. Same seed ⇒ byte-identical instance.
+- **Optimum + scoring**: `solve_optimum` is an exact `O(N·B)` DP (cross-checked against brute force
+  in tests). The score is `achieved_value / optimal_value ∈ [0, 1]`; an **infeasible** allocation
+  (over budget, out-of-range, or duplicate indices) clamps to **0**. `optimal` play scores 1.0 by
+  construction; `random` is the floor for context (same objective-payoff-vs-baselines backbone as
+  D-011/D-019).
+- **Agent interface** (its own, per D-035): an `EconomicAgent.choose(scenario) -> item indices`. The
+  four baselines reuse the **negotiation ride's names** so the radar can profile a shared agent name
+  across both axes: `random` (feasible floor), `greedy` (value/weight ratio), `heuristic`
+  (greedy + a local-swap improvement pass), `optimal` (the DP ceiling).
+- **Suite** (`suite.py`): a fixed set of ~12 seeded instances; reports mean ± 95% CI reusing
+  `scoring.Stat`, so variance is reported the same way across rides.
+- **Ride + registry**: `EconomicRide` (`name="economic"`, `axis="economic"`) implements
+  `evaluate(agent_name, seed) -> RideResult` (normalized `score` = mean achieved/optimal; `detail`
+  holds the CI, scenario count, and feasible rate). Registered as `"economic"` in `RIDE_REGISTRY`.
+- **CLI**: `parkbench economic --agent <random|greedy|heuristic|optimal> --seed 1` (additive; the
+  existing subcommands are untouched).
+- **Results** (seed 1, 12 scenarios): `optimal` 1.000 ≥ `heuristic` 0.990 ≥ `greedy` 0.989 >
+  `random` 0.659, all 100% feasible. Fully reproducible (verified across separate processes).
+  Stdlib-only (D-023). +12 tests in `tests/test_economic.py` (suite total 60 → 72).
 
 ## Radar roll-up (D-037)
 

@@ -149,6 +149,33 @@ def cmd_radar(args: argparse.Namespace) -> None:
     print()
 
 
+def cmd_economic(args: argparse.Namespace) -> None:
+    # Imported lazily so the core CLI has no dependency on the economic ride unless used (D-036).
+    from .economic import AGENT_REGISTRY as ECON_AGENTS
+    from .economic import make_agent as make_econ_agent
+    from .economic import run_suite as run_econ_suite
+
+    result = run_econ_suite(make_econ_agent(args.agent), seed=args.seed, n_scenarios=args.scenarios)
+
+    print("\nParkbench - economic ride (solo resource-allocation / knapsack, D-036)")
+    print(
+        f"suite seed={args.seed}  scenarios={result.score.n}  "
+        f"agents={', '.join(sorted(ECON_AGENTS))}\n"
+    )
+    print(f"agent: {result.agent_name}")
+    print(f"  achieved / optimal : {_fmt(result.score)}   [optimum = 1.000]")
+    print(f"  feasible rate      : {result.feasible_rate:6.1%}\n")
+
+    print("  scenario   budget   optimal   achieved   score")
+    for r in result.scenarios:
+        flag = "" if r.feasible else "  (infeasible)"
+        print(
+            f"    seed {str(r.scenario_seed):<5} {r.budget:>5}   {r.optimal_value:>7}   "
+            f"{r.achieved_value:>8}   {r.score:5.3f}{flag}"
+        )
+    print()
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="parkbench", description="Parkbench v1 negotiation benchmark.")
     sub = p.add_subparsers(dest="command", required=True)
@@ -204,6 +231,15 @@ def build_parser() -> argparse.ArgumentParser:
     rd.add_argument("--seed", type=int, default=1, help="Seed passed to each ride.")
     rd.add_argument("--json", action="store_true", help="Emit the profile as JSON instead of a chart.")
     rd.set_defaults(func=cmd_radar)
+
+    # Economic ride (solo resource-allocation / knapsack, D-036). Localized: its own agent registry.
+    from .economic import AGENT_REGISTRY as ECON_AGENTS
+
+    e = sub.add_parser("economic", help="Run an agent through the economic (knapsack) ride.")
+    e.add_argument("--agent", default="greedy", choices=sorted(ECON_AGENTS))
+    e.add_argument("--seed", type=int, default=1, help="Suite seed (selects the scenario set).")
+    e.add_argument("--scenarios", type=int, default=12)
+    e.set_defaults(func=cmd_economic)
     return p
 
 
