@@ -294,3 +294,13 @@ personas (was ~0).
 output).
 **Rejected:** one fixed shape for all scenarios (too little spread); per-scenario hand-authored
 preferences (not reproducible-by-construction); squared/heavy-tailed weights (collapsed outcomes).
+
+### D-033 · 2026-05-30 · CLI auto-loads a local `.env` (zero-dep)
+**Decision:** `parkbench`'s entry point loads a `.env` from the working directory at startup via a
+small stdlib loader (`dotenv.py`). It sets only keys **not already** in the environment, so real env
+vars / CI secrets always take precedence; a missing file is a no-op.
+**Why:** The live LLM agent (D-030) needs `OPENROUTER_API_KEY`; the key is gitignored and
+machine-local, so without this you must re-`export` it every shell. Auto-loading removes that
+friction without adding a dependency (upholds D-023) and without ever committing a secret.
+**Rejected:** `python-dotenv` (a runtime dependency); requiring a manual `export` each session;
+committing the key (never — public repo).

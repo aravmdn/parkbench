@@ -12,6 +12,7 @@ import sys
 
 from .agents import AGENT_REGISTRY, make_agent
 from .agents.baselines import RandomAgent
+from .dotenv import load_dotenv
 from .nudge import PERSONA_REGISTRY, Nudge, parse_scenario_spec
 from .runlog import write_run
 from .scenario import analyze, generate_scenario
@@ -186,6 +187,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    load_dotenv()  # pick up a local .env (e.g. OPENROUTER_API_KEY); env vars win (D-033)
     args = build_parser().parse_args(argv)
     args.func(args)
     return 0
