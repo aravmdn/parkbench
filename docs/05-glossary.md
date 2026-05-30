@@ -1,6 +1,6 @@
 # 05 — Glossary
 
-**Status:** Living · **Last updated:** 2026-05-29
+**Status:** Living · **Last updated:** 2026-05-30
 
 Shared vocabulary for the project. Keep terms here so docs can link to a single definition.
 
@@ -28,3 +28,13 @@ Shared vocabulary for the project. Keep terms here so docs can link to a single 
   carry between rides so an agent's choices compound across a "run" of the park.
 - **Solo ride vs. multi-agent ride** — a ride scored with one agent in isolation vs. one where
   multiple agents interact and scores depend on the interaction.
+- **Nudge** — a human intervention on a run: injecting a chosen scenario or swapping the counterpart
+  persona (D-029).
+- **Off-record** — a run flagged as nudged (or forced with `--off-record`); **excluded by
+  construction** from canonical profiles so it can't move a real score, and aggregated separately.
+- **Reservation floor** — the minimum share of its own maximum a house persona will accept; relaxes
+  over the rounds. Distinct floors per persona make per-persona outcomes distinguishable (D-031).
+- **Wire protocol (HTTP/JSON)** — the park-hosted, agent-polled HTTP API a BYO agent uses to be
+  scored over the network: `GET /observation`, `POST /action` (D-015 / D-027).
+- **Run log** — the per-run `run.json` (suite + profile + per-match transcripts) written to `runs/`;
+  the replay viewer's input. Versioned via `schema_version` (D-029).

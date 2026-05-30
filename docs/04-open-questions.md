@@ -5,14 +5,8 @@
 Questions still genuinely open. When one is resolved it becomes an entry in the decision log
 ([`02-decisions.md`](02-decisions.md)) and is listed under "Resolved" below.
 
-## Open — next build (deferred from v1 core, D-026)
-
-- **HTTP/JSON server** so external BYO agents connect over the wire (D-015).
-- **Static replay viewer** over the JSON run logs; the log schema's minimum feature set for replay.
-- **Nudge** controls (inject scenario / swap persona) + off-record flagging so nudged runs don't
-  pollute canonical profiles (D-021).
-- **LLM provider** wiring for a real reference agent (implement `Provider.complete` + `LLMAgent.act`)
-  (D-025).
+_All four v1 follow-ups deferred from the core build (D-026) have now shipped — see **Resolved**
+below (D-027–D-030)._
 
 ## Open — cross-cutting (post-v1)
 
