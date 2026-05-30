@@ -18,8 +18,6 @@ Questions still genuinely open. When one is resolved it becomes an entry in the 
 - **HTTP/JSON server** so external BYO agents connect over the wire (D-015).
 - **Nudge** controls (inject scenario / swap persona) + off-record flagging so nudged runs don't
   pollute canonical profiles (D-021).
-- **LLM provider** wiring for a real reference agent (implement `Provider.complete` + `LLMAgent.act`)
-  (D-025).
 
 ## Open — cross-cutting (post-v1)
 
@@ -41,3 +39,6 @@ Questions still genuinely open. When one is resolved it becomes an entry in the 
   no build step, no dependencies). Renders suite header, agent profile, per-persona bars,
   match list, and per-match transcript playback with running score. Sample fixture at
   `viewer/sample-run.json`.
+- **2026-05-30** — **LLM provider** wiring resolved as **D-030**: a real LLM reference agent
+  (`agents/llm.py`) via OpenRouter's OpenAI-compatible API using stdlib only (no SDK, no new
+  runtime dep), with graceful heuristic fallback. Registered as the `llm` CLI agent.

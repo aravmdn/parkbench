@@ -1,6 +1,6 @@
 # 02 — Decision Log
 
-**Status:** Living · **Last updated:** 2026-05-29
+**Status:** Living · **Last updated:** 2026-05-30
 
 Append-only log of decisions and their rationale (lightweight ADR style). When a decision is
 reversed or superseded, add a **new** entry referencing the old one rather than editing history.
@@ -198,3 +198,20 @@ that satisfies the observe+nudge loop requirement (D-021) and keeps the barrier 
 run log as low as possible (double-click → browser → done).
 **Rejected:** React/Vue SPA (requires build step and node_modules); separate CSS file
 (single file is simpler to distribute alongside run logs); iframe-based embedding.
+### D-030 · 2026-05-30 · LLM reference agent = OpenRouter via stdlib (refines/closes D-025)
+**Decision:** Implement the deferred LLM reference agent in `agents/llm.py`: a `Provider` seam
+(`complete(messages, **opts) -> str`) plus a concrete `OpenRouterProvider` that POSTs to OpenRouter's
+OpenAI-compatible endpoint (`https://openrouter.ai/api/v1/chat/completions`) using **only stdlib**
+`urllib.request` + `json` — **no third-party SDK, no new runtime dependency** (honours D-023). The
+key comes from `OPENROUTER_API_KEY`; the model from `OPENROUTER_MODEL`, defaulting to a free
+(`:free`) model id held in the `DEFAULT_MODEL` constant. `LLMAgent.act` builds a compact prompt from
+**only the agent's own** utilities (private preferences, D-016) + standing offer + rounds-left +
+recent history, requires a single strict JSON action, parses/validates it into a `protocol.Action`,
+and **degrades gracefully** to the `HeuristicNegotiator` move on any missing-key/network/parse/
+validation error (no stdout, short HTTP timeout) so a run never crashes or hangs. Registered as the
+`llm` agent in the CLI; runnable with or without a key.
+**Why:** A real reference agent is now useful, and OpenRouter's OpenAI-compatible API gives free
+models behind one key while staying provider-agnostic (BYO stays open). Stdlib-only keeps the
+zero-dep promise. This **refines and closes D-025** (which shipped only the stub seam).
+**Rejected:** committing to a vendor SDK (`openai`/`anthropic`) or any new runtime dependency;
+hard-failing when no key is set (would make `llm` unrunnable in CI / offline).
