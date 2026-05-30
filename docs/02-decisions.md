@@ -183,3 +183,18 @@ agents, JSON run logs, and a CLI. Defer the HTTP server, replay viewer, nudge, a
 **Validation:** 14 passing tests incl. a determinism check; the CLI shows clean separation
 (efficiency: heuristic 0.978 > random 0.840 > greedy 0.412) with tight CIs and exact reproducibility.
 Full design + formulas in [`06-v1-architecture.md`](06-v1-architecture.md).
+
+### D-028 · 2026-05-30 · Static replay viewer = single HTML file, no build step, no server
+**Decision:** The replay viewer (D-021) is implemented as `viewer/index.html` with embedded
+plain JS/CSS — zero dependencies, no bundler, no framework. It loads a `run.json` via a
+`<input type="file">` picker, a `?path=` query parameter (same-origin), or an auto-load of
+the bundled `viewer/sample-run.json` fixture. It renders the suite header, agent profile with
+per-persona bar charts, a scrollable match list, and per-match transcript playback (step
+forward/back, auto-play at three speeds, keyboard navigation) with a running score panel that
+tracks the current offer on the table until a deal is accepted.
+**Why:** "No build step, no server, dependency-free" is the constraint from D-023 ("replay
+viewer will be static HTML/JS over the JSON run logs"). A single file is the minimal surface
+that satisfies the observe+nudge loop requirement (D-021) and keeps the barrier to opening a
+run log as low as possible (double-click → browser → done).
+**Rejected:** React/Vue SPA (requires build step and node_modules); separate CSS file
+(single file is simpler to distribute alongside run logs); iframe-based embedding.
