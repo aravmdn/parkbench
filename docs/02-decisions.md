@@ -304,3 +304,22 @@ machine-local, so without this you must re-`export` it every shell. Auto-loading
 friction without adding a dependency (upholds D-023) and without ever committing a secret.
 **Rejected:** `python-dotenv` (a runtime dependency); requiring a manual `export` each session;
 committing the key (never — public repo).
+
+### D-034 · 2026-05-30 · Enter the post-v1 multi-ride phase
+**Decision:** v1's "one ride" scope (D-009) is complete and trusted; begin the post-v1 phase whose
+goal is the **diagnostic radar profile across ≥2 skill axes** (D-007, roadmap #1). This deliberately
+extends the v1 one-ride boundary — logged here per the no-scope-creep rule (promotion via decision).
+**Why:** The radar is the project's headline output and cannot exist with a single axis; a second
+ride validates the diagnostic-profile concept with more than one data point.
+**Rejected:** staying single-ride; jumping straight to 3–4 rides (prove the roll-up on two first).
+
+### D-035 · 2026-05-30 · Minimal, additive ride abstraction + registry
+**Decision:** A ride exposes `name`, `axis` (D-005), and `evaluate(agent_name, seed) -> RideResult`
+where `RideResult.score` is normalized to `[0, 1]`; rides register in `RIDE_REGISTRY` and stay
+independent (D-008). New modules `axis.py` + `rides.py`; the negotiation suite is **wrapped**
+(`NegotiationRide`, axis `social`) without changing the existing flow. Each ride owns its agent
+interface + baselines.
+**Why:** A tiny normalized contract lets dissimilar rides roll up onto one radar (D-037) without a
+risky refactor; additive wrapping keeps `parkbench run` and the existing tests intact.
+**Rejected:** a universal cross-ride agent interface (premature); refactoring the engine/suite into a
+generic framework now (unneeded for two rides). See [`07-multi-ride.md`](07-multi-ride.md).

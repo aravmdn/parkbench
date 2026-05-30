@@ -9,7 +9,8 @@ Directional only — sequence and detail will firm up as v1 is built and learned
 
 1. **Second ride → validate the radar with ≥2 axes.** Likely an **Economic/resource** ride — the
    closest sibling to negotiation, reusing the objective-payoff scoring. Proves the diagnostic
-   profile concept with more than one data point.
+   profile concept with more than one data point. _(In progress, 2026-05-30: the ride abstraction
+   landed (D-035); economic ride (D-036) + radar roll-up (D-037) underway.)_
 2. **Fill out the four axes.** Add a **Coding/tool-use** ride (a clean *solo* ride — gives the
    reproducible contrast to the social rides) and a **Safety/robustness** ride (leans on the "nudge"
    mechanic as an adversarial probe).

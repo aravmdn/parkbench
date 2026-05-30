@@ -23,6 +23,7 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
 | 04 | [`04-open-questions.md`](04-open-questions.md) | Deferred questions to resolve at planning time. | Living |
 | 05 | [`05-glossary.md`](05-glossary.md) | Shared vocabulary. | Living |
 | 06 | [`06-v1-architecture.md`](06-v1-architecture.md) | How the v1 core is built — modules, scoring formulas, how to run, results. | Stable |
+| 07 | [`07-multi-ride.md`](07-multi-ride.md) | Post-v1: the ride abstraction, the radar roll-up, and added rides. | Living |
 
 ### Reference
 
@@ -49,3 +50,6 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
 - **2026-05-30** — `.env` auto-load added (D-033, 57 tests). Docs synced to the shipped follow-ups:
   refreshed the root README, checked off the `01` success criteria, added a replay-viewer section to
   `06`, new glossary terms in `05`, and cleared the resolved "next build" items from `04`.
+- **2026-05-30** — Entered the post-v1 multi-ride phase (D-034): added the ride abstraction (D-035,
+  `07-multi-ride.md`) and began the economic ride (D-036), radar roll-up (D-037), and agent
+  identity/versioning (D-038).
