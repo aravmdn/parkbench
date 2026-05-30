@@ -1,0 +1,3159 @@
+{
+  "suite": {
+    "name": "v1_negotiation",
+    "seed": 1,
+    "n_scenarios": 12,
+    "n_issues": 4,
+    "n_levels": 3,
+    "round_cap": 8
+  },
+  "profile": {
+    "agent": "heuristic",
+    "efficiency": {
+      "mean": 0.9776891352594759,
+      "std": 0.04320169197113017,
+      "ci95": 0.012221829159599858,
+      "n": 48
+    },
+    "own_value": {
+      "mean": 0.637738578866514,
+      "std": 0.1074639935597909,
+      "ci95": 0.030401739148869372,
+      "n": 48
+    },
+    "deal_rate": 1.0,
+    "per_persona": {
+      "cooperative": {
+        "efficiency": {
+          "mean": 0.9807299514237963,
+          "std": 0.03934919409514711,
+          "ci95": 0.022263902447163454,
+          "n": 12
+        },
+        "own_value": {
+          "mean": 0.6807856106166965,
+          "std": 0.09923763036558925,
+          "ci95": 0.05614897515320726,
+          "n": 12
+        },
+        "deal_rate": 1.0
+      },
+      "fair": {
+        "efficiency": {
+          "mean": 0.9868247522729249,
+          "std": 0.03574634278126021,
+          "ci95": 0.02022539741475911,
+          "n": 12
+        },
+        "own_value": {
+          "mean": 0.6608051124579405,
+          "std": 0.09800967757355886,
+          "ci95": 0.05545419545567699,
+          "n": 12
+        },
+        "deal_rate": 1.0
+      },
+      "slippery": {
+        "efficiency": {
+          "mean": 0.9761556921769244,
+          "std": 0.04556777533602263,
+          "ci95": 0.025782396009492555,
+          "n": 12
+        },
+        "own_value": {
+          "mean": 0.6077063593599142,
+          "std": 0.11117836765385397,
+          "ci95": 0.06290508328315546,
+          "n": 12
+        },
+        "deal_rate": 1.0
+      },
+      "tough": {
+        "efficiency": {
+          "mean": 0.9670461451642582,
+          "std": 0.05333579491128527,
+          "ci95": 0.030177566838483758,
+          "n": 12
+        },
+        "own_value": {
+          "mean": 0.6016572330315048,
+          "std": 0.11190583721561038,
+          "ci95": 0.06331668793551663,
+          "n": 12
+        },
+        "deal_rate": 1.0
+      }
+    }
+  },
+  "matches": [
+    {
+      "scenario_seed": 1,
+      "persona": "tough",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          0,
+          0
+        ]
+      },
+      "efficiency": 0.8843681906783448,
+      "own_value": 0.4078054901942466,
+      "turns_used": 5,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 137.3406357948772,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          0,
+          2,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 1,
+      "persona": "fair",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          2,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.777595195818613,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 137.3406357948772,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          0,
+          2,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 1,
+      "persona": "cooperative",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          2,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.777595195818613,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 137.3406357948772,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          0,
+          2,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 1,
+      "persona": "slippery",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          0,
+          0
+        ]
+      },
+      "efficiency": 0.8843681906783448,
+      "own_value": 0.4078054901942466,
+      "turns_used": 5,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 137.3406357948772,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          0,
+          2,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 2,
+      "persona": "tough",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          0,
+          0,
+          0
+        ]
+      },
+      "efficiency": 0.8782836446913013,
+      "own_value": 0.44806526445396394,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              0,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              0,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 150.04291241871312,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          2,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 2,
+      "persona": "fair",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          0,
+          0,
+          0
+        ]
+      },
+      "efficiency": 0.8782836446913013,
+      "own_value": 0.44806526445396394,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              0,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              0,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 150.04291241871312,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          2,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 2,
+      "persona": "cooperative",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          0,
+          0,
+          0
+        ]
+      },
+      "efficiency": 0.8782836446913013,
+      "own_value": 0.44806526445396394,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              0,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              0,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 150.04291241871312,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          2,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 2,
+      "persona": "slippery",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          0,
+          0,
+          0
+        ]
+      },
+      "efficiency": 0.8782836446913013,
+      "own_value": 0.44806526445396394,
+      "turns_used": 4,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              0,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              0,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              0,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 150.04291241871312,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          2,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 3,
+      "persona": "tough",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          0,
+          2
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.638090592500287,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              2
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 153.55024630352227,
+        "max_a": 100.0,
+        "max_b": 99.99999999999999,
+        "nash_outcome": [
+          0,
+          2,
+          0,
+          2
+        ]
+      }
+    },
+    {
+      "scenario_seed": 3,
+      "persona": "fair",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          0,
+          2
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.638090592500287,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              2
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 153.55024630352227,
+        "max_a": 100.0,
+        "max_b": 99.99999999999999,
+        "nash_outcome": [
+          0,
+          2,
+          0,
+          2
+        ]
+      }
+    },
+    {
+      "scenario_seed": 3,
+      "persona": "cooperative",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          0,
+          2
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.638090592500287,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              2
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 153.55024630352227,
+        "max_a": 100.0,
+        "max_b": 99.99999999999999,
+        "nash_outcome": [
+          0,
+          2,
+          0,
+          2
+        ]
+      }
+    },
+    {
+      "scenario_seed": 3,
+      "persona": "slippery",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          0,
+          2
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.638090592500287,
+      "turns_used": 4,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              0,
+              0,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              2
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 153.55024630352227,
+        "max_a": 100.0,
+        "max_b": 99.99999999999999,
+        "nash_outcome": [
+          0,
+          2,
+          0,
+          2
+        ]
+      }
+    },
+    {
+      "scenario_seed": 4,
+      "persona": "tough",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          0,
+          2,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.6715064740943177,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 143.34579111868106,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          0,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 4,
+      "persona": "fair",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          0,
+          2,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.6715064740943177,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 143.34579111868106,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          0,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 4,
+      "persona": "cooperative",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          0,
+          2,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.6715064740943177,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 143.34579111868106,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          0,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 4,
+      "persona": "slippery",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          0,
+          2,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.6715064740943177,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 143.34579111868106,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          0,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 5,
+      "persona": "tough",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          0,
+          2,
+          2
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.5564684448658184,
+      "turns_used": 3,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              0,
+              2,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              0,
+              2,
+              2
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 130.41708799787278,
+        "max_a": 100.0,
+        "max_b": 100.00000000000001,
+        "nash_outcome": [
+          0,
+          0,
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "scenario_seed": 5,
+      "persona": "fair",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          0,
+          2,
+          2
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.5564684448658184,
+      "turns_used": 3,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              0,
+              2,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              0,
+              2,
+              2
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 130.41708799787278,
+        "max_a": 100.0,
+        "max_b": 100.00000000000001,
+        "nash_outcome": [
+          0,
+          0,
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "scenario_seed": 5,
+      "persona": "cooperative",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          2,
+          2
+        ]
+      },
+      "efficiency": 0.9268623898104557,
+      "own_value": 0.7962344227708914,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              2
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 130.41708799787278,
+        "max_a": 100.0,
+        "max_b": 100.00000000000001,
+        "nash_outcome": [
+          0,
+          0,
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "scenario_seed": 5,
+      "persona": "slippery",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          0,
+          2,
+          2
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.5564684448658184,
+      "turns_used": 3,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              0,
+              2,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              0,
+              2,
+              2
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 130.41708799787278,
+        "max_a": 100.0,
+        "max_b": 100.00000000000001,
+        "nash_outcome": [
+          0,
+          0,
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "scenario_seed": 6,
+      "persona": "tough",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          2,
+          0,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.6695267149758398,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              2,
+              0,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              2,
+              0,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 139.68862934221312,
+        "max_a": 100.00000000000001,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          2,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 6,
+      "persona": "fair",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          2,
+          0,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.6695267149758398,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              2,
+              0,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              2,
+              0,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 139.68862934221312,
+        "max_a": 100.00000000000001,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          2,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 6,
+      "persona": "cooperative",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          2,
+          0,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.6695267149758398,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              2,
+              0,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              2,
+              0,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 139.68862934221312,
+        "max_a": 100.00000000000001,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          2,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 6,
+      "persona": "slippery",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          2,
+          0,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.6695267149758398,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              2,
+              0,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              2,
+              0,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 139.68862934221312,
+        "max_a": 100.00000000000001,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          2,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 7,
+      "persona": "tough",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          0,
+          2,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.7687601755305907,
+      "turns_used": 4,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 145.4611351899283,
+        "max_a": 100.00000000000001,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          0,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 7,
+      "persona": "fair",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          0,
+          2,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.7687601755305907,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 145.4611351899283,
+        "max_a": 100.00000000000001,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          0,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 7,
+      "persona": "cooperative",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          0,
+          2,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.7687601755305907,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 145.4611351899283,
+        "max_a": 100.00000000000001,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          0,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 7,
+      "persona": "slippery",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          0,
+          2,
+          0
+        ]
+      },
+      "efficiency": 0.9876030881696484,
+      "own_value": 0.5013648439786413,
+      "turns_used": 5,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              0,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 145.4611351899283,
+        "max_a": 100.00000000000001,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          0,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 8,
+      "persona": "tough",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          0,
+          0
+        ]
+      },
+      "efficiency": 0.878288524017654,
+      "own_value": 0.4559582104579753,
+      "turns_used": 3,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 156.93213707891363,
+        "max_a": 99.99999999999999,
+        "max_b": 100.0,
+        "nash_outcome": [
+          0,
+          2,
+          0,
+          2
+        ]
+      }
+    },
+    {
+      "scenario_seed": 8,
+      "persona": "fair",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          0,
+          2
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.7959430579508374,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              2
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 156.93213707891363,
+        "max_a": 99.99999999999999,
+        "max_b": 100.0,
+        "nash_outcome": [
+          0,
+          2,
+          0,
+          2
+        ]
+      }
+    },
+    {
+      "scenario_seed": 8,
+      "persona": "cooperative",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          0,
+          2
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.7959430579508374,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              2
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 156.93213707891363,
+        "max_a": 99.99999999999999,
+        "max_b": 100.0,
+        "nash_outcome": [
+          0,
+          2,
+          0,
+          2
+        ]
+      }
+    },
+    {
+      "scenario_seed": 8,
+      "persona": "slippery",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          0,
+          2
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.7959430579508374,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              0,
+              2
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 156.93213707891363,
+        "max_a": 99.99999999999999,
+        "max_b": 100.0,
+        "nash_outcome": [
+          0,
+          2,
+          0,
+          2
+        ]
+      }
+    },
+    {
+      "scenario_seed": 9,
+      "persona": "tough",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          0,
+          0,
+          2
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.7002815792185882,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              0,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              0,
+              2
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 158.937332737111,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          0,
+          0,
+          2
+        ]
+      }
+    },
+    {
+      "scenario_seed": 9,
+      "persona": "fair",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          0,
+          0,
+          2
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.7002815792185882,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              0,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              0,
+              2
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 158.937332737111,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          0,
+          0,
+          2
+        ]
+      }
+    },
+    {
+      "scenario_seed": 9,
+      "persona": "cooperative",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          0,
+          0,
+          2
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.7002815792185882,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              0,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              0,
+              2
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 158.937332737111,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          0,
+          0,
+          2
+        ]
+      }
+    },
+    {
+      "scenario_seed": 9,
+      "persona": "slippery",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          0,
+          0,
+          2
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.7002815792185882,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              0,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              0,
+              2
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 158.937332737111,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          0,
+          0,
+          2
+        ]
+      }
+    },
+    {
+      "scenario_seed": 10,
+      "persona": "tough",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          0,
+          2,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.629632523984321,
+      "turns_used": 4,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 128.49189195246112,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          0,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 10,
+      "persona": "fair",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          0,
+          2,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.629632523984321,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 128.49189195246112,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          0,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 10,
+      "persona": "cooperative",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          0,
+          2,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.629632523984321,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 128.49189195246112,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          0,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 10,
+      "persona": "slippery",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          2,
+          0,
+          2,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.629632523984321,
+      "turns_used": 4,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              2,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 128.49189195246112,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          2,
+          0,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 11,
+      "persona": "tough",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          2,
+          0
+        ]
+      },
+      "efficiency": 0.9636133825837979,
+      "own_value": 0.6087529990942234,
+      "turns_used": 6,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 125.65930630957696,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          0,
+          2,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 11,
+      "persona": "fair",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          2,
+          0
+        ]
+      },
+      "efficiency": 0.9636133825837979,
+      "own_value": 0.6087529990942234,
+      "turns_used": 3,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 125.65930630957696,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          0,
+          2,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 11,
+      "persona": "cooperative",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          2,
+          0
+        ]
+      },
+      "efficiency": 0.9636133825837979,
+      "own_value": 0.6087529990942234,
+      "turns_used": 3,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 125.65930630957696,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          0,
+          2,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 11,
+      "persona": "slippery",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          2,
+          0
+        ]
+      },
+      "efficiency": 0.9636133825837979,
+      "own_value": 0.6087529990942234,
+      "turns_used": 4,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              2
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 125.65930630957696,
+        "max_a": 100.0,
+        "max_b": 100.0,
+        "nash_outcome": [
+          0,
+          2,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 12,
+      "persona": "tough",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          2,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.6650383270078851,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 143.45556814877102,
+        "max_a": 100.0,
+        "max_b": 99.99999999999999,
+        "nash_outcome": [
+          0,
+          2,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 12,
+      "persona": "fair",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          2,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.6650383270078851,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 143.45556814877102,
+        "max_a": 100.0,
+        "max_b": 99.99999999999999,
+        "nash_outcome": [
+          0,
+          2,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 12,
+      "persona": "cooperative",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          2,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.6650383270078851,
+      "turns_used": 2,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 143.45556814877102,
+        "max_a": 100.0,
+        "max_b": 99.99999999999999,
+        "nash_outcome": [
+          0,
+          2,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "scenario_seed": 12,
+      "persona": "slippery",
+      "agreed": true,
+      "outcome": {
+        "levels": [
+          0,
+          2,
+          2,
+          0
+        ]
+      },
+      "efficiency": 1.0,
+      "own_value": 0.6650383270078851,
+      "turns_used": 4,
+      "transcript": [
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              0,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "A",
+          "type": "offer",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "Here's my proposal."
+        },
+        {
+          "party": "B",
+          "type": "accept",
+          "offer": {
+            "levels": [
+              0,
+              2,
+              2,
+              0
+            ]
+          },
+          "message": "That works for me \u2014 deal."
+        }
+      ],
+      "analysis": {
+        "max_joint": 143.45556814877102,
+        "max_a": 100.0,
+        "max_b": 99.99999999999999,
+        "nash_outcome": [
+          0,
+          2,
+          2,
+          0
+        ]
+      }
+    }
+  ]
+}

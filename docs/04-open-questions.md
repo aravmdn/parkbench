@@ -1,6 +1,6 @@
 # 04 — Open Questions
 
-**Status:** Living · **Last updated:** 2026-05-29
+**Status:** Living · **Last updated:** 2026-05-30
 
 Questions still genuinely open. When one is resolved it becomes an entry in the decision log
 ([`02-decisions.md`](02-decisions.md)) and is listed under "Resolved" below.
@@ -16,7 +16,6 @@ Questions still genuinely open. When one is resolved it becomes an entry in the 
 ## Open — next build (deferred from v1 core, D-026)
 
 - **HTTP/JSON server** so external BYO agents connect over the wire (D-015).
-- **Static replay viewer** over the JSON run logs; the log schema's minimum feature set for replay.
 - **Nudge** controls (inject scenario / swap persona) + off-record flagging so nudged runs don't
   pollute canonical profiles (D-021).
 - **LLM provider** wiring for a real reference agent (implement `Provider.complete` + `LLMAgent.act`)
@@ -38,3 +37,7 @@ Questions still genuinely open. When one is resolved it becomes an entry in the 
     (D-016; see [`06-v1-architecture.md`](06-v1-architecture.md)).
   - *Round cap* → 8 exchanges per side (D-017).
   - *Persona prompts* → replaced by scripted strategies (D-024).
+- **2026-05-30** — Static replay viewer built as **D-028**: `viewer/index.html` (single file,
+  no build step, no dependencies). Renders suite header, agent profile, per-persona bars,
+  match list, and per-match transcript playback with running score. Sample fixture at
+  `viewer/sample-run.json`.
