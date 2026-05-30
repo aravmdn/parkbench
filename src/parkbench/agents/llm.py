@@ -35,8 +35,8 @@ from .base import Agent
 from .heuristic import HeuristicNegotiator
 
 # A free OpenRouter model id (ends in ":free"). Easily changed here or via the
-# OPENROUTER_MODEL env var; the orchestrator confirms the exact free model id.
-DEFAULT_MODEL = "meta-llama/llama-3.3-70b-instruct:free"
+# OPENROUTER_MODEL env var. Verified available + JSON-capable on 2026-05-30.
+DEFAULT_MODEL = "openai/gpt-oss-120b:free"
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_TIMEOUT = 20.0  # seconds; a run must never hang on the network
