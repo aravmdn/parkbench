@@ -323,3 +323,32 @@ interface + baselines.
 risky refactor; additive wrapping keeps `parkbench run` and the existing tests intact.
 **Rejected:** a universal cross-ride agent interface (premature); refactoring the engine/suite into a
 generic framework now (unneeded for two rides). See [`07-multi-ride.md`](07-multi-ride.md).
+
+### D-036 · 2026-05-30 · Second ride = solo resource-allocation (0/1 knapsack), economic axis
+**Decision:** Add the project's second ride — a **solo, deterministic 0/1-knapsack** test on the
+**economic** axis (D-005) — so the radar (D-007/D-037) has ≥2 axes. A seeded `generate_scenario`
+builds N items (integer `value`/`weight`) + an integer budget `B` (default N=12, budget ≈ 45% of
+total weight — the regime where ratio-greedy can miss the optimum, yet brute force 2¹² and the
+`O(N·B)` DP are both instant). An exact DP (`solve_optimum`, cross-checked against brute force in
+tests) gives the ceiling; scoring is `score = achieved_value / optimal_value ∈ [0, 1]`, with an
+**infeasible** choice (over budget / out-of-range / duplicate) clamped to **0**. A fixed suite of
+~12 seeded instances reports mean ± 95% CI via the shared `scoring.Stat`. Four baselines reuse the
+**negotiation ride's agent names** — `random` (feasible floor) / `greedy` (value/weight ratio) /
+`heuristic` (greedy + a local-swap pass) / `optimal` (the DP ceiling) — so the radar can profile one
+shared agent name across both rides. The ride defines its **own** agent interface
+(`EconomicAgent.choose(scenario) -> indices`), is wrapped as `EconomicRide` (`name="economic"`,
+`axis="economic"`), registered as `"economic"` in `RIDE_REGISTRY`, and gets a localized
+`parkbench economic --agent <name> --seed 1` CLI subcommand. New package `src/parkbench/economic/`;
+the only shared edits are one `RIDE_REGISTRY` line + its import, and the additive CLI subcommand.
+**Why:** A clean solo ride on a second axis is the cheapest way to validate the cross-ride radar with
+a real second data point (D-034); knapsack has an objective, gaming-resistant optimum (the same
+"objective payoff vs. baselines" backbone as D-011/D-019) and a genuine greedy/optimal gap that makes
+the score discriminate. Stdlib-only (no new runtime dependency, D-023).
+**Result:** seed 1, 12 scenarios — `optimal` 1.000 ≥ `heuristic` 0.990 ≥ `greedy` 0.989 > `random`
+0.659 (all 100% feasible). Fully reproducible (same seed ⇒ identical scenarios ⇒ identical scores,
+verified across separate processes). 72 passing tests (60 → 72, +12 in `tests/test_economic.py`).
+Implements the D-035 ride contract; see [`07-multi-ride.md`](07-multi-ride.md).
+**Rejected:** an LLM-judged or partial-credit-on-overspend score (gameable / less rigorous than the
+exact optimum); a multi-agent economic ride (knapsack is deliberately the clean solo contrast to the
+social ride, D-006); a fractional/unbounded knapsack (0/1 has the more interesting greedy gap);
+sharing the negotiation `Agent` interface (each ride owns its interface per D-035).

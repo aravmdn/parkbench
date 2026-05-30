@@ -16,6 +16,7 @@ from typing import Protocol, runtime_checkable
 
 from .agents import make_agent
 from .axis import Axis, RideResult
+from .economic import EconomicRide  # D-036: registers the economic (knapsack) ride below
 from .suite import Suite, run_suite
 
 
@@ -55,4 +56,5 @@ class NegotiationRide:
 # Rides available for radar roll-up. New rides add themselves here.
 RIDE_REGISTRY: dict[str, Ride] = {
     "negotiation": NegotiationRide(),
+    "economic": EconomicRide(),  # D-036: solo resource-allocation (knapsack) ride
 }
