@@ -46,3 +46,6 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
 - **2026-05-30** — v1 follow-ups landed in parallel (PRs #3–#7): HTTP/JSON server (D-027), replay
   viewer (D-028), nudge controls (D-029), LLM reference agent via OpenRouter (D-030), and ride tuning
   (D-031–D-032). 54 passing tests.
+- **2026-05-30** — `.env` auto-load added (D-033, 57 tests). Docs synced to the shipped follow-ups:
+  refreshed the root README, checked off the `01` success criteria, added a replay-viewer section to
+  `06`, new glossary terms in `05`, and cleared the resolved "next build" items from `04`.

@@ -1,6 +1,6 @@
 # 01 — v1 Scope
 
-**Status:** Stable · **Last updated:** 2026-05-29
+**Status:** Stable · **Last updated:** 2026-05-30
 
 ## Scope discipline
 
@@ -35,11 +35,15 @@ score** for a BYO agent. If that holds, the rest of the park is "more rides."
 
 ## Success criteria for v1
 
-- [ ] The same agent, scored repeatedly on the same scenarios, yields **stable, low-variance** scores.
-- [ ] Stronger and weaker reference agents are **clearly separated** by the score (it discriminates).
-- [ ] A third-party agent can connect over the published protocol and be scored **without bespoke glue**.
-- [ ] A human can **watch a negotiation replay** and **nudge** (inject a scenario / coach) and see
+- [x] The same agent, scored repeatedly on the same scenarios, yields **stable, low-variance** scores.
+- [x] Stronger and weaker reference agents are **clearly separated** by the score (it discriminates).
+- [x] A third-party agent can connect over the published protocol and be scored **without bespoke glue**.
+- [x] A human can **watch a negotiation replay** and **nudge** (inject a scenario / coach) and see
       the effect — the observe+nudge loop works end-to-end on one ride.
+
+**All four met as of 2026-05-30** — D-027 (HTTP/JSON server for BYO connection), D-028 (replay
+viewer), D-029 (nudge / off-record), and D-031/D-032 (tuning for clean discrimination + low variance).
+Headline numbers and how-to-run in [`06-v1-architecture.md`](06-v1-architecture.md).
 
 ## Explicitly OUT of scope for v1
 
@@ -73,7 +77,8 @@ Structured run logs + a simple replay viewer (transcript + running score). Nudge
 or swap the counterpart persona; nudged runs are flagged **off-record** and excluded from canonical
 profiles.
 
-### Still deferred
-Per-scenario preference generation, the exact persona prompts, the round-cap value, the log/replay
-schema, radar roll-up across rides, anti-gaming, and agent identity/versioning — see
-[`04-open-questions.md`](04-open-questions.md).
+### Resolved during the build
+Per-scenario preference generation (D-016), persona prompts → scripted strategies (D-024), the
+round-cap value = 8 (D-017), and the log/replay schema (D-021/D-028) were all settled while building.
+**Still genuinely open:** radar roll-up across rides, anti-gaming, and agent identity/versioning —
+see [`04-open-questions.md`](04-open-questions.md).

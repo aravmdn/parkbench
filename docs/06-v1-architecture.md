@@ -197,6 +197,15 @@ is untouched, so the viewer/nudge slices are unaffected).
 - `client.drive_agent(base_url, agent)` is the small in-process adapter that serves any existing
   `Agent` over the wire — both the reference BYO example and the test harness.
 
+## Replay viewer (D-028)
+
+`viewer/index.html` is a single static file — no build step, no dependencies, opens directly via
+`file://` — that renders any `run.json`. Load a run with the file picker or a `?path=` query param;
+it shows the suite header, the agent profile + per-persona bars, the match list, and per-match
+transcript **playback** with the running score updating as offers land and lock in on accept. It
+reads the existing run-log schema (no server needed); `viewer/sample-run.json` is an offline demo
+fixture and `viewer/README.md` documents usage.
+
 ## How to run
 
 ```bash

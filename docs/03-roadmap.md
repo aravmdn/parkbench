@@ -1,6 +1,6 @@
 # 03 — Roadmap
 
-**Status:** Living · **Last updated:** 2026-05-29
+**Status:** Living · **Last updated:** 2026-05-30
 
 Directional only — sequence and detail will firm up as v1 is built and learned from. v1 itself is in
 [`01-v1-scope.md`](01-v1-scope.md).
@@ -17,8 +17,8 @@ Directional only — sequence and detail will firm up as v1 is built and learned
    compound — only once per-ride scoring is trusted (reverses part of D-008 deliberately; log it).
 4. **Theming + spectator product.** Apply the creative skin; build a watchable replay/leaderboard
    experience for mindshare.
-5. **Grow the BYO ecosystem.** Harden and document the connection protocol; lower the barrier for
-   third parties to plug in agents.
+5. **Grow the BYO ecosystem.** A first HTTP/JSON connection protocol now exists (D-027); next is
+   hardening + documenting it and lowering the barrier for third parties to plug in agents.
 6. **Revisit commercial models** (D-013) only after meaningful adoption: eval-as-a-service, public
    leaderboard + sponsorship, or a spectator/media product.
 
