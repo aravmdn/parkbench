@@ -6,12 +6,14 @@ from .house_cast import (
     HOUSE_CAST,
     CooperativePersona,
     FairPersona,
+    Persona,
     SlipperyPersona,
     ToughPersona,
 )
 
 __all__ = [
     "HOUSE_CAST",
+    "Persona",
     "ToughPersona",
     "FairPersona",
     "CooperativePersona",

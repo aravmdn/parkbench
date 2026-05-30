@@ -77,7 +77,9 @@ total_rounds)`); `RandomAgent` and the `Slippery` persona draw only from that se
 ## The fixed suite (D-020)
 
 `suites/v1_negotiation.json` is the canonical spec; the CLI mirrors it: **seed 1, 12 scenarios,
-4 issues × 3 levels, round cap 8, 4 personas → 48 matches.** Scenarios are generated from seeds
+round cap 8, 4 personas → 48 matches.** Scenario shapes **vary** across the suite (3–5 issues ×
+3–5 levels, cycled from a fixed `SCENARIO_SHAPES` menu; `Suite.vary_shapes=True` by default) and
+per-issue weights are moderately dispersed (D-032). Scenarios are generated from seeds
 `seed .. seed+11`.
 
 ## Nudge controls + off-record (D-029)
@@ -120,7 +122,7 @@ Existing top-level keys remain `suite`, `profile`, `matches`; existing per-match
 | `random` | baseline / floor | Random offers; accepts ~25% of the time. |
 | `greedy` | baseline | Always demands its own best; never concedes; rarely closes. |
 | `heuristic` | test (good) | Time-based concession; concedes cheap issues first (logrolling). |
-| `tough` / `fair` / `cooperative` / `slippery` | house cast | One `ConcederStrategy` tuned to four dispositions; `slippery` adds RNG noise. |
+| `tough` / `fair` / `cooperative` / `slippery` | house cast | Each gates acceptance with an explicit, time-relaxing **reservation floor** (tough highest → cooperative lowest; `slippery` adds RNG noise) layered over the shared `ConcederStrategy` proposal logic (D-031). |
 | `llm` | test (reference) | A real LLM negotiator via OpenRouter (D-030). Falls back to `heuristic` on any failure. |
 
 ## The LLM reference agent (D-030)
@@ -193,7 +195,7 @@ is untouched, so the viewer/nudge slices are unaffected).
 
 ```bash
 uv venv && uv pip install -e ".[dev]"      # or: python -m venv .venv && pip install -e ".[dev]"
-pytest                                      # 49 tests
+pytest                                      # 54 tests
 parkbench run --agent heuristic --seed 1    # run the suite, print a profile, write a run log
 parkbench run --agent greedy --seed 1       # compare a weaker strategy
 parkbench analyze --seed 1                  # inspect one scenario's optimum
@@ -210,14 +212,16 @@ parkbench run --agent heuristic --off-record                    # force off-reco
 
 | Agent | Efficiency (mean ± CI95) | Own value | Deal rate |
 |---|---|---|---|
-| `heuristic` | 0.978 ± 0.012 | 0.638 ± 0.030 | 100% |
-| `random` (floor) | 0.840 ± 0.039 | 0.443 ± 0.063 | 100% |
-| `greedy` | 0.412 ± 0.129 | 0.426 ± 0.132 | 46% |
+| `heuristic` | 0.975 ± 0.009 | 0.548 ± 0.047 | 100% |
+| `random` (floor) | 0.881 ± 0.044 | 0.336 ± 0.051 | 98% |
+| `greedy` | 0.100 ± 0.076 | 0.125 ± 0.095 | 12.5% |
 
-Clean separation across three strategies, tight CIs for consistent play (heuristic) vs. wide for
-erratic play (greedy), and a working per-persona signal (the heuristic captures more vs. `cooperative`
-than vs. `tough`). This satisfies the v1 success criteria in [`01-v1-scope.md`](01-v1-scope.md):
-**discrimination** + **reproducibility**.
+Clean separation across three strategies (efficiency 0.975 > 0.881 > 0.100), tight CIs for
+consistent play (heuristic) vs. wide for erratic play. After the D-031 reservation floors the
+**per-persona signal is crisp**: heuristic own-value spreads `cooperative` 0.772 → `fair` 0.554 →
+`slippery` 0.511 → `tough` 0.356 with non-overlapping CI95s, and `greedy` now correctly collapses
+against the stiffer floors (12.5% deal rate). This satisfies the v1 success criteria in
+[`01-v1-scope.md`](01-v1-scope.md): **discrimination** + **reproducibility**.
 
 ## Deferred
 

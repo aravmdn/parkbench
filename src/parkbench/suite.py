@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from .agents.base import Agent
 from .engine import run_match
 from .nudge import Nudge
-from .scenario import Scenario, analyze, generate_scenario
+from .scenario import Scenario, analyze, generate_scenario, shape_for_index
 from .scoring import Profile, build_off_record_profile, build_profile, score_match
 
 
@@ -25,9 +25,16 @@ class Suite:
     name: str = "v1_negotiation"
     seed: int = 1
     n_scenarios: int = 12
-    n_issues: int = 4
+    n_issues: int = 4  # fallback shape when vary_shapes is off
     n_levels: int = 3
     round_cap: int = 8
+    vary_shapes: bool = True  # cycle issue/level counts across scenarios (decision D-032)
+
+    def shape(self, index: int) -> tuple[int, int]:
+        """The (n_issues, n_levels) for scenario `index` in this suite."""
+        if self.vary_shapes:
+            return shape_for_index(index)
+        return self.n_issues, self.n_levels
 
 
 def run_suite(
@@ -47,7 +54,7 @@ def run_suite(
         scenarios: list[Scenario] = [nudge.inject_scenario]
     else:
         scenarios = [
-            generate_scenario(suite.seed + s, suite.n_issues, suite.n_levels)
+            generate_scenario(suite.seed + s, *suite.shape(s))
             for s in range(suite.n_scenarios)
         ]
 
@@ -66,6 +73,8 @@ def run_suite(
             records.append(
                 {
                     "scenario_seed": scenario.seed,
+                    "n_issues": scenario.n_issues,
+                    "n_levels": scenario.n_levels,
                     "persona": persona.name,
                     "agreed": result.agreed,
                     "outcome": result.outcome.to_dict() if result.outcome else None,
