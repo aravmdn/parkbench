@@ -10,8 +10,6 @@ below (D-027–D-030)._
 
 ## Open — cross-cutting (post-v1)
 
-- How per-ride scores roll up into the radar profile (weighting, normalization across dissimilar
-  rides).
 - Anti-gaming / reward-hacking safeguards as more ride types are added.
 - Identity & versioning of submitted agents (attributable, reproducible results over time).
 
@@ -41,3 +39,7 @@ below (D-027–D-030)._
 - **2026-05-30** — Ride-refinement questions resolved: **D-031** (per-persona reservation floors →
   crisp, non-overlapping per-persona spread) and **D-032** (suite varies scenario shapes 3–5 × 3–5 +
   moderately dispersed weights). See [`06-v1-architecture.md`](06-v1-architecture.md).
+- **2026-05-30** — **Radar roll-up** resolved as **D-037**: per-axis **mean** of the normalized
+  `[0, 1]` ride scores; an axis with no ride is **absent** (`n/a`), not 0; a ride that can't score an
+  agent is **skipped gracefully**. Built in `src/parkbench/radar.py` (stdlib-only ASCII chart +
+  `to_dict()`) with a `parkbench radar` CLI subcommand. See [`07-multi-ride.md`](07-multi-ride.md).
