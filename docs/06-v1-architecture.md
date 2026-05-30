@@ -29,6 +29,7 @@ sharper discrimination (D-031/D-032).
 | `server.py` | The park-hosted HTTP/JSON server (D-027): an `HttpBridgeAgent` (side-A stub that blocks on the network) + a stdlib `ThreadingHTTPServer`. Hosts one run, drives it via `run_suite`, writes the same run log. |
 | `client.py` | `drive_agent(base_url, agent)` — a reference `urllib` poll-loop adapter that serves any local `Agent` to a `ParkServer` over the wire (the BYO example). |
 | `cli.py` | `parkbench run` (incl. `--swap-persona`, `--inject-scenario`, `--off-record`), `parkbench analyze`, and `parkbench serve`. |
+| `dotenv.py` | A zero-dep `.env` loader the CLI calls at startup (D-033); real env vars take precedence. |
 
 ## Utility model (D-016)
 
@@ -154,6 +155,10 @@ shape, which varies under D-032). Off-record runs also get a `__off_record` dire
 
 The default model is the `DEFAULT_MODEL` module constant in `src/parkbench/agents/llm.py`
 (a free model id ending in `:free`); change it there or via `OPENROUTER_MODEL`.
+
+The CLI **auto-loads a `.env`** from the working directory at startup (D-033), so dropping
+`OPENROUTER_API_KEY=…` (and optionally `OPENROUTER_MODEL=…`) in a local `.env` is enough — no manual
+`export` needed. Real environment variables (and CI secrets) override the file.
 
 ### Run a live negotiation
 
