@@ -33,6 +33,14 @@ class ConcederStrategy(Agent):
         self.rng = random.Random(0)
         self.total_rounds = 8
 
+    def config(self) -> dict:
+        """The params that define this strategy's behaviour (decision D-038).
+
+        Two ConcederStrategy agents with different schedules/noise get distinct
+        identities; the RNG seed is per-match state, not config, so it is excluded.
+        """
+        return {"start": self.start, "end": self.end, "noise": self.noise}
+
     def _target(self, obs: Observation) -> float:
         total = max(1, self.total_rounds)
         progress = min(1.0, max(0.0, (total - obs.rounds_left) / total))

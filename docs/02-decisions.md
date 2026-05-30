@@ -375,3 +375,31 @@ Implements the D-035 ride contract; see [`07-multi-ride.md`](07-multi-ride.md).
 exact optimum); a multi-agent economic ride (knapsack is deliberately the clean solo contrast to the
 social ride, D-006); a fractional/unbounded knapsack (0/1 has the more interesting greedy gap);
 sharing the negotiation `Agent` interface (each ride owns its interface per D-035).
+### D-038 · 2026-05-30 · Agent identity & versioning stamped into run logs
+**Decision:** Every agent has a stable, attributable identity — `Agent.identity() ->
+AgentIdentity{name, version, config_hash}`. `name` is the agent's name; `version` defaults to the
+package version (`parkbench.__version__`, falling back to `"0"`); `config_hash` is a short
+(12-hex-char) **deterministic** SHA-256 of the agent's *defining* config (a new `Agent.config()`
+hook, default `{}`). The hash is taken over a canonical, key-sorted JSON encoding, so the **same
+agent + same code ⇒ same identity** across instances and processes (no memory addresses). The
+identity is stamped into the run log as a top-level **`agent` block** `{name, version,
+config_hash}`; the run-log `schema_version` bumps **2 → 3**. The change is **additive and backward
+compatible**: `Agent` gains `config()`/`identity()` with sensible defaults so every existing agent
+constructs and runs unchanged; `write_run` gains an optional `agent=` param (when omitted the block
+is derived from the profile's agent name with version `"0"`). `ConcederStrategy` declares its
+`{start, end, noise}` schedule as config and `LLMAgent` declares its `{model}` (the API key is a
+secret and is never part of the identity); per-match RNG seed is state, not config, so it is
+excluded.
+**Why:** Results must be **attributable and reproducible over time** (the open question in
+[`04-open-questions.md`](04-open-questions.md)) — a bare agent name can't distinguish two
+differently-configured agents or pin which version produced a score. A deterministic config hash
+makes runs comparable and tamper-evident without leaking secrets. Stamping it in the (versioned,
+additive) run log lets the replay viewer / future leaderboard key on a stable identity.
+**Implements:** part of the post-v1 multi-ride phase (D-034). **Touches:** `agents/base.py`
+(`AgentIdentity`, `config_hash`, `config()`/`identity()`), `agents/conceder.py`, `agents/llm.py`
+(`config()` overrides), `runlog.py` (schema 3 + `agent` block + optional `agent=` param), and the
+`cli.py`/`server.py` call sites (pass the agent through). Zero new runtime deps (D-023).
+**Rejected:** hashing memory addresses / object ids (non-reproducible); including the RNG seed or
+API key in the identity (the first is per-match state, the second a secret); a full content hash of
+the agent source (brittle and overkill for v1); reordering existing run-log fields (would break the
+viewer/parsers — additions only).

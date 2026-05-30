@@ -11,7 +11,6 @@ below (D-027–D-030)._
 ## Open — cross-cutting (post-v1)
 
 - Anti-gaming / reward-hacking safeguards as more ride types are added.
-- Identity & versioning of submitted agents (attributable, reproducible results over time).
 
 ## Resolved
 
@@ -43,3 +42,8 @@ below (D-027–D-030)._
   `[0, 1]` ride scores; an axis with no ride is **absent** (`n/a`), not 0; a ride that can't score an
   agent is **skipped gracefully**. Built in `src/parkbench/radar.py` (stdlib-only ASCII chart +
   `to_dict()`) with a `parkbench radar` CLI subcommand. See [`07-multi-ride.md`](07-multi-ride.md).
+- **2026-05-30** — **Identity & versioning of submitted agents** resolved as **D-038**: every agent
+  has a stable `identity()` → `AgentIdentity{name, version, config_hash}` (deterministic short hash
+  of the agent's defining config), stamped into the run log as a top-level `agent` block; run-log
+  `schema_version` bumped 2 → 3 (additive). Makes results attributable and reproducible over time.
+  See [`07-multi-ride.md`](07-multi-ride.md) and [`06-v1-architecture.md`](06-v1-architecture.md).

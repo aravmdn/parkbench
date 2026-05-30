@@ -80,7 +80,28 @@ the other three show `n/a`. Rationale and rejected alternatives: **D-037** in
 
 ## Agent identity & versioning (D-038)
 
-_Slice in progress (`feat/agent-identity`) — this section is filled in by that work._
+So results stay **attributable and reproducible over time**, every agent now has a stable identity
+(`src/parkbench/agents/base.py`):
+
+- **`Agent.identity() -> AgentIdentity{name, version, config_hash}`** — `name` is the agent's name;
+  `version` defaults to the package version (`parkbench.__version__`, falling back to `"0"`);
+  `config_hash` is a short (12 hex chars) **deterministic** SHA-256 of the agent's *defining* config.
+- **`Agent.config() -> dict`** — the new hook each agent overrides to declare the params that
+  distinguish its behaviour (default `{}`). `ConcederStrategy` returns `{start, end, noise}`;
+  `LLMAgent` returns `{model}`. The per-match RNG seed is state, not config (excluded); the API key
+  is a secret (never hashed).
+- **Deterministic by construction:** the hash is taken over a canonical, key-sorted JSON encoding,
+  so the *same agent + same code ⇒ the same identity* across instances and processes — no memory
+  addresses, no object ids.
+- **Backward compatible:** `config()`/`identity()` ship with sensible defaults, so every existing
+  agent constructs and runs unchanged.
+
+The identity is **stamped into the run log** as a top-level `agent` block `{name, version,
+config_hash}`; the run-log `schema_version` bumps **2 → 3** (additive — see the schema notes in
+[`06-v1-architecture.md`](06-v1-architecture.md)). `write_run` gained an optional `agent=` param;
+when omitted the block is still emitted, derived from the profile's agent name (version `"0"`), so
+older call sites keep working. This is the foundation a future leaderboard / cross-run comparison
+keys on.
 
 ## Still open
 

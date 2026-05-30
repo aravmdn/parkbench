@@ -24,7 +24,7 @@ sharper discrimination (D-031/D-032).
 | `personas/house_cast.py` | The four scripted personas: `Tough`, `Fair`, `Cooperative`, `Slippery` (D-024). |
 | `scoring.py` | `score_match()` (efficiency + own-value), `Stat` (mean/std/CI95), `build_profile()`. |
 | `suite.py` | `Suite` (seed + counts) and `run_suite(suite, agent, nudge=None)` — agent × every persona × every scenario; a `Nudge` restricts the roster / injects a scenario and flags the run off-record. |
-| `runlog.py` | Writes a JSON run log (profile + per-match transcripts) to `runs/` — the replay viewer's input. Versioned (`schema_version`) with a top-level `off_record` flag (D-029). |
+| `runlog.py` | Writes a JSON run log (profile + per-match transcripts) to `runs/` — the replay viewer's input. Versioned (`schema_version`) with a top-level `off_record` flag (D-029) and a top-level `agent` identity block (D-038). |
 | `nudge.py` | `Nudge` spec, the persona-name registry, and `parse_scenario_spec()` (inline JSON or file). Powers the observe+nudge loop (D-029); keeps CLI/suite edits localized. |
 | `server.py` | The park-hosted HTTP/JSON server (D-027): an `HttpBridgeAgent` (side-A stub that blocks on the network) + a stdlib `ThreadingHTTPServer`. Hosts one run, drives it via `run_suite`, writes the same run log. |
 | `client.py` | `drive_agent(base_url, agent)` — a reference `urllib` poll-loop adapter that serves any local `Agent` to a `ParkServer` over the wire (the BYO example). |
@@ -102,15 +102,22 @@ move a canonical mean, std, CI, deal-rate, or per-persona figure — the exclusi
 
 ## Run-log schema (`runs/<ts>__<agent>[__off_record]/run.json`)
 
-The log is **versioned** so the server/replay slices can detect shape changes. D-029 set
-`schema_version = 2` and added the `off_record` flags; **all pre-existing fields are unchanged and in
-their original positions** (additions only). Fields added by D-029:
+The log is **versioned** so the server/replay slices can detect shape changes. Every bump is
+**additive** — **all pre-existing fields are unchanged and in their original positions**. D-029 set
+`schema_version = 2` (added `schema_version` + the `off_record` flags); **D-038** sets
+`schema_version = 3`, adding a top-level **`agent` identity block** `{name, version, config_hash}`
+(see D-038 / [`07-multi-ride.md`](07-multi-ride.md)). Fields by version:
 
-| Field | Type | Location | Meaning |
-|---|---|---|---|
-| `schema_version` | `int` | top level | Run-log schema version (currently `2`). Absent ⇒ treat as `1`. |
-| `off_record` | `bool` | top level | Whether the whole run was nudged/off-record (default `false`). |
-| `off_record` | `bool` | each entry of `matches[]` (appended last) | Per-match off-record flag (mirrors the run flag in v1). |
+| Field | Type | Location | Added | Meaning |
+|---|---|---|---|---|
+| `schema_version` | `int` | top level | D-029 | Run-log schema version (currently `3`). Absent ⇒ treat as `1`. |
+| `off_record` | `bool` | top level | D-029 | Whether the whole run was nudged/off-record (default `false`). |
+| `off_record` | `bool` | each entry of `matches[]` (appended last) | D-029 | Per-match off-record flag (mirrors the run flag in v1). |
+| `agent` | `object` `{name: str, version: str, config_hash: str}` | top level (between `off_record` and `suite`) | D-038 | The acting agent's stable identity (D-038): `name`, `version` (defaults to the package version, else `"0"`), and a short deterministic `config_hash` of its defining config. |
+
+`write_run` stamps the `agent` block from the agent's `identity()` when the caller passes
+`agent=`; when omitted (older call sites) it is derived from the profile's agent name with version
+`"0"`, so the field is always present. The CLI and HTTP server both pass the agent through.
 
 Existing top-level keys remain `suite`, `profile`, `matches`; existing per-match keys
 (`scenario_seed`, `n_issues`, `n_levels`, `persona`, `agreed`, `outcome`, `efficiency`, `own_value`,
