@@ -210,7 +210,7 @@ fixture and `viewer/README.md` documents usage.
 
 ```bash
 uv venv && uv pip install -e ".[dev]"      # or: python -m venv .venv && pip install -e ".[dev]"
-pytest                                      # 54 tests
+pytest                                      # 57 tests
 parkbench run --agent heuristic --seed 1    # run the suite, print a profile, write a run log
 parkbench run --agent greedy --seed 1       # compare a weaker strategy
 parkbench analyze --seed 1                  # inspect one scenario's optimum

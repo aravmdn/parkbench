@@ -49,14 +49,15 @@ end-to-end: engine, seeded scenario generator, objective-payoff scoring, scripte
 baseline/heuristic agents, and a `parkbench` CLI — plus the **HTTP/JSON server** for external BYO
 agents (D-027), a **static replay viewer** over the run logs (D-028), **nudge controls** with
 off-record flagging (D-029), a real **LLM reference agent** via OpenRouter (D-030), and tuned
-personas + a varied scenario suite (D-031/D-032). Reproducible: **54 passing tests**. Design +
+personas + a varied scenario suite (D-031/D-032), and `.env` auto-load for the LLM key (D-033).
+Reproducible: **57 passing tests**. Design +
 formulas: `docs/06-v1-architecture.md`.
 
 - **Headline (seed 1, 48 matches):** efficiency heuristic 0.975 > random 0.881 > greedy 0.100;
   per-persona own-value spreads cooperative 0.772 → fair 0.554 → slippery 0.511 → tough 0.356.
 - **Next** (`docs/04-open-questions.md`, now post-v1 cross-cutting): radar roll-up across rides,
   anti-gaming safeguards, agent identity/versioning; LLM house personas remain a fast-follow (D-024).
-- **Verify:** `uv venv && uv pip install -e ".[dev]"`, then `pytest` (54 pass) and
+- **Verify:** `uv venv && uv pip install -e ".[dev]"`, then `pytest` (57 pass) and
   `parkbench run --agent heuristic --seed 1`. Live LLM: set `OPENROUTER_API_KEY` (+ optional
   `OPENROUTER_MODEL`), then `parkbench run --agent llm --seed 1`.
 
