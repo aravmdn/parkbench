@@ -31,7 +31,8 @@ def cmd_run(args: argparse.Namespace) -> None:
         inject_scenario=(parse_scenario_spec(args.inject_scenario) if args.inject_scenario else None),
         force_off_record=args.off_record,
     )
-    profile, records = run_suite(suite, make_agent(args.agent), nudge)
+    agent = make_agent(args.agent)
+    profile, records = run_suite(suite, agent, nudge)
     n_scenarios_run = 1 if nudge.inject_scenario is not None else suite.n_scenarios
     n_personas = len(records) // n_scenarios_run if n_scenarios_run else 0
 
@@ -67,7 +68,7 @@ def cmd_run(args: argparse.Namespace) -> None:
         )
 
     if not args.no_log:
-        run_dir = write_run(profile, records, suite, off_record=nudge.off_record)
+        run_dir = write_run(profile, records, suite, off_record=nudge.off_record, agent=agent)
         print(f"\n  run log: {run_dir / 'run.json'}")
     print()
 

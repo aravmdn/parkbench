@@ -299,7 +299,9 @@ class ParkServer:
             self._state.profile = profile
             self._state.records = records
             if self.write_log:
-                write_run(profile, records, self.suite, out_root=self.log_root)
+                write_run(
+                    profile, records, self.suite, out_root=self.log_root, agent=self.agent
+                )
         except Exception as exc:  # surface to clients via /observation
             self._state.error = repr(exc)
         finally:

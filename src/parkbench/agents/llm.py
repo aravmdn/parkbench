@@ -120,6 +120,14 @@ class LLMAgent(Agent):
         super().reset(seed, total_rounds)
         self._fallback.reset(seed, total_rounds)
 
+    def config(self) -> dict:
+        """The model id defines this agent's behaviour (decision D-038).
+
+        Different models => different identities. The API key is a secret and is never
+        part of the identity. ``getattr`` guards providers without a ``model`` attribute.
+        """
+        return {"model": getattr(self.provider, "model", None)}
+
     # -- prompt construction -------------------------------------------------
 
     def build_messages(self, obs: Observation) -> list[dict]:

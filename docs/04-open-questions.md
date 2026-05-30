@@ -13,7 +13,6 @@ below (D-027–D-030)._
 - How per-ride scores roll up into the radar profile (weighting, normalization across dissimilar
   rides).
 - Anti-gaming / reward-hacking safeguards as more ride types are added.
-- Identity & versioning of submitted agents (attributable, reproducible results over time).
 
 ## Resolved
 
@@ -41,3 +40,8 @@ below (D-027–D-030)._
 - **2026-05-30** — Ride-refinement questions resolved: **D-031** (per-persona reservation floors →
   crisp, non-overlapping per-persona spread) and **D-032** (suite varies scenario shapes 3–5 × 3–5 +
   moderately dispersed weights). See [`06-v1-architecture.md`](06-v1-architecture.md).
+- **2026-05-30** — **Identity & versioning of submitted agents** resolved as **D-038**: every agent
+  has a stable `identity()` → `AgentIdentity{name, version, config_hash}` (deterministic short hash
+  of the agent's defining config), stamped into the run log as a top-level `agent` block; run-log
+  `schema_version` bumped 2 → 3 (additive). Makes results attributable and reproducible over time.
+  See [`07-multi-ride.md`](07-multi-ride.md) and [`06-v1-architecture.md`](06-v1-architecture.md).
