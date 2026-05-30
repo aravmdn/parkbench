@@ -1,0 +1,4 @@
+# Append-only logs: auto-keep both sides on merge so parallel slices don't
+# produce needless conflicts in these files.
+docs/02-decisions.md merge=union
+docs/04-open-questions.md merge=union

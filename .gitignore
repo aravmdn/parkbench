@@ -32,3 +32,6 @@ npm-debug.log*
 
 # Parkbench run outputs
 runs/
+
+# Agent worktrees
+.claude/worktrees/
