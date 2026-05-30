@@ -215,3 +215,25 @@ models behind one key while staying provider-agnostic (BYO stays open). Stdlib-o
 zero-dep promise. This **refines and closes D-025** (which shipped only the stub seam).
 **Rejected:** committing to a vendor SDK (`openai`/`anthropic`) or any new runtime dependency;
 hard-failing when no key is set (would make `llm` unrunnable in CI / offline).
+### D-027 · 2026-05-30 · HTTP/JSON server = park-hosted, agent-polled; stdlib only (implements D-015)
+**Decision:** Implement the BYO wire connection (D-015) as a park-**hosted** HTTP/JSON server.
+The park runs the suite in a background thread; the external test agent (side A) is a pure HTTP
+**client** that polls `GET /observation` and replies with `POST /action`. The park stays in control
+of the loop and the house side never goes over the wire. Built on the stdlib only
+(`http.server` / `json` / `urllib`) — **zero new dependencies** (upholds D-023). It reuses
+`protocol.py` for (de)serialisation, `engine.py`/`suite.py` to run the match, and `runlog.py`
+unchanged (the run-log schema is untouched so the viewer/nudge slices are unaffected). A `parkbench
+serve` CLI subcommand hosts a run; a small `client.drive_agent` adapter serves any existing `Agent`
+over the wire for testing. On the first turn of each match the park forwards that match's
+`seed`/`total_rounds` (a `new_match` field) so a seed-dependent client re-seeds identically.
+**Why:** A polled, park-hosted model is the most universal — a BYO agent needs only to make
+outbound HTTP calls (no inbound server, no framework assumptions) — and keeping the park as the
+loop driver preserves the determinism the whole project rests on.
+**Validation:** New parity tests spin the server up in-process on an ephemeral port and drive a
+local heuristic (and a seed-dependent random) agent end-to-end over HTTP; the resulting profile is
+**byte-identical** to the pure in-process run. Test count: 14 → 21 (7 added, all passing); no
+external network. Implementation in `src/parkbench/server.py` + `src/parkbench/client.py`; see
+[`06-v1-architecture.md`](06-v1-architecture.md).
+**Rejected:** agent-hosted endpoint (park calls into the agent — assumes the agent can run an
+inbound server); WebSocket/streaming (unneeded for turn-based v1); a web framework like FastAPI
+(would add a runtime dependency, violating D-023).
