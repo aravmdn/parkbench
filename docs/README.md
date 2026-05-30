@@ -43,3 +43,6 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
 - **2026-05-29** — v1 negotiation-ride design decisions locked (D-015–D-021); `01-v1-scope.md` and `04-open-questions.md` updated.
 - **2026-05-29** — Project named **Parkbench** (D-022); founding survey moved to `reference-survey-2026.md`; public GitHub repo created.
 - **2026-05-29** — v1 core implemented (engine + scoring + CLI); added `06-v1-architecture.md`; decisions D-023–D-026.
+- **2026-05-30** — v1 follow-ups landed in parallel (PRs #3–#7): HTTP/JSON server (D-027), replay
+  viewer (D-028), nudge controls (D-029), LLM reference agent via OpenRouter (D-030), and ride tuning
+  (D-031–D-032). 54 passing tests.

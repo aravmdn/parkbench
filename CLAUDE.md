@@ -40,17 +40,25 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 | `docs/03-roadmap.md` | Directional roadmap beyond v1. |
 | `docs/04-open-questions.md` | Deferred (often borderline-technical) questions to resolve later. |
 | `docs/05-glossary.md` | Shared vocabulary (ride, house cast, BYO agent, radar profile, …). |
+| `docs/06-v1-architecture.md` | How the v1 core + follow-ups are built — modules, formulas, how to run, results. |
 
-## Current status (2026-05-29)
+## Current status (2026-05-30)
 
-**v1 core is on `main`** (PR #1 merged). The negotiation ride runs end-to-end: engine, seeded
-scenario generator, objective-payoff scoring, scripted house cast, baseline/heuristic agents, and a
-`parkbench` CLI — all reproducible (14 passing tests). Design + formulas: `docs/06-v1-architecture.md`.
+**v1 core + all four follow-ups are on `main`** (PRs #1–#7 merged). The negotiation ride runs
+end-to-end: engine, seeded scenario generator, objective-payoff scoring, scripted house cast,
+baseline/heuristic agents, and a `parkbench` CLI — plus the **HTTP/JSON server** for external BYO
+agents (D-027), a **static replay viewer** over the run logs (D-028), **nudge controls** with
+off-record flagging (D-029), a real **LLM reference agent** via OpenRouter (D-030), and tuned
+personas + a varied scenario suite (D-031/D-032). Reproducible: **54 passing tests**. Design +
+formulas: `docs/06-v1-architecture.md`.
 
-- **Next** (from `docs/04-open-questions.md`): HTTP/JSON server so external agents connect over the
-  wire → static replay viewer over the JSON run logs → nudge controls → a real LLM reference agent.
-- **Verify the current state:** `uv venv && uv pip install -e ".[dev]"`, then `pytest` (14 pass) and
-  `parkbench run --agent heuristic --seed 1`.
+- **Headline (seed 1, 48 matches):** efficiency heuristic 0.975 > random 0.881 > greedy 0.100;
+  per-persona own-value spreads cooperative 0.772 → fair 0.554 → slippery 0.511 → tough 0.356.
+- **Next** (`docs/04-open-questions.md`, now post-v1 cross-cutting): radar roll-up across rides,
+  anti-gaming safeguards, agent identity/versioning; LLM house personas remain a fast-follow (D-024).
+- **Verify:** `uv venv && uv pip install -e ".[dev]"`, then `pytest` (54 pass) and
+  `parkbench run --agent heuristic --seed 1`. Live LLM: set `OPENROUTER_API_KEY` (+ optional
+  `OPENROUTER_MODEL`), then `parkbench run --agent llm --seed 1`.
 
 ## Conventions for growing the docs
 
