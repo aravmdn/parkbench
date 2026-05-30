@@ -30,7 +30,28 @@ _Slice in progress (`feat/economic-ride`) — this section is filled in by that 
 
 ## Radar roll-up (D-037)
 
-_Slice in progress (`feat/radar`) — this section is filled in by that work._
+The headline output (D-007). `src/parkbench/radar.py` turns the independent rides into one
+diagnostic profile:
+
+- **`build_radar(agent_name, seed=1, rides=None)`** iterates the rides (default `RIDE_REGISTRY`;
+  `rides=` is injectable for testing — accepts a registry-like mapping or any iterable of `Ride`s),
+  calls each `ride.evaluate(agent_name, seed)`, and aggregates the normalized `[0, 1]`
+  `RideResult.score` **per axis (D-005) by simple mean** where several rides share an axis.
+- **`RadarProfile{agent, seed, axis_scores, results, skipped}`** (frozen) is the result.
+  `axis_scores` holds only the **covered** axes; an axis with no ride is **absent** and shown as
+  `n/a` (a coverage gap, not a 0). `covered_axes` / `missing_axes` partition the four axes in
+  canonical order.
+- **Graceful skip:** a ride that can't score the agent — its roster has no entry, so `evaluate`
+  raises `KeyError`/`ValueError` (D-035: each ride owns its roster) — is skipped and named in
+  `skipped`, so a partially-covered agent never crashes the roll-up.
+- **Rendering:** `to_dict()` gives a JSON view (stable key order); `render_radar()` draws a compact
+  per-axis ASCII bar chart — **stdlib only, no plotting dependency** (D-023).
+- **CLI:** `parkbench radar --agent <name> --seed 1 [--json]`.
+
+Deterministic: rides are visited in registry/iteration order and a fixed `seed` yields identical
+output. Until the economic ride lands, only the **social** axis (from `NegotiationRide`) populates;
+the other three show `n/a`. Rationale and rejected alternatives: **D-037** in
+[`02-decisions.md`](02-decisions.md).
 
 ## Agent identity & versioning (D-038)
 

@@ -323,3 +323,27 @@ interface + baselines.
 risky refactor; additive wrapping keeps `parkbench run` and the existing tests intact.
 **Rejected:** a universal cross-ride agent interface (premature); refactoring the engine/suite into a
 generic framework now (unneeded for two rides). See [`07-multi-ride.md`](07-multi-ride.md).
+
+### D-037 · 2026-05-30 · Radar roll-up = per-axis mean of normalized ride scores, missing axes absent
+**Decision:** The diagnostic radar profile (D-007) is built by `build_radar(agent_name, seed, rides=None)`
+in `src/parkbench/radar.py`. It iterates the rides (default `RIDE_REGISTRY`, injectable for testing),
+calls each `ride.evaluate(agent_name, seed)`, and aggregates the normalized `[0, 1]` `RideResult.score`
+**per axis (D-005) by simple mean** when several rides share an axis. An axis with **no** contributing
+ride is **absent** from `axis_scores` (rendered `n/a`) rather than scored 0 — a gap in coverage is not
+a failing grade. A ride that **cannot score the agent** (its roster has no entry, so `evaluate` raises
+`KeyError`/`ValueError`) is **skipped gracefully** and recorded in `skipped`, so a partially-covered
+agent never crashes the roll-up. Output is a frozen `RadarProfile{agent, seed, axis_scores, results,
+skipped}` with a `to_dict()` for JSON and a stdlib-only ASCII per-axis bar chart (`render_radar`); no
+plotting dependency (upholds D-023). A localized `parkbench radar --agent <name> --seed 1 [--json]` CLI
+subcommand prints it. Fully deterministic: rides are visited in registry order and a fixed seed yields
+identical output.
+**Why:** A simple, transparent per-axis mean is the smallest aggregation that turns the independent
+rides (D-008/D-035) into the headline radar (D-007) without inventing cross-ride weights before there
+is evidence for them; "missing ≠ zero" keeps the profile honest while rides are still being added; the
+graceful skip means each ride can own its own roster (D-035) without the roll-up having to know who is
+eligible where. This **resolves** the open question "how per-ride scores roll up into the radar profile"
+([`04-open-questions.md`](04-open-questions.md)).
+**Rejected:** per-ride/per-axis configurable weighting (premature — no basis to set weights yet; a
+later add); scoring a missing axis as 0 (penalizes coverage gaps, not the agent); a composite single
+number (contradicts the diagnostic-profile intent of D-007); a plotting/charting dependency (violates
+D-023). See [`07-multi-ride.md`](07-multi-ride.md).

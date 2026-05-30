@@ -3,11 +3,13 @@
   parkbench run     — run an agent through the negotiation suite and print its profile.
   parkbench analyze — print a single scenario's optimum (for debugging / inspection).
   parkbench serve   — host a run over HTTP/JSON so a bring-your-own agent connects (D-027).
+  parkbench radar   — roll every ride up into the agent's diagnostic radar profile (D-037).
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 
 from .agents import AGENT_REGISTRY, make_agent
@@ -134,6 +136,19 @@ def cmd_serve(args: argparse.Namespace) -> None:
         server.stop()
 
 
+def cmd_radar(args: argparse.Namespace) -> None:
+    # Imported lazily so the core CLI carries no dependency on the roll-up unless used.
+    from .radar import build_radar, render_radar
+
+    profile = build_radar(args.agent, seed=args.seed)
+    if args.json:
+        print(json.dumps(profile.to_dict(), indent=2))
+        return
+    print()
+    print(render_radar(profile))
+    print()
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="parkbench", description="Parkbench v1 negotiation benchmark.")
     sub = p.add_subparsers(dest="command", required=True)
@@ -183,6 +198,12 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Drive the run in-process with a built-in agent over HTTP (for testing).")
     s.add_argument("--no-log", action="store_true", help="Do not write a run log.")
     s.set_defaults(func=cmd_serve)
+
+    rd = sub.add_parser("radar", help="Roll every ride up into the agent's diagnostic radar profile.")
+    rd.add_argument("--agent", default="heuristic", choices=sorted(AGENT_REGISTRY))
+    rd.add_argument("--seed", type=int, default=1, help="Seed passed to each ride.")
+    rd.add_argument("--json", action="store_true", help="Emit the profile as JSON instead of a chart.")
+    rd.set_defaults(func=cmd_radar)
     return p
 
 
