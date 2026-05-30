@@ -183,3 +183,42 @@ agents, JSON run logs, and a CLI. Defer the HTTP server, replay viewer, nudge, a
 **Validation:** 14 passing tests incl. a determinism check; the CLI shows clean separation
 (efficiency: heuristic 0.978 > random 0.840 > greedy 0.412) with tight CIs and exact reproducibility.
 Full design + formulas in [`06-v1-architecture.md`](06-v1-architecture.md).
+
+### D-031 · 2026-05-30 · House personas gain an explicit reservation floor (ride tuning)
+**Decision:** Each scripted persona now gates acceptance with an explicit, time-varying
+**reservation floor** (a fraction of its own maximum), separate from the shared
+`ConcederStrategy` proposal logic. A persona accepts a standing offer only if it clears both the
+floor and the persona's own current proposal; the floor relaxes from `reserve_start` to
+`reserve_end` over the round cap, with an end-game fallback so no persona stonewalls into a
+needless no-deal. The four floors are spread wide (tough highest → cooperative lowest; slippery
+high-ish with RNG jitter). Implemented entirely in `personas/house_cast.py` (a new `Persona`
+base) so the shared `ConcederStrategy` used by the heuristic test agent is untouched.
+**Why:** The plain strategy accepted any offer that merely beat its *own* proposal, so a generous
+opening from the test agent made every persona accept the same deal and per-persona breakdowns
+collapsed (the open question in [`04-open-questions.md`](04-open-questions.md)). An explicit floor
+makes a tough counterpart reject what a cooperative one grabs, producing distinguishable outcomes.
+**Result:** vs. the heuristic agent, per-persona own-value is now crisply separated with
+non-overlapping CI95s: tough 0.356 < slippery 0.511 < fair 0.554 < cooperative 0.772 (was a
+~0.08-wide, overlapping band). Refines D-024 (scripted cast); stays fully deterministic (D-018).
+**Rejected:** editing the shared `ConcederStrategy` (would also change the heuristic test agent);
+LLM-judged acceptance (non-deterministic); leaving the collapse and reporting only aggregate spread.
+
+### D-032 · 2026-05-30 · Suite varies scenario shapes + moderately dispersed weights (ride tuning)
+**Decision:** The canonical suite **cycles issue/level counts** across scenarios (a fixed
+`SCENARIO_SHAPES` menu of 3-5 issues × 3-5 levels, e.g. 4×4, 5×4, 4×5, 5×3, 5×5, …) instead of a
+single fixed 4×3 shape, and `generate_scenario` now draws **moderately dispersed bounded weights**
+(`0.5 + U(0,1)` per issue, normalized to 100) rather than flat or heavily-skewed weights. A
+`Suite.vary_shapes` flag (default on) drives this; `vary_shapes=False` pins the explicit
+`n_issues`/`n_levels` for single-shape experiments. Anti-correlation across parties (D-016) is
+preserved. `analyze()` still brute-forces every outcome (largest shape 5×5 = 3125, trivial).
+**Why:** Coarse 3×3-ish scenarios with flat weights left too few distinct Pareto agreements, so
+personas with different floors were forced onto the *same* deal; heavily-skewed weights collapsed
+them the other way (one issue decisive). Moderate dispersion + richer shapes give graduated trades
+that discriminate behavior. 8/12 suite scenarios now yield ≥3 distinct A-outcomes across the four
+personas (was ~0).
+**Result:** cleaner overall separation too — efficiency heuristic 0.975 > random 0.881 > greedy
+0.100; greedy now correctly collapses (12.5% deal rate) against the stiffer floors. Refines D-016
+(preference generation) and D-020 (the fixed suite); fully reproducible (same seed → identical
+output).
+**Rejected:** one fixed shape for all scenarios (too little spread); per-scenario hand-authored
+preferences (not reproducible-by-construction); squared/heavy-tailed weights (collapsed outcomes).

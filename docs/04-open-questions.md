@@ -1,17 +1,9 @@
 # 04 — Open Questions
 
-**Status:** Living · **Last updated:** 2026-05-29
+**Status:** Living · **Last updated:** 2026-05-30
 
 Questions still genuinely open. When one is resolved it becomes an entry in the decision log
 ([`02-decisions.md`](02-decisions.md)) and is listed under "Resolved" below.
-
-## Open — refine the ride
-
-- **Persona behavioral spread.** Personas differ in aggregate (own-value drops from `cooperative` to
-  `tough`), but can collapse to the same outcome on individual scenarios when the test agent's first
-  offer is already generous. Tune persona acceptance/proposal so per-persona breakdowns are crisper.
-- **Scenario diversity.** Whether 4 issues × 3 levels and the current weight generation give enough
-  spread; consider varying issue/level counts across the suite.
 
 ## Open — next build (deferred from v1 core, D-026)
 
@@ -38,3 +30,6 @@ Questions still genuinely open. When one is resolved it becomes an entry in the 
     (D-016; see [`06-v1-architecture.md`](06-v1-architecture.md)).
   - *Round cap* → 8 exchanges per side (D-017).
   - *Persona prompts* → replaced by scripted strategies (D-024).
+- **2026-05-30** — Ride-refinement questions resolved: **D-031** (per-persona reservation floors →
+  crisp, non-overlapping per-persona spread) and **D-032** (suite varies scenario shapes 3–5 × 3–5 +
+  moderately dispersed weights). See [`06-v1-architecture.md`](06-v1-architecture.md).

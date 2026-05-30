@@ -1,4 +1,11 @@
-from parkbench.scenario import Scenario, analyze, generate_scenario
+from parkbench.scenario import (
+    SCENARIO_SHAPES,
+    Scenario,
+    analyze,
+    generate_scenario,
+    shape_for_index,
+)
+from parkbench.suite import Suite
 
 
 def hand_scenario() -> Scenario:
@@ -37,3 +44,38 @@ def test_generation_is_deterministic():
     a = generate_scenario(5)
     b = generate_scenario(5)
     assert a == b
+
+
+def test_weights_are_moderately_dispersed():
+    """D-032: weights are ranked (some issues matter more) but no issue dominates — the
+    largest weight stays well below the degenerate 'one issue is everything' regime."""
+    for seed in range(20):
+        sc = generate_scenario(seed, n_issues=5, n_levels=4)
+        assert len(set(sc.weight_a)) == sc.n_issues  # genuinely ranked, no ties
+        # Moderate dispersion: no single issue is worth more than ~half the total (100).
+        assert max(sc.weight_a) < 50.0
+        assert max(sc.weight_b) < 50.0
+        # Anti-correlation still holds: A's smallest-weight issue is B's largest.
+        a_min_issue = min(range(sc.n_issues), key=lambda i: sc.weight_a[i])
+        b_max_issue = max(range(sc.n_issues), key=lambda i: sc.weight_b[i])
+        assert a_min_issue == b_max_issue
+
+
+def test_suite_varies_scenario_shapes():
+    """D-032: the canonical suite cycles issue/level counts instead of a single fixed shape,
+    and every shape stays inside the D-016 envelope (3-5 issues)."""
+    suite = Suite(seed=1, n_scenarios=12)  # vary_shapes defaults to True
+    shapes = {suite.shape(i) for i in range(suite.n_scenarios)}
+    assert len(shapes) >= 4  # more than one shape exercised
+    for n_issues, n_levels in shapes:
+        assert 3 <= n_issues <= 5
+        assert 2 <= n_levels <= 5
+    # shape_for_index mirrors the suite and cycles the SCENARIO_SHAPES menu.
+    assert suite.shape(0) == shape_for_index(0) == SCENARIO_SHAPES[0]
+
+
+def test_suite_can_pin_a_fixed_shape():
+    """vary_shapes=False falls back to the explicit n_issues/n_levels (for reproducible
+    single-shape experiments)."""
+    suite = Suite(seed=1, n_scenarios=3, n_issues=4, n_levels=3, vary_shapes=False)
+    assert {suite.shape(i) for i in range(3)} == {(4, 3)}
