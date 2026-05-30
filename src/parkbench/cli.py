@@ -2,6 +2,7 @@
 
   parkbench run     — run an agent through the negotiation suite and print its profile.
   parkbench analyze — print a single scenario's optimum (for debugging / inspection).
+  parkbench serve   — host a run over HTTP/JSON so a bring-your-own agent connects (D-027).
 """
 
 from __future__ import annotations
@@ -66,6 +67,55 @@ def cmd_analyze(args: argparse.Namespace) -> None:
     print(f"  Pareto outcomes   : {len(an.pareto)}\n")
 
 
+def cmd_serve(args: argparse.Namespace) -> None:
+    # Imported lazily so the core CLI has no dependency on the HTTP slice unless used.
+    from .server import ParkServer
+
+    suite = Suite(seed=args.seed, n_scenarios=args.scenarios, round_cap=args.round_cap)
+    server = ParkServer(
+        suite,
+        host=args.host,
+        port=args.port,
+        agent_name=args.agent_name,
+        write_log=not args.no_log,
+    )
+    server.start()
+    print("\nParkbench - v1 negotiation ride (HTTP/JSON server, D-027)")
+    print(
+        f"suite '{suite.name}'  seed={suite.seed}  scenarios={suite.n_scenarios}  "
+        f"round_cap={suite.round_cap}"
+    )
+    print(f"listening on {server.base_url}")
+    print("  GET  /observation   POST /action   GET /health")
+    print(f"side A is the external agent '{args.agent_name}'.\n")
+
+    if args.local_agent is not None:
+        # Convenience: drive the run in-process with a built-in agent over the wire.
+        from .client import drive_agent
+
+        print(f"driving with local agent '{args.local_agent}' over HTTP...\n")
+        drive_agent(server.base_url, make_agent(args.local_agent))
+        profile, records = server.wait()
+        print(f"agent: {profile.agent_name}")
+        print(
+            f"  efficiency (joint value captured): {_fmt(profile.efficiency)}   [optimum = 1.000]"
+        )
+        print(f"  own value  (own share)           : {_fmt(profile.own_value)}")
+        print(f"  deal rate                        : {profile.deal_rate:6.1%}\n")
+        server.stop()
+        return
+
+    print("waiting for an external agent to connect (Ctrl+C to stop)...\n")
+    try:
+        profile, _ = server.wait()
+        print(f"\nrun complete for agent: {profile.agent_name}")
+        print(f"  efficiency {_fmt(profile.efficiency)}   own value {_fmt(profile.own_value)}\n")
+    except KeyboardInterrupt:
+        print("\nstopped.\n")
+    finally:
+        server.stop()
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="parkbench", description="Parkbench v1 negotiation benchmark.")
     sub = p.add_subparsers(dest="command", required=True)
@@ -87,6 +137,20 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("--issues", type=int, default=4)
     a.add_argument("--levels", type=int, default=3)
     a.set_defaults(func=cmd_analyze)
+
+    s = sub.add_parser("serve", help="Host a run over HTTP/JSON for an external BYO agent.")
+    s.add_argument("--host", default="127.0.0.1", help="Bind host (default 127.0.0.1).")
+    s.add_argument("--port", type=int, default=8080, help="Bind port (0 = ephemeral).")
+    s.add_argument("--seed", type=int, default=1, help="Suite seed (selects the scenario set).")
+    s.add_argument("--scenarios", type=int, default=12)
+    s.add_argument("--round-cap", type=int, default=8, dest="round_cap")
+    s.add_argument("--agent-name", default="byo-http", dest="agent_name",
+                   help="Label recorded for the external test agent (side A).")
+    s.add_argument("--local-agent", choices=sorted(AGENT_REGISTRY), default=None,
+                   dest="local_agent",
+                   help="Drive the run in-process with a built-in agent over HTTP (for testing).")
+    s.add_argument("--no-log", action="store_true", help="Do not write a run log.")
+    s.set_defaults(func=cmd_serve)
     return p
 
 

@@ -1,11 +1,12 @@
 # 06 — v1 Core Architecture
 
-**Status:** Stable · **Last updated:** 2026-05-29
+**Status:** Stable · **Last updated:** 2026-05-30
 
-How the v1 negotiation ride is implemented. This is the "core" slice (decision D-026): the engine,
-scenario generator, scoring, scripted house cast, baseline/heuristic agents, and a CLI. The HTTP
-server, replay viewer, nudge controls, and a real LLM agent are deferred (see
-[`04-open-questions.md`](04-open-questions.md)).
+How the v1 negotiation ride is implemented. This started as the "core" slice (decision D-026): the
+engine, scenario generator, scoring, scripted house cast, baseline/heuristic agents, and a CLI. The
+**HTTP/JSON server** for external BYO agents is now built on top of it (D-027 — see
+[The HTTP/JSON server](#the-httpjson-server-d-027)). The replay viewer, nudge controls, and a real
+LLM agent remain deferred (see [`04-open-questions.md`](04-open-questions.md)).
 
 ## Module map — `src/parkbench/`
 
@@ -23,7 +24,9 @@ server, replay viewer, nudge controls, and a real LLM agent are deferred (see
 | `scoring.py` | `score_match()` (efficiency + own-value), `Stat` (mean/std/CI95), `build_profile()`. |
 | `suite.py` | `Suite` (seed + counts) and `run_suite()` — agent × every persona × every scenario. |
 | `runlog.py` | Writes a JSON run log (profile + per-match transcripts) to `runs/` — the replay viewer's input. |
-| `cli.py` | `parkbench run` and `parkbench analyze`. |
+| `server.py` | The park-hosted HTTP/JSON server (D-027): an `HttpBridgeAgent` (side-A stub that blocks on the network) + a stdlib `ThreadingHTTPServer`. Hosts one run, drives it via `run_suite`, writes the same run log. |
+| `client.py` | `drive_agent(base_url, agent)` — a reference `urllib` poll-loop adapter that serves any local `Agent` to a `ParkServer` over the wire (the BYO example). |
+| `cli.py` | `parkbench run`, `parkbench analyze`, and `parkbench serve`. |
 
 ## Utility model (D-016)
 
@@ -84,14 +87,42 @@ total_rounds)`); `RandomAgent` and the `Slippery` persona draw only from that se
 | `heuristic` | test (good) | Time-based concession; concedes cheap issues first (logrolling). |
 | `tough` / `fair` / `cooperative` / `slippery` | house cast | One `ConcederStrategy` tuned to four dispositions; `slippery` adds RNG noise. |
 
+## The HTTP/JSON server (D-027)
+
+The wire realisation of D-015, so a **bring-your-own** agent can be scored over HTTP without bespoke
+glue. It is **park-hosted and agent-polled**, **stdlib only** (no new dependencies, upholds D-023),
+and reuses `protocol.py`, `engine.py`/`suite.py`, and `runlog.py` **unchanged** (the run-log schema
+is untouched, so the viewer/nudge slices are unaffected).
+
+- The park runs `run_suite` in a background thread. Side A is an `HttpBridgeAgent` whose `act(obs)`
+  publishes the observation and **blocks** until the external agent posts an action. The house side
+  (B) never goes over the wire, so the park keeps full control of the loop and stays deterministic.
+- The external agent is a pure HTTP **client** — no inbound server needed on its side:
+
+  | Endpoint | Returns |
+  |---|---|
+  | `GET /observation` | `{"status":"your_turn","turn":N,"observation":{…}}` when it's the agent's turn (with a `new_match` field carrying `seed`/`total_rounds` on a match's first turn); else `{"status":"waiting"}`; or `{"status":"done","profile":{…}}` when the run is over. |
+  | `POST /action` | body is an `Action`-shaped JSON object (`{type, offer, message}`); replies `{"status":"accepted","turn":N}`, or `409` if it isn't the agent's turn. |
+  | `GET /health` | `{"status":"ok","agent":"<name>"}`. |
+
+- **Determinism parity.** `run_suite` re-seeds side A per match; the park forwards that match's
+  `seed`/`total_rounds` to the client (`new_match`) so a seed-dependent BYO agent re-seeds
+  identically. `tests/test_server.py` spins the server up in-process on an ephemeral port, drives a
+  local heuristic (and a seed-dependent random) agent end-to-end over HTTP, and asserts the profile
+  is **byte-identical** to the pure in-process run. No external network.
+- `client.drive_agent(base_url, agent)` is the small in-process adapter that serves any existing
+  `Agent` over the wire — both the reference BYO example and the test harness.
+
 ## How to run
 
 ```bash
 uv venv && uv pip install -e ".[dev]"      # or: python -m venv .venv && pip install -e ".[dev]"
-pytest                                      # 14 tests
+pytest                                      # 21 tests (14 core + 7 HTTP server)
 parkbench run --agent heuristic --seed 1    # run the suite, print a profile, write a run log
 parkbench run --agent greedy --seed 1       # compare a weaker strategy
 parkbench analyze --seed 1                  # inspect one scenario's optimum
+parkbench serve --port 8080                 # host a run over HTTP for an external BYO agent (side A)
+parkbench serve --port 0 --local-agent heuristic   # self-drive a built-in agent over HTTP (demo/test)
 ```
 
 ## Results snapshot (seed 1, 48 matches)
@@ -109,5 +140,5 @@ than vs. `tough`). This satisfies the v1 success criteria in [`01-v1-scope.md`](
 
 ## Deferred
 
-HTTP/JSON server (external BYO agents), the static replay viewer, nudge controls, and a real LLM
-reference agent — tracked in [`04-open-questions.md`](04-open-questions.md).
+The static replay viewer, nudge controls, and a real LLM reference agent — tracked in
+[`04-open-questions.md`](04-open-questions.md). (The HTTP/JSON server is now built — D-027 above.)

@@ -1,6 +1,6 @@
 # 04 — Open Questions
 
-**Status:** Living · **Last updated:** 2026-05-29
+**Status:** Living · **Last updated:** 2026-05-30
 
 Questions still genuinely open. When one is resolved it becomes an entry in the decision log
 ([`02-decisions.md`](02-decisions.md)) and is listed under "Resolved" below.
@@ -15,7 +15,6 @@ Questions still genuinely open. When one is resolved it becomes an entry in the 
 
 ## Open — next build (deferred from v1 core, D-026)
 
-- **HTTP/JSON server** so external BYO agents connect over the wire (D-015).
 - **Static replay viewer** over the JSON run logs; the log schema's minimum feature set for replay.
 - **Nudge** controls (inject scenario / swap persona) + off-record flagging so nudged runs don't
   pollute canonical profiles (D-021).
@@ -31,6 +30,10 @@ Questions still genuinely open. When one is resolved it becomes an entry in the 
 
 ## Resolved
 
+- **2026-05-30** — **HTTP/JSON server** for external BYO agents built as **D-027** (park-hosted,
+  agent-polled, stdlib only; reuses the protocol/engine/runlog unchanged). It realises the wire
+  connection D-015 deferred from the core build (D-026). Design in
+  [`06-v1-architecture.md`](06-v1-architecture.md).
 - **2026-05-29** — Core v1 ride design locked as **D-015–D-021**.
 - **2026-05-29** — Implementation choices locked as **D-023–D-026** (stack, scripted cast, deferred
   LLM, core-only build). The three former v1 ride details are now decided:
