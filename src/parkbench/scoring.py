@@ -27,19 +27,24 @@ class MatchScore:
     agreed: bool
     efficiency: float
     own_value: float
+    off_record: bool = False  # nudged matches (D-029); excluded from canonical aggregation
 
 
 def score_match(
-    scenario: Scenario, analysis: Analysis, result: MatchResult, persona_name: str
+    scenario: Scenario,
+    analysis: Analysis,
+    result: MatchResult,
+    persona_name: str,
+    off_record: bool = False,
 ) -> MatchScore:
     if not result.agreed or result.outcome is None:
-        return MatchScore(persona_name, scenario.seed, False, 0.0, 0.0)
+        return MatchScore(persona_name, scenario.seed, False, 0.0, 0.0, off_record)
     levels = result.outcome.levels
     ua = scenario.util_a(levels)
     ub = scenario.util_b(levels)
     efficiency = (ua + ub) / analysis.max_joint if analysis.max_joint > 0 else 0.0
     own_value = ua / analysis.max_a if analysis.max_a > 0 else 0.0
-    return MatchScore(persona_name, scenario.seed, True, efficiency, own_value)
+    return MatchScore(persona_name, scenario.seed, True, efficiency, own_value, off_record)
 
 
 @dataclass
@@ -67,10 +72,36 @@ class Profile:
     own_value: Stat
     deal_rate: float
     per_persona: dict  # persona -> {"efficiency": Stat, "own_value": Stat, "deal_rate": float}
-    matches: list  # list[MatchScore]
+    matches: list  # list[MatchScore] — the matches that fed the canonical aggregation
+    off_record: bool = False  # True when this profile is built from nudged matches (D-029)
+    excluded: int = 0  # count of off-record matches dropped from canonical aggregation
 
 
 def build_profile(agent_name: str, matches: list[MatchScore]) -> Profile:
+    """Aggregate match scores into a canonical (on-record) profile.
+
+    Off-record matches (nudged runs — D-029) are EXCLUDED from the canonical aggregation
+    so they cannot pollute the scores; only their count is retained (`excluded`). To build
+    a profile *of* nudged matches instead, use `build_off_record_profile`.
+    """
+    on_record = [m for m in matches if not m.off_record]
+    excluded = len(matches) - len(on_record)
+    profile = _aggregate(agent_name, on_record)
+    profile.excluded = excluded
+    return profile
+
+
+def build_off_record_profile(agent_name: str, matches: list[MatchScore]) -> Profile:
+    """Aggregate nudged matches into a clearly-flagged off-record profile (D-029).
+
+    Never feeds canonical scores; produced only for the observe+nudge replay surface.
+    """
+    profile = _aggregate(agent_name, list(matches))
+    profile.off_record = True
+    return profile
+
+
+def _aggregate(agent_name: str, matches: list[MatchScore]) -> Profile:
     deal_rate = (sum(1 for m in matches if m.agreed) / len(matches)) if matches else 0.0
     per_persona: dict = {}
     for p in sorted({m.persona for m in matches}):

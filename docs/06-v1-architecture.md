@@ -23,11 +23,12 @@ sharper discrimination (D-031/D-032).
 | `agents/llm.py` | `Provider` interface + `OpenRouterProvider` (stdlib-only) + `LLMAgent` — the real LLM reference agent (D-030, refines D-025); falls back to the heuristic on any failure. |
 | `personas/house_cast.py` | The four scripted personas: `Tough`, `Fair`, `Cooperative`, `Slippery` (D-024). |
 | `scoring.py` | `score_match()` (efficiency + own-value), `Stat` (mean/std/CI95), `build_profile()`. |
-| `suite.py` | `Suite` (seed + counts) and `run_suite()` — agent × every persona × every scenario. |
-| `runlog.py` | Writes a JSON run log (profile + per-match transcripts) to `runs/` — the replay viewer's input. |
+| `suite.py` | `Suite` (seed + counts) and `run_suite(suite, agent, nudge=None)` — agent × every persona × every scenario; a `Nudge` restricts the roster / injects a scenario and flags the run off-record. |
+| `runlog.py` | Writes a JSON run log (profile + per-match transcripts) to `runs/` — the replay viewer's input. Versioned (`schema_version`) with a top-level `off_record` flag (D-029). |
+| `nudge.py` | `Nudge` spec, the persona-name registry, and `parse_scenario_spec()` (inline JSON or file). Powers the observe+nudge loop (D-029); keeps CLI/suite edits localized. |
 | `server.py` | The park-hosted HTTP/JSON server (D-027): an `HttpBridgeAgent` (side-A stub that blocks on the network) + a stdlib `ThreadingHTTPServer`. Hosts one run, drives it via `run_suite`, writes the same run log. |
 | `client.py` | `drive_agent(base_url, agent)` — a reference `urllib` poll-loop adapter that serves any local `Agent` to a `ParkServer` over the wire (the BYO example). |
-| `cli.py` | `parkbench run`, `parkbench analyze`, and `parkbench serve`. |
+| `cli.py` | `parkbench run` (incl. `--swap-persona`, `--inject-scenario`, `--off-record`), `parkbench analyze`, and `parkbench serve`. |
 
 ## Utility model (D-016)
 
@@ -78,6 +79,39 @@ total_rounds)`); `RandomAgent` and the `Slippery` persona draw only from that se
 `suites/v1_negotiation.json` is the canonical spec; the CLI mirrors it: **seed 1, 12 scenarios,
 4 issues × 3 levels, round cap 8, 4 personas → 48 matches.** Scenarios are generated from seeds
 `seed .. seed+11`.
+
+## Nudge controls + off-record (D-029)
+
+The observe+nudge loop (D-003, D-021) is realized as a `Nudge` passed to `run_suite`:
+
+- **`--swap-persona <name>`** — face only the named counterpart (`tough`/`fair`/`cooperative`/
+  `slippery`) instead of the whole roster. Names resolve via `nudge.PERSONA_REGISTRY`.
+- **`--inject-scenario <JSON|PATH>`** — run a single human-supplied scenario instead of the seeded
+  suite scenarios. Accepts inline JSON or a path to a `.json` file; parsed by `parse_scenario_spec`
+  into a `Scenario` (fields: `weight_a`, `weight_b` required; `issues`, `n_levels`, `seed` optional).
+- **`--off-record`** — force off-record without swapping/injecting.
+
+**Off-record is enforced, not advisory.** Using swap or inject auto-sets `off_record=True`.
+`scoring.build_profile` aggregates **only on-record matches** into the canonical profile and records
+the dropped count as `Profile.excluded`; nudged runs are aggregated separately by
+`build_off_record_profile` (which sets `Profile.off_record=True`). So an off-record match can never
+move a canonical mean, std, CI, deal-rate, or per-persona figure — the exclusion is by construction.
+
+## Run-log schema (`runs/<ts>__<agent>[__off_record]/run.json`)
+
+The log is **versioned** so the server/replay slices can detect shape changes. D-029 set
+`schema_version = 2` and added the `off_record` flags; **all pre-existing fields are unchanged and in
+their original positions** (additions only). Fields added by D-029:
+
+| Field | Type | Location | Meaning |
+|---|---|---|---|
+| `schema_version` | `int` | top level | Run-log schema version (currently `2`). Absent ⇒ treat as `1`. |
+| `off_record` | `bool` | top level | Whether the whole run was nudged/off-record (default `false`). |
+| `off_record` | `bool` | each entry of `matches[]` (appended last) | Per-match off-record flag (mirrors the run flag in v1). |
+
+Existing top-level keys remain `suite`, `profile`, `matches`; existing per-match keys
+(`scenario_seed`, `persona`, `agreed`, `outcome`, `efficiency`, `own_value`, `turns_used`,
+`transcript`, `analysis`) are untouched. Off-record runs also get a `__off_record` directory suffix.
 
 ## Agents & personas
 
@@ -159,12 +193,17 @@ is untouched, so the viewer/nudge slices are unaffected).
 
 ```bash
 uv venv && uv pip install -e ".[dev]"      # or: python -m venv .venv && pip install -e ".[dev]"
-pytest                                      # 21 tests (14 core + 7 HTTP server)
+pytest                                      # 49 tests
 parkbench run --agent heuristic --seed 1    # run the suite, print a profile, write a run log
 parkbench run --agent greedy --seed 1       # compare a weaker strategy
 parkbench analyze --seed 1                  # inspect one scenario's optimum
 parkbench serve --port 8080                 # host a run over HTTP for an external BYO agent (side A)
 parkbench serve --port 0 --local-agent heuristic   # self-drive a built-in agent over HTTP (demo/test)
+
+# Nudge controls (D-029) — these runs are off-record and excluded from canonical scores:
+parkbench run --agent heuristic --swap-persona tough            # face only the tough persona
+parkbench run --agent heuristic --inject-scenario scn.json      # run a supplied scenario (or inline JSON)
+parkbench run --agent heuristic --off-record                    # force off-record without nudging
 ```
 
 ## Results snapshot (seed 1, 48 matches)

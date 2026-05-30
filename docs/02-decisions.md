@@ -237,3 +237,22 @@ external network. Implementation in `src/parkbench/server.py` + `src/parkbench/c
 **Rejected:** agent-hosted endpoint (park calls into the agent — assumes the agent can run an
 inbound server); WebSocket/streaming (unneeded for turn-based v1); a web framework like FastAPI
 (would add a runtime dependency, violating D-023).
+### D-029 · 2026-05-30 · Nudge controls = persona swap / scenario injection, flagged off-record
+**Decision:** Implement the v1 nudge surface from D-021. A *nudge* is either (a) **injecting a
+chosen scenario** (inline JSON or a `.json` file) and/or (b) **swapping the counterpart persona** for
+a run. Any nudge makes the run **off-record**; an explicit `--off-record` flag forces the same. The
+CLI gains `--swap-persona <name>`, `--inject-scenario <JSON|PATH>`, and `--off-record`. Off-record
+results are **excluded from canonical aggregation** in `scoring.build_profile` (only their count is
+retained as `excluded`); off-record runs are aggregated separately via `build_off_record_profile`.
+The run-log schema is versioned (`schema_version = 2`) and gains a top-level `off_record` flag plus a
+per-match `off_record` flag; all existing fields are unchanged and in place (additive only). New
+`parkbench/nudge.py` holds the persona registry, scenario-spec parser, and the `Nudge` spec, keeping
+CLI/suite edits localized.
+**Why:** Realizes the observe+nudge loop (D-003, D-021) on the smallest surface, and **makes the
+score-integrity guarantee real**: nudged runs can never pollute canonical profiles because the
+aggregation drops them by construction, not by convention. Versioning the log lets the server/replay
+slices detect the new shape.
+**Implements:** D-021 (nudge = inject scenario / swap persona, off-record). **Touches:** `cli.py`,
+`suite.py`, `scoring.py`, `runlog.py`; adds `nudge.py`. Zero new runtime deps (D-023).
+**Rejected:** mixing off-record matches into canonical stats and filtering only at display time
+(fragile); a free-form scenario DSL (JSON spec is enough for v1); reordering existing log fields.

@@ -19,6 +19,8 @@ Questions still genuinely open. When one is resolved it becomes an entry in the 
 - **Static replay viewer** over the JSON run logs; the log schema's minimum feature set for replay.
 - **Nudge** controls (inject scenario / swap persona) + off-record flagging so nudged runs don't
   pollute canonical profiles (D-021).
+- **LLM provider** wiring for a real reference agent (implement `Provider.complete` + `LLMAgent.act`)
+  (D-025).
 
 ## Open — cross-cutting (post-v1)
 
@@ -33,6 +35,9 @@ Questions still genuinely open. When one is resolved it becomes an entry in the 
   agent-polled, stdlib only; reuses the protocol/engine/runlog unchanged). It realises the wire
   connection D-015 deferred from the core build (D-026). Design in
   [`06-v1-architecture.md`](06-v1-architecture.md).
+- **2026-05-30** — **Nudge controls** implemented as **D-029**: persona swap / scenario injection,
+  flagged off-record and excluded from canonical profiles; run-log schema versioned with an
+  `off_record` flag. See [`06-v1-architecture.md`](06-v1-architecture.md).
 - **2026-05-29** — Core v1 ride design locked as **D-015–D-021**.
 - **2026-05-29** — Implementation choices locked as **D-023–D-026** (stack, scripted cast, deferred
   LLM, core-only build). The three former v1 ride details are now decided:

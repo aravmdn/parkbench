@@ -31,11 +31,30 @@ def _profile_to_dict(profile: Profile) -> dict:
     }
 
 
-def write_run(profile: Profile, records: list[dict], suite: Suite, out_root: str = "runs") -> Path:
+# Run-log schema version. Bumped to 2 with D-029, which ADDED `schema_version` and the
+# top-level `off_record` flag. v1 logs (no version key) are treated as schema_version 1.
+SCHEMA_VERSION = 2
+
+
+def write_run(
+    profile: Profile,
+    records: list[dict],
+    suite: Suite,
+    out_root: str = "runs",
+    off_record: bool | None = None,
+) -> Path:
+    """Write a JSON run log. `off_record` flags a nudged run (D-029); when omitted it is
+    inferred from the profile so callers that don't know about nudging still log correctly.
+    """
+    if off_record is None:
+        off_record = bool(getattr(profile, "off_record", False))
     ts = time.strftime("%Y%m%d-%H%M%S")
-    run_dir = Path(out_root) / f"{ts}__{profile.agent_name}"
+    suffix = "__off_record" if off_record else ""
+    run_dir = Path(out_root) / f"{ts}__{profile.agent_name}{suffix}"
     run_dir.mkdir(parents=True, exist_ok=True)
     payload = {
+        "schema_version": SCHEMA_VERSION,
+        "off_record": off_record,
         "suite": {
             "name": suite.name,
             "seed": suite.seed,
