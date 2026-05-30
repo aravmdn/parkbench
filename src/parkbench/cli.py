@@ -11,6 +11,7 @@ import sys
 
 from .agents import AGENT_REGISTRY, make_agent
 from .agents.baselines import RandomAgent
+from .nudge import PERSONA_REGISTRY, Nudge, parse_scenario_spec
 from .runlog import write_run
 from .scenario import analyze, generate_scenario
 from .scoring import Stat
@@ -23,12 +24,27 @@ def _fmt(s: Stat) -> str:
 
 def cmd_run(args: argparse.Namespace) -> None:
     suite = Suite(seed=args.seed, n_scenarios=args.scenarios, round_cap=args.round_cap)
-    profile, records = run_suite(suite, make_agent(args.agent))
-    n_personas = len(records) // suite.n_scenarios if suite.n_scenarios else 0
+    nudge = Nudge(
+        swap_persona=args.swap_persona,
+        inject_scenario=(parse_scenario_spec(args.inject_scenario) if args.inject_scenario else None),
+        force_off_record=args.off_record,
+    )
+    profile, records = run_suite(suite, make_agent(args.agent), nudge)
+    n_scenarios_run = 1 if nudge.inject_scenario is not None else suite.n_scenarios
+    n_personas = len(records) // n_scenarios_run if n_scenarios_run else 0
 
     print("\nParkbench - v1 negotiation ride")
+    if nudge.off_record:
+        tags = []
+        if nudge.swap_persona:
+            tags.append(f"swap-persona={nudge.swap_persona}")
+        if nudge.inject_scenario is not None:
+            tags.append("inject-scenario")
+        if not tags:
+            tags.append("forced")
+        print(f"  ** NUDGED RUN (off-record, excluded from canonical scores): {', '.join(tags)} **")
     print(
-        f"suite '{suite.name}'  seed={suite.seed}  scenarios={suite.n_scenarios}  "
+        f"suite '{suite.name}'  seed={suite.seed}  scenarios={n_scenarios_run}  "
         f"personas={n_personas}  matches={len(records)}  round_cap={suite.round_cap}\n"
     )
     print(f"agent: {profile.agent_name}")
@@ -40,7 +56,8 @@ def cmd_run(args: argparse.Namespace) -> None:
     for p, v in profile.per_persona.items():
         print(f"    {p:<12} {_fmt(v['efficiency'])}   {_fmt(v['own_value'])}   {v['deal_rate']:4.0%}")
 
-    if args.compare_floor and args.agent != "random":
+    # A nudged run is off-record; comparing it to the canonical floor would be misleading.
+    if args.compare_floor and args.agent != "random" and not nudge.off_record:
         floor, _ = run_suite(suite, RandomAgent())
         print(
             f"\n  floor (random):  efficiency {_fmt(floor.efficiency)}   "
@@ -48,7 +65,7 @@ def cmd_run(args: argparse.Namespace) -> None:
         )
 
     if not args.no_log:
-        run_dir = write_run(profile, records, suite)
+        run_dir = write_run(profile, records, suite, off_record=nudge.off_record)
         print(f"\n  run log: {run_dir / 'run.json'}")
     print()
 
@@ -79,6 +96,20 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument(
         "--no-compare-floor", dest="compare_floor", action="store_false",
         help="Skip running the random floor for comparison.",
+    )
+    # Nudge controls (D-029). Using swap/inject auto-sets off-record.
+    r.add_argument(
+        "--swap-persona", dest="swap_persona", default=None,
+        choices=sorted(PERSONA_REGISTRY),
+        help="Nudge: face only this counterpart persona (auto off-record).",
+    )
+    r.add_argument(
+        "--inject-scenario", dest="inject_scenario", default=None, metavar="JSON|PATH",
+        help="Nudge: run a supplied scenario (inline JSON or a .json file path; auto off-record).",
+    )
+    r.add_argument(
+        "--off-record", dest="off_record", action="store_true",
+        help="Flag this run off-record so it is excluded from canonical profiles.",
     )
     r.set_defaults(func=cmd_run, compare_floor=True)
 

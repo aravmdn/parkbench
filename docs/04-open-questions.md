@@ -1,6 +1,6 @@
 # 04 — Open Questions
 
-**Status:** Living · **Last updated:** 2026-05-29
+**Status:** Living · **Last updated:** 2026-05-30
 
 Questions still genuinely open. When one is resolved it becomes an entry in the decision log
 ([`02-decisions.md`](02-decisions.md)) and is listed under "Resolved" below.
@@ -17,8 +17,6 @@ Questions still genuinely open. When one is resolved it becomes an entry in the 
 
 - **HTTP/JSON server** so external BYO agents connect over the wire (D-015).
 - **Static replay viewer** over the JSON run logs; the log schema's minimum feature set for replay.
-- **Nudge** controls (inject scenario / swap persona) + off-record flagging so nudged runs don't
-  pollute canonical profiles (D-021).
 - **LLM provider** wiring for a real reference agent (implement `Provider.complete` + `LLMAgent.act`)
   (D-025).
 
@@ -31,6 +29,9 @@ Questions still genuinely open. When one is resolved it becomes an entry in the 
 
 ## Resolved
 
+- **2026-05-30** — **Nudge controls** implemented as **D-029**: persona swap / scenario injection,
+  flagged off-record and excluded from canonical profiles; run-log schema versioned with an
+  `off_record` flag. See [`06-v1-architecture.md`](06-v1-architecture.md).
 - **2026-05-29** — Core v1 ride design locked as **D-015–D-021**.
 - **2026-05-29** — Implementation choices locked as **D-023–D-026** (stack, scripted cast, deferred
   LLM, core-only build). The three former v1 ride details are now decided:

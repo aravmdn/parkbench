@@ -1,6 +1,6 @@
 # 02 — Decision Log
 
-**Status:** Living · **Last updated:** 2026-05-29
+**Status:** Living · **Last updated:** 2026-05-30
 
 Append-only log of decisions and their rationale (lightweight ADR style). When a decision is
 reversed or superseded, add a **new** entry referencing the old one rather than editing history.
@@ -183,3 +183,23 @@ agents, JSON run logs, and a CLI. Defer the HTTP server, replay viewer, nudge, a
 **Validation:** 14 passing tests incl. a determinism check; the CLI shows clean separation
 (efficiency: heuristic 0.978 > random 0.840 > greedy 0.412) with tight CIs and exact reproducibility.
 Full design + formulas in [`06-v1-architecture.md`](06-v1-architecture.md).
+
+### D-029 · 2026-05-30 · Nudge controls = persona swap / scenario injection, flagged off-record
+**Decision:** Implement the v1 nudge surface from D-021. A *nudge* is either (a) **injecting a
+chosen scenario** (inline JSON or a `.json` file) and/or (b) **swapping the counterpart persona** for
+a run. Any nudge makes the run **off-record**; an explicit `--off-record` flag forces the same. The
+CLI gains `--swap-persona <name>`, `--inject-scenario <JSON|PATH>`, and `--off-record`. Off-record
+results are **excluded from canonical aggregation** in `scoring.build_profile` (only their count is
+retained as `excluded`); off-record runs are aggregated separately via `build_off_record_profile`.
+The run-log schema is versioned (`schema_version = 2`) and gains a top-level `off_record` flag plus a
+per-match `off_record` flag; all existing fields are unchanged and in place (additive only). New
+`parkbench/nudge.py` holds the persona registry, scenario-spec parser, and the `Nudge` spec, keeping
+CLI/suite edits localized.
+**Why:** Realizes the observe+nudge loop (D-003, D-021) on the smallest surface, and **makes the
+score-integrity guarantee real**: nudged runs can never pollute canonical profiles because the
+aggregation drops them by construction, not by convention. Versioning the log lets the server/replay
+slices detect the new shape.
+**Implements:** D-021 (nudge = inject scenario / swap persona, off-record). **Touches:** `cli.py`,
+`suite.py`, `scoring.py`, `runlog.py`; adds `nudge.py`. Zero new runtime deps (D-023).
+**Rejected:** mixing off-record matches into canonical stats and filtering only at display time
+(fragile); a free-form scenario DSL (JSON spec is enough for v1); reordering existing log fields.
