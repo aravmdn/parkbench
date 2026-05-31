@@ -44,32 +44,36 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 
 ## Current status (2026-05-31)
 
-**v1 + the post-v1 multi-ride phase are on `main`.** The negotiation ride runs end-to-end: engine,
-seeded scenario generator, objective-payoff scoring, scripted house cast, baseline/heuristic agents,
-and a `parkbench` CLI — plus the **HTTP/JSON server** for external BYO agents (D-027), a **static
-replay viewer** (D-028), **nudge controls** with off-record flagging (D-029), a real **LLM reference
-agent** via OpenRouter (D-030), tuned personas + a varied scenario suite (D-031/D-032), and `.env`
-auto-load (D-033). The **multi-ride phase** then added a ride abstraction (D-034/D-035), a second
-ride — a **solo Economic knapsack ride** (D-036) — the **radar roll-up** that produces the headline
-diagnostic profile across axes (D-037), **agent identity/versioning** in run logs (D-038), and a
-third ride — a **solo Coding code-generation ride** (D-039, hidden-test scored with seed-randomized
-tests). Reproducible: **111 passing tests**. Design + formulas: `docs/06-v1-architecture.md` and
+**v1 + the post-v1 multi-ride phase are on `main`; the four-axis diagnostic radar is complete.** The
+negotiation ride runs end-to-end: engine, seeded scenario generator, objective-payoff scoring,
+scripted house cast, baseline/heuristic agents, and a `parkbench` CLI — plus the **HTTP/JSON server**
+for external BYO agents (D-027), a **static replay viewer** (D-028), **nudge controls** with
+off-record flagging (D-029), a real **LLM reference agent** via OpenRouter (D-030), tuned personas +
+a varied scenario suite (D-031/D-032), and `.env` auto-load (D-033). The **multi-ride phase** then
+added a ride abstraction (D-034/D-035), the **radar roll-up** (D-037), **agent identity/versioning**
+in run logs (D-038), and **all four scored rides**: negotiation (social, D-010), a **solo Economic
+knapsack ride** (D-036), a **solo Coding code-generation ride** (D-039, hidden-test scored with
+seed-randomized tests), and a **solo Safety red-line ride** (D-040, an adversarial reward-hacking
+probe). Reproducible: **127 passing tests**. Design + formulas: `docs/06-v1-architecture.md` and
 `docs/07-multi-ride.md`.
 
-- **Headline:** the radar for `heuristic` now spans **three** axes — **social 0.975** (negotiation) +
-  **economic 0.990** (knapsack) + **coding 0.667** (code-generation); only **safety** remains `n/a`.
-  Coding (seed 1): optimal 1.000 > heuristic 0.667 > greedy 0.333 > random 0.000. Negotiation (seed 1):
-  efficiency heuristic 0.975 > random 0.881 > greedy 0.100; per-persona own-value cooperative 0.772 →
-  fair 0.554 → slippery 0.511 → tough 0.356.
-- **Next** (`docs/04-open-questions.md`): a **Safety/robustness ride** to complete the fourth radar
-  axis (roadmap #2); continued **anti-gaming / reward-hacking safeguards** (D-039 made a start with
-  seed-randomized hidden tests + a flagged need to sandbox/time-bound untrusted code) and hardening
-  the BYO protocol; LLM house personas remain a fast-follow (D-024).
-- **Verify:** `uv venv && uv pip install -e ".[dev]"`, then `pytest` (111 pass),
+- **Headline:** the radar for `heuristic` now spans **all four** axes — **social 0.975**
+  (negotiation) + **economic 0.990** (knapsack) + **coding 0.667** (code-generation) + **safety
+  0.667** (red-line). The radar's diagnostic value shows in `greedy`: economic 0.989 (strong) but
+  safety 0.333 (a reward-hacker). Per-ride (seed 1): safety optimal 1.000 > heuristic 0.667 > greedy
+  0.333 > random 0.276; coding optimal 1.000 > heuristic 0.667 > greedy 0.333 > random 0.000;
+  negotiation efficiency heuristic 0.975 > random 0.881 > greedy 0.100 (per-persona own-value
+  cooperative 0.772 → fair 0.554 → slippery 0.511 → tough 0.356).
+- **Next** (`docs/03-roadmap.md`, `docs/04-open-questions.md`): the four single-ride axes are done and
+  trusted, so the roadmap turns to **cross-ride "career"** (#3 — persistent reputation/resources),
+  **theming + spectator product** (#4), and **growing/hardening the BYO ecosystem** (#5). Cross-cutting:
+  continued **anti-gaming safeguards** (D-039/D-040 made real starts; still open: cross-ride safeguards
+  + **sandboxing/time-bounding untrusted code**); LLM house personas remain a fast-follow (D-024).
+- **Verify:** `uv venv && uv pip install -e ".[dev]"`, then `pytest` (127 pass),
   `parkbench run --agent heuristic --seed 1`, `parkbench economic --agent greedy`,
-  `parkbench coding --agent heuristic`, and `parkbench radar --agent heuristic` (3-axis profile).
-  Live LLM: set `OPENROUTER_API_KEY` (+ optional `OPENROUTER_MODEL`), then
-  `parkbench run --agent llm --seed 1`.
+  `parkbench coding --agent heuristic`, `parkbench safety --agent heuristic`, and
+  `parkbench radar --agent heuristic` (4-axis profile). Live LLM: set `OPENROUTER_API_KEY` (+ optional
+  `OPENROUTER_MODEL`), then `parkbench run --agent llm --seed 1`.
 
 ## Conventions for growing the docs
 

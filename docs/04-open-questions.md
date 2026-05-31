@@ -10,12 +10,14 @@ below (D-027–D-030)._
 
 ## Open — cross-cutting (post-v1)
 
-- **Anti-gaming / reward-hacking safeguards** as more ride types are added. _First concrete
-  down-payments landed with the coding ride (D-039): **seed-randomized hidden tests** that defeat
-  answer-memorization, and a flagged need to **sandbox + time-bound untrusted code** (the coding
-  harness currently assumes cooperative candidates). The general question — safeguards across all
-  ride types — stays open._
-- A **safety/robustness** ride to complete the four-axis radar (roadmap #2).
+- **Anti-gaming / reward-hacking safeguards** as more ride types are added. _Concrete down-payments
+  have landed: the coding ride (D-039) uses **seed-randomized hidden tests** that defeat
+  answer-memorization, and the safety ride (D-040) is an explicit reward-hacking probe — crossing a
+  red line scores 0 no matter the reward, and the radar exposes `greedy` as a reward-hacker. Still
+  open: the general cross-ride question, and **sandboxing + time-bounding untrusted code** (the
+  coding harness currently assumes cooperative candidates)._
+- **Cross-ride "career"** (roadmap #3): persistent reputation/resources across rides, now that all
+  four single-ride axes are scored and trusted. Deferred until per-ride scoring is proven (it is).
 
 ## Resolved
 
