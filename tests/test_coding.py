@@ -74,6 +74,60 @@ def test_strict_type_match_rejects_bool_int_confusion():
     assert res.passed == 0
 
 
+# --- isolation & time-bounding (D-043) -----------------------------------------------------
+
+def test_infinite_loop_candidate_times_out_and_scores_zero():
+    # The headline new guarantee: a hanging candidate must time out and score 0 without ever
+    # hanging the test run. A short timeout keeps the test fast; the subprocess is killed.
+    task = _task("add")
+    res = grade(task, "def add(a, b):\n    while True:\n        pass\n", seed=1, timeout=1.0)
+    assert not res.compiled  # nothing usable came back across the boundary
+    assert res.passed == 0
+    assert res.score == 0.0
+
+
+def test_candidate_that_exits_is_contained():
+    # A candidate that kills its own process (non-zero exit) fails every test, no crash.
+    task = _task("add")
+    res = grade(task, "import sys\nsys.exit(1)\ndef add(a, b):\n    return a + b\n", seed=1)
+    assert res.passed == 0
+
+
+def test_candidate_that_crashes_the_interpreter_is_contained():
+    # os._exit bypasses normal shutdown; isolation means it only takes down the child.
+    task = _task("add")
+    res = grade(task, "import os\ndef add(a, b):\n    os._exit(0)\n", seed=1)
+    assert res.passed == 0
+    # The ride survives and can immediately grade a correct candidate.
+    ok = grade(task, task.reference, seed=1)
+    assert ok.score == 1.0
+
+
+def test_raising_in_subprocess_counts_as_fail_per_test():
+    # A candidate that compiles but raises per call: it *compiled* (entry point exists) yet every
+    # call fails — distinct from a non-compiling candidate.
+    task = _task("add")
+    res = grade(task, "def add(a, b):\n    raise RuntimeError('boom')", seed=1)
+    assert res.compiled
+    assert res.passed == 0
+
+
+def test_wrong_type_rejected_across_subprocess_boundary():
+    # is_even returns bool; a candidate returning 0/1 must NOT pass via True==1 / False==0, even
+    # though the comparison is now reconstructed from the child's (type_name, repr) report.
+    task = _task("is_even")
+    res = grade(task, "def is_even(n):\n    return 1 if n % 2 == 0 else 0", seed=1)
+    assert res.compiled
+    assert res.passed == 0
+
+
+def test_correct_candidate_still_scores_one_via_subprocess():
+    # A correct, non-trivial candidate (not the reference verbatim) round-trips and scores 1.0.
+    task = _task("count_vowels")
+    alt = "def count_vowels(s):\n    return len([c for c in s if c in 'aeiou'])\n"
+    assert grade(task, alt, seed=4).score == 1.0
+
+
 # --- anti-gaming: seed-randomized hidden tests ---------------------------------------------
 
 def test_memorized_answers_do_not_generalize():
@@ -93,6 +147,14 @@ def test_grade_is_deterministic_in_seed():
     task = _task("is_prime")
     ref = task.reference
     assert grade(task, ref, seed=7).passed == grade(task, ref, seed=7).passed
+
+
+def test_grade_returns_identical_taskresult_for_same_seed():
+    # Same seed ⇒ byte-identical TaskResult, even though the candidate now runs in a fresh
+    # subprocess each call (the result must not depend on process-spawn nondeterminism). D-043.
+    task = _task("collatz_steps")
+    src = "def collatz_steps(n):\n    s = 0\n    while n != 1:\n        n = n//2 if n%2==0 else 3*n+1\n        s += 1\n    return s\n"
+    assert grade(task, src, seed=11) == grade(task, src, seed=11)
 
 
 def test_suite_is_deterministic():

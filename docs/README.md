@@ -70,3 +70,8 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
   them and **`career_score = mean_capability × reputation`**, so misconduct anywhere discounts
   capability everywhere. The reward-hacker `greedy` (economic star) now ranks **last, below `random`**.
   143 passing tests. Updated `02`–`05`, `07`, and root `CLAUDE.md`.
+- **2026-05-31** — Two parallel follow-ups (fanned out to sub-agents): the coding harness is now
+  **sandboxed + time-bounded** (D-043, subprocess + wall-clock timeout — closes the long-flagged
+  untrusted-code gap; baselines byte-identical), and a static zero-dependency **diagnostic-profile
+  viewer** (D-044, `viewer/profiles.html`) renders the radar/career/leaderboard outputs (roadmap #4).
+  **150 passing tests.** Updated `02`–`05`, `07`, and root `CLAUDE.md`.

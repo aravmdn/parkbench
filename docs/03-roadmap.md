@@ -21,11 +21,15 @@ Directional only — sequence and detail will firm up as v1 is built and learned
    capability everywhere (it deliberately reverses part of D-008, logged in D-041). It makes a
    reward-hacker pay: `greedy`, the economic star, lands last (below `random`) because its red-line
    violations collapse its reputation. See [`07-multi-ride.md`](07-multi-ride.md).
-4. **Theming + spectator product.** _Started (2026-05-31):_ a **career leaderboard** (D-042,
-   `parkbench leaderboard`) ranks agents by career score — the first watchable surface. Still to do:
-   apply the creative skin and a career/radar-aware static replay/leaderboard viewer for mindshare.
-5. **Grow the BYO ecosystem.** A first HTTP/JSON connection protocol now exists (D-027); next is
-   hardening + documenting it and lowering the barrier for third parties to plug in agents.
+4. **Theming + spectator product.** _Well underway (2026-05-31):_ a **career leaderboard** (D-042,
+   `parkbench leaderboard`) ranks agents by career score, and a static, zero-dependency
+   **diagnostic-profile viewer** (D-044, `viewer/profiles.html`) renders the radar (inline-SVG),
+   career (trust-collapse), and leaderboard (reward-hacker callout) from the `--json` outputs. Still
+   to do: apply the creative skin/theme and possibly live/served profiles for mindshare.
+5. **Grow the BYO ecosystem.** A first HTTP/JSON connection protocol exists (D-027), and the coding
+   harness is now **sandboxed + time-bounded** (D-043, subprocess + wall-clock timeout) so it is safe
+   to point at untrusted BYO code. Next: document/harden the protocol, lower the barrier for third
+   parties, and add a **full OS sandbox** (FS/network/resource confinement) for untrusted code.
 6. **Revisit commercial models** (D-013) only after meaningful adoption: eval-as-a-service, public
    leaderboard + sponsorship, or a spectator/media product.
 

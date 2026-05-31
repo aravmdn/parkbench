@@ -64,11 +64,15 @@ it is the clean solo contrast (D-006) to the multi-agent negotiation ride. Lives
   three `Difficulty` tiers (3 easy / 3 medium / 3 hard — e.g. `add`, `fib`, `is_prime`,
   `collatz_steps`, `run_length_encode`). Each `CodingTask` ships an `entry_point` name, a prompt, a
   **reference** solution (source), and a seeded `gen_inputs(rng)` input generator.
-- **Harness** (`harness.py`): `grade(task, source, seed, n_tests)` compiles the candidate's source
-  in an isolated namespace, generates `n_tests` inputs from the seed, computes each expected output
-  by running the **reference as the oracle**, and returns the pass count. Source that fails to
-  compile, lacks the entry point, raises, or returns a wrong value (strict value **and** type match)
-  simply **fails** the affected tests — it never crashes the ride.
+- **Harness** (`harness.py` + `_runner.py`, hardened in D-043): `grade(task, source, seed, n_tests,
+  timeout=5.0)` generates `n_tests` inputs from the seed, computes each expected output by running the
+  **reference as the oracle** (in-process — the reference is trusted), then runs the **untrusted**
+  candidate source in an **isolated subprocess** (`sys.executable -I`) under a wall-clock timeout,
+  batching all inputs into one child. The candidate source + inputs go over **stdin as JSON**; the
+  child returns **text only** (`[ok, type_name, repr(value)]` per test, never a pickle). Source that
+  fails to compile, lacks the entry point, raises, hangs/times out, crashes, or returns a wrong value
+  (strict value **and** type match, reconstructed across the boundary) simply **fails** the affected
+  tests — it never hangs or crashes the ride.
 - **Two anti-gaming properties (D-039):** *(a)* the reference is the oracle, so expected answers are
   never hand-listed and can't drift; *(b)* hidden-test inputs are **seed-randomized**, so an agent
   can't pass by memorizing input→output pairs — it must implement real logic, while a correct
@@ -94,10 +98,17 @@ it is the clean solo contrast (D-006) to the multi-agent negotiation ride. Lives
   reproducible (same seed ⇒ identical hidden tests ⇒ identical scores). Stdlib-only (D-023). +16
   tests in `tests/test_coding.py` (suite total 95 → 111).
 
-**Known limitation:** the harness does not sandbox or time-bound arbitrary code (it assumes
-cooperative candidates — the in-repo baselines are). Subprocess isolation + wall-clock timeouts for
-untrusted BYO code is folded into the anti-gaming / BYO-protocol hardening work
-([`04-open-questions.md`](04-open-questions.md)).
+**Sandboxing (D-043):** the harness now runs untrusted candidate code in an isolated subprocess
+(`sys.executable -I`) under a wall-clock timeout (default 5s), so a candidate that infinite-loops,
+crashes, exits, or emits garbage just fails (score 0) and never hangs the ride. The strict value+type
+match is preserved across the boundary via a text-only protocol (no unpickling). Baselines are
+byte-identical; coding tests grew 16 → **23** (the suite spawns processes, so they run slower — an
+accepted cost). **Still not** a full OS sandbox: the child inherits the parent's filesystem/network
+access and OS privileges, with no resource caps — full confinement (FS/network jails, CPU/memory
+limits, container/seccomp) stays in BYO-protocol hardening ([`04-open-questions.md`](04-open-questions.md)).
+
+**Spectator viewer (D-044):** this ride's `coding --json` payload — and the radar/career/leaderboard
+JSON — is now visualized by `viewer/profiles.html` (see "Spectator product" below).
 
 ## Safety ride (D-040)
 
@@ -216,6 +227,28 @@ ladder shared across the solo rides — `random`, `greedy`, `heuristic`, `optima
 legible surface for the reward-hacker's fall, with `n_rides`/`skipped` columns keeping coverage gaps
 visible. See **D-042** in [`02-decisions.md`](02-decisions.md).
 
+### Spectator product — the profiles viewer (D-044)
+
+`viewer/profiles.html` is a second static, **zero-dependency** viewer alongside the negotiation replay
+viewer (`index.html`, D-028) — same constraints (single file, inline CSS/JS, no build, no CDN, Open-
+file picker + `?path=` + bundled-sample auto-load, `file://` fetch caveat). It **auto-detects** which
+diagnostic payload it was handed (by keys) and renders it:
+
+- **radar** (`radar --json`) — a hand-drawn **inline-SVG** 4-axis spider chart; a `missing_axes` entry
+  shows `n/a` (a coverage gap, not a zero — D-037) — plus a per-ride breakdown.
+- **career** (`career --json`) — the "park tour" with per-leg capability/integrity bars and a running
+  `trust_after` bar that **visibly collapses** on an integrity breach, then the
+  `career_score = mean_capability × reputation` equation.
+- **leaderboard** (`leaderboard --json`) — a ranked table + career-score bar chart, with the
+  **reward-hacker** detected *structurally* (last-ranked agent whose reputation collapsed yet whose
+  economic capability beats a higher-ranked peer) and called out — so the headline insight
+  ("capability you can't trust loses the tour") is legible at a glance.
+
+This is the first watchable spectator surface for the headline outputs (roadmap #4 / the vision's
+mindshare wedge), adding no runtime dependency (D-023). Verified rendering in Chrome (no console
+errors). Bundled fixtures: `viewer/sample-{radar,career,leaderboard}.json`. See **D-044** in
+[`02-decisions.md`](02-decisions.md).
+
 ## Agent identity & versioning (D-038)
 
 So results stay **attributable and reproducible over time**, every agent now has a stable identity
@@ -245,14 +278,16 @@ keys on.
 
 Anti-gaming / reward-hacking safeguards across rides remain an open question
 ([`04-open-questions.md`](04-open-questions.md)). Concrete down-payments have landed: the coding
-ride's **seed-randomized hidden tests** (D-039) defeat answer-memorization, and the **safety ride**
+ride's **seed-randomized hidden tests** (D-039) defeat answer-memorization; the **safety ride**
 (D-040) is an explicit reward-hacking probe ("violation = 0" makes crossing a red line for reward
-worthless, and the radar exposes `greedy` as a reward-hacker). The general cross-ride question — plus
-**sandboxing/time-bounding untrusted code** (flagged by the coding harness) — stays open.
+worthless); the **career** (D-041) makes misconduct anywhere discount capability everywhere; and the
+coding harness now **sandboxes + time-bounds untrusted code** (D-043, subprocess + wall-clock
+timeout). What stays open is a **full OS sandbox** for untrusted code (FS/network/resource
+confinement, beyond process isolation + timeout) — folded into BYO-protocol hardening (roadmap #5).
 
-**The four-axis radar is complete** (D-040) and the **first cross-ride coupling — the career
-(D-041) + leaderboard (D-042)** — has now landed (roadmap #3, plus a #4 down-payment). Beyond it the
-roadmap turns to the rest of **theming + spectator product** (#4 — e.g. a career/radar-aware static
-viewer) and **growing the BYO ecosystem** (#5) — see [`03-roadmap.md`](03-roadmap.md). The career is
-also the project's deepest anti-gaming move so far: a reward-hacker's reputation collapse now
-discounts its whole career, not just one axis.
+**The four-axis radar is complete** (D-040); the **first cross-ride coupling — the career (D-041) +
+leaderboard (D-042)** — has landed (roadmap #3); the diagnostic outputs now have a **static spectator
+viewer** (D-044, `viewer/profiles.html` — roadmap #4 down-payment); and the coding harness is
+**sandboxed** (D-043). Beyond this the roadmap turns to the rest of **theming + spectator product**
+(#4 — applying the creative skin, possibly live/served profiles) and **growing/hardening the BYO
+ecosystem** (#5, which still owns the **full-OS-sandbox** item) — see [`03-roadmap.md`](03-roadmap.md).

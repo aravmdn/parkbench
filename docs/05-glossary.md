@@ -49,3 +49,11 @@ Shared vocabulary for the project. Keep terms here so docs can link to a single 
   scored over the network: `GET /observation`, `POST /action` (D-015 / D-027).
 - **Run log** — the per-run `run.json` (suite + profile + per-match transcripts) written to `runs/`;
   the replay viewer's input. Versioned via `schema_version` (D-029).
+- **Subprocess-isolated harness** — the coding ride runs untrusted candidate code in a separate,
+  wall-clock-time-bounded Python process (D-043) so a hanging/crashing/malicious candidate just fails
+  (score 0) instead of freezing or compromising the ride. Process isolation + a timeout — **not** a
+  full OS sandbox (no filesystem/network/resource confinement yet).
+- **Diagnostic-profile viewer** — `viewer/profiles.html` (D-044): a static, zero-dependency page that
+  renders the radar (inline-SVG), career (trust-collapse), and leaderboard (reward-hacker callout)
+  from the `radar`/`career`/`leaderboard --json` outputs. Sibling to the negotiation replay viewer
+  (`index.html`, D-028).

@@ -16,12 +16,26 @@ below (D-027–D-030)._
   line scores 0 no matter the reward); and the **cross-ride career (D-041)** now makes misconduct
   anywhere discount capability everywhere — a reward-hacker's reputation collapse drags its whole
   career below an incompetent agent's, so reward-hacking is penalised across rides, not just exposed
-  on one axis. Still open: **sandboxing + time-bounding untrusted code** (the coding harness still
-  assumes cooperative candidates — folded into BYO-protocol hardening, roadmap #5), and continued
+  on one axis. **Time-bounding + process isolation of untrusted code has now landed (D-043)**: the
+  coding harness runs candidate source in an isolated subprocess under a wall-clock timeout, so a
+  hanging/crashing/malicious candidate just fails (score 0) instead of freezing or compromising the
+  ride. Still open: a **full OS sandbox** for untrusted code (the child still inherits the parent's
+  filesystem/network/OS privileges, with no resource caps — filesystem/network jails, CPU/memory
+  limits, container/seccomp), folded into BYO-protocol hardening (roadmap #5); and continued
   vigilance as new ride types arrive._
 
 ## Resolved
 
+- **2026-05-31** — **Time-bounding + sandboxing untrusted code** (the coding harness's flagged
+  limitation) resolved as **D-043**: candidate source runs in an isolated subprocess
+  (`sys.executable -I`) under a wall-clock timeout, talking a text-only stdin/stdout protocol (no
+  unpickling); a hanging/crashing/malicious candidate fails (score 0) without freezing or
+  compromising the ride. Baselines byte-identical. Only a **full OS sandbox** (FS/network/resource
+  confinement) remains open (see above). See [`07-multi-ride.md`](07-multi-ride.md).
+- **2026-05-31** — **Spectator surface for the diagnostic outputs** resolved as **D-044**:
+  `viewer/profiles.html`, a static zero-dependency page rendering the radar (inline-SVG), career
+  (trust-collapse), and leaderboard (reward-hacker callout) from the `--json` outputs. Roadmap #4
+  down-payment. See [`07-multi-ride.md`](07-multi-ride.md).
 - **2026-05-31** — **Cross-ride "career"** resolved as **D-041** (+ leaderboard **D-042**): the first
   cross-ride coupling. Each ride declares an `integrity` signal; **reputation = the product** of them
   and **`career_score = mean_capability × reputation`**, so misconduct anywhere discounts capability

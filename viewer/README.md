@@ -1,4 +1,16 @@
-# Parkbench Replay Viewer
+# Parkbench Viewers
+
+Two static, dependency-free HTML viewers. No build step, no server required — open either
+file directly in any modern browser (modulo the `file://` fetch caveat noted below).
+
+| File | What it shows |
+|------|---------------|
+| `index.html` | **Replay viewer** — step/auto-play through a negotiation `run.json` (`parkbench run`). |
+| `profiles.html` | **Diagnostic profile viewer** — radar, career, and leaderboard payloads. |
+
+---
+
+# Replay viewer (`index.html`)
 
 A static, dependency-free HTML viewer for `run.json` files produced by `parkbench run`.
 No build step, no server required — open `index.html` directly in any modern browser.
@@ -63,3 +75,62 @@ The CLI prints the path to the log file; open it with the viewer.
 - **Running score** — efficiency, own value, and the current offer on the table
   update as you step through the transcript; final scores lock in when a deal
   is reached.
+
+---
+
+# Diagnostic profile viewer (`profiles.html`)
+
+A static, dependency-free viewer for the three diagnostic outputs Parkbench produces.
+Open `profiles.html` directly, or serve the folder (same fetch caveat as above).
+
+```
+viewer/
+  profiles.html            ← open this in your browser
+  sample-radar.json        ← bundled demo: radar profile (heuristic, seed 1)
+  sample-career.json       ← bundled demo: career / park tour (greedy, seed 1)
+  sample-leaderboard.json  ← bundled demo: ranked careers (seed 1)
+```
+
+On first load (no `?path=`), it **auto-loads all three bundled samples** so the page is a
+self-explanatory demo out of the box. Click **Open JSON** to load any one payload from disk —
+the kind (radar / career / leaderboard) is **auto-detected** from its keys, so a single
+button handles all three.
+
+## What it shows
+
+- **Radar** — a hand-drawn inline-SVG 4-axis spider chart (social · economic · coding · safety,
+  each in `[0,1]`). Covered axes show their value; any axis in `missing_axes` is rendered as
+  `n/a` with a hollow dashed marker — a **coverage gap, not a zero**. Below the chart, a
+  per-ride breakdown lists each ride's score, sub-metrics, and flags any `integrity < 1`.
+- **Career** — the "park tour": per-leg capability + integrity bars and the running `trust_after`
+  (reputation), which **visibly collapses** on the leg where integrity drops. Headline equation
+  **`career_score = mean_capability × reputation`** with all three numbers shown large.
+- **Leaderboard** — a ranked table (rank, agent, career, capability, reputation, rides) plus an
+  inline career-score bar chart. It **calls out the reward-hacker**: the economically strong
+  agent that nonetheless ranks last because its reputation collapsed.
+
+## How to load a payload
+
+| Method | When to use |
+|--------|-------------|
+| **Open JSON** button | Any radar/career/leaderboard JSON from disk; works on `file://`; kind auto-detected |
+| **Load samples** button | Re-loads the three bundled demos |
+| `?path=` query param | Pass a relative URL to a payload served from the same origin: `http://localhost:8080/profiles.html?path=../runs/heuristic-radar.json` |
+
+## Generating the fixtures
+
+```bash
+# Install the project (once)
+uv venv && uv pip install -e ".[dev]"
+
+# Radar (4-axis profile for one agent)
+parkbench radar --agent heuristic --seed 1 --json > viewer/sample-radar.json
+
+# Career (park tour — reputation compounding across rides)
+parkbench career --agent greedy --seed 1 --json > viewer/sample-career.json
+
+# Leaderboard (ranked careers across agents)
+parkbench leaderboard --seed 1 --json > viewer/sample-leaderboard.json
+```
+
+(The viewer depends only on the JSON shape, not the invocation, so any seed/agent works.)

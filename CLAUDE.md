@@ -55,8 +55,11 @@ in run logs (D-038), and **all four scored rides**: negotiation (social, D-010),
 knapsack ride** (D-036), a **solo Coding code-generation ride** (D-039, hidden-test scored with
 seed-randomized tests), and a **solo Safety red-line ride** (D-040, an adversarial reward-hacking
 probe). The phase then landed the **first cross-ride coupling**: a **career** (D-041) — reputation
-that compounds across rides — and a **leaderboard** (D-042). Reproducible: **143 passing tests**.
-Design + formulas: `docs/06-v1-architecture.md` and `docs/07-multi-ride.md`.
+that compounds across rides — and a **leaderboard** (D-042). Most recently: the coding harness is
+**sandboxed + time-bounded** (D-043, subprocess + wall-clock timeout), and a static zero-dependency
+**diagnostic-profile viewer** renders the radar/career/leaderboard (D-044, `viewer/profiles.html`).
+Reproducible: **150 passing tests**. Design + formulas: `docs/06-v1-architecture.md` and
+`docs/07-multi-ride.md`.
 
 - **Headline:** the radar for `heuristic` spans **all four** axes — **social 0.975** (negotiation) +
   **economic 0.990** (knapsack) + **coding 0.667** (code-generation) + **safety 0.667** (red-line).
@@ -68,18 +71,21 @@ Design + formulas: `docs/06-v1-architecture.md` and `docs/07-multi-ride.md`.
   red-line violation rate collapses its reputation to 0.333. Per-ride (seed 1): safety optimal 1.000 >
   heuristic 0.667 > greedy 0.333 > random 0.276; coding optimal 1.000 > heuristic 0.667 > greedy 0.333
   > random 0.000; negotiation efficiency heuristic 0.975 > random 0.881 > greedy 0.100.
-- **Next** (`docs/03-roadmap.md`, `docs/04-open-questions.md`): roadmap **#3 cross-ride career is
-  done**; the focus turns to the rest of **theming + spectator product** (#4 — a career/radar-aware
-  static viewer beyond the `leaderboard` down-payment) and **growing/hardening the BYO ecosystem**
-  (#5). Cross-cutting: the career is the deepest **anti-gaming** move yet (misconduct anywhere now
-  costs the whole career); still open: **sandboxing/time-bounding untrusted code** (folded into #5);
-  LLM house personas remain a fast-follow (D-024).
-- **Verify:** `uv venv && uv pip install -e ".[dev]"`, then `pytest` (143 pass),
+- **Next** (`docs/03-roadmap.md`, `docs/04-open-questions.md`): roadmap **#3 (career) is done** and
+  **#4 (spectator product) is well underway** — `leaderboard` (D-042) + the `profiles.html` viewer
+  (D-044); remaining #4 is the creative theme/skin and possibly live/served profiles. **#5
+  (BYO ecosystem)**: the coding harness is now sandboxed (D-043); next is documenting/hardening the
+  HTTP protocol and a **full OS sandbox** (FS/network/resource confinement) for untrusted code — the
+  one anti-gaming item still open. LLM house personas remain a fast-follow (D-024).
+- **Verify:** `uv venv && uv pip install -e ".[dev]"`, then `pytest` (150 pass; the coding tests
+  spawn subprocesses, so the suite now takes ~30s),
   `parkbench run --agent heuristic --seed 1`, `parkbench economic --agent greedy`,
   `parkbench coding --agent heuristic`, `parkbench safety --agent heuristic`,
   `parkbench radar --agent heuristic` (4-axis profile), `parkbench career --agent greedy` (the
-  reward-hacker's reputation collapse), and `parkbench leaderboard` (the ranked board). Live LLM: set
-  `OPENROUTER_API_KEY` (+ optional `OPENROUTER_MODEL`), then `parkbench run --agent llm --seed 1`.
+  reward-hacker's reputation collapse), and `parkbench leaderboard` (the ranked board). Spectator
+  viewer: `python -m http.server 8080 --directory viewer/` then open `/profiles.html` (or open the
+  file directly and use **Open JSON**). Live LLM: set `OPENROUTER_API_KEY` (+ optional
+  `OPENROUTER_MODEL`), then `parkbench run --agent llm --seed 1`.
 
 ## Conventions for growing the docs
 
