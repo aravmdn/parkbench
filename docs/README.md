@@ -56,3 +56,7 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
 - **2026-05-30** — Multi-ride phase shipped (PRs #10–#12): the **Economic knapsack ride** (D-036),
   the **radar roll-up** (D-037), and **agent identity/versioning** (D-038) all merged. The radar now
   spans two axes — social 0.975 + economic 0.990 for `heuristic`. 95 passing tests.
+- **2026-05-31** — **Coding ride** (D-039) added: a solo, hidden-test-scored code-generation ride on
+  the **coding** axis, with seed-randomized tests as a first anti-gaming safeguard. The radar now
+  spans **three** axes — social 0.975 + economic 0.990 + coding 0.667 for `heuristic`. 111 passing
+  tests. Updated `02`, `03`, `04`, `07`.

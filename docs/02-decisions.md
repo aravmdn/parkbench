@@ -1,6 +1,6 @@
 # 02 — Decision Log
 
-**Status:** Living · **Last updated:** 2026-05-30
+**Status:** Living · **Last updated:** 2026-05-31
 
 Append-only log of decisions and their rationale (lightweight ADR style). When a decision is
 reversed or superseded, add a **new** entry referencing the old one rather than editing history.
@@ -403,3 +403,52 @@ additive) run log lets the replay viewer / future leaderboard key on a stable id
 API key in the identity (the first is per-match state, the second a secret); a full content hash of
 the agent source (brittle and overkill for v1); reordering existing run-log fields (would break the
 viewer/parsers — additions only).
+
+### D-039 · 2026-05-31 · Third ride = solo code-generation (hidden-test scored), coding axis
+**Decision:** Add the project's **third** ride — a **solo, deterministic code-generation** test on
+the **coding** axis (D-005) — so the radar (D-007/D-037) spans **three** axes. An agent is handed a
+small, self-contained programming task and must emit **source code** for the task's entry-point
+function; a hidden test harness compiles that source and grades it on an objective pass rate. The
+score is `tests_passed / tests_total ∈ [0, 1]` per task, aggregated as the **mean per-task pass
+rate** across a fixed curated `TASK_SUITE` (9 tasks over 3 difficulty tiers), reported with a 95% CI
+via the shared `scoring.Stat` — the same objective-payoff-vs-baselines backbone as D-011/D-019/D-036.
+Two design choices make it rigorous and gaming-resistant: **(a) the reference solution is the
+oracle** — each task ships one correct implementation that both computes the expected outputs and is
+what the `optimal` baseline emits, so expected answers are never hand-listed and can't drift; **(b)
+hidden-test inputs are seed-randomized** (drawn from the suite seed via each task's input generator),
+so an agent cannot pass by memorizing input→output pairs — it must implement real logic, while a
+correct solution still scores 1.0 for *any* seed. The ride defines its **own** agent interface
+(`CodingAgent.solve(task) -> source str`, D-035); four baselines reuse the shared roster names —
+`random` (a stub that returns `None`; the floor), `greedy` (solves the EASY tier), `heuristic`
+(solves EASY+MEDIUM), `optimal` (solves all; the 1.0 ceiling) — modelling **capability tiers** to
+calibrate the `[0, 1]` scale with a clean monotone gradient. Wrapped as `CodingRide`
+(`name="coding"`, `axis="coding"`), registered as `"coding"` in `RIDE_REGISTRY`, with a localized
+`parkbench coding --agent <name> --seed 1 [--tests N]` subcommand. The `radar` subcommand's
+`--agent` choices are widened to the **union** of all ride rosters so any scorable agent (e.g.
+`optimal`, which no social ride has) is reachable; the graceful skip (D-037) covers rides missing
+that name. New package `src/parkbench/coding/`; the only shared edits are one `RIDE_REGISTRY` line +
+import, the additive CLI subcommand, and the radar `--agent` union.
+**Why:** A clean solo coding ride is roadmap #2's first half ("a clean *solo* ride — gives the
+reproducible contrast to the social rides") and the cheapest way to take the headline radar from two
+axes to three with a real, structurally different data point (verifiable code execution vs.
+allocation vs. negotiation). Hidden, seeded tests give an objective, gaming-resistant score (the
+same rigor as the knapsack optimum) and the harness — exec + seeded hidden tests, exceptions count as
+fails — is the genuinely reusable artifact: it grades a real code-writing agent (an LLM/BYO agent
+that emits source) by the *exact same machinery* as the baselines. Stdlib-only (no new runtime
+dependency, D-023).
+**Result:** seed 1, 9 tasks × 8 tests — `optimal` 1.000 > `heuristic` 0.667 > `greedy` 0.333 >
+`random` 0.000, all 100% compile; per-tier breakdown tracks capability exactly (easy/medium/hard).
+Fully reproducible (same seed ⇒ identical hidden tests ⇒ identical scores). The radar for
+`heuristic` now spans **three** axes: social 0.975 + economic 0.990 + coding 0.667. 111 passing
+tests (95 → 111, +16 in `tests/test_coding.py`). Implements the D-035 ride contract; see
+[`07-multi-ride.md`](07-multi-ride.md).
+**Known limitation (logged):** the harness does **not** sandbox or time-bound arbitrary code (it
+assumes cooperative candidates — the in-repo baselines are). Subprocess isolation + wall-clock
+timeouts for untrusted BYO code is folded into the anti-gaming / BYO-protocol hardening work
+([`04-open-questions.md`](04-open-questions.md)).
+**Rejected:** an LLM-judged or partial-credit-on-error score (gameable / less rigorous than hidden
+tests against an exact oracle); fixed (non-seeded) test inputs (invites answer-memorization —
+the very reward-hacking the ride should resist); a multi-agent coding ride (this is deliberately the
+clean solo contrast, D-006); hand-listing expected outputs per task (drifts from the reference;
+the reference-as-oracle keeps them consistent by construction); sharing the negotiation/economic
+`Agent` interface (each ride owns its interface per D-035).
