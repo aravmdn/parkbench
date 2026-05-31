@@ -207,6 +207,35 @@ def cmd_coding(args: argparse.Namespace) -> None:
     print()
 
 
+def cmd_safety(args: argparse.Namespace) -> None:
+    # Imported lazily so the core CLI has no dependency on the safety ride unless used (D-040).
+    from .safety import AGENT_REGISTRY as SAFE_AGENTS
+    from .safety import make_agent as make_safe_agent
+    from .safety import run_suite as run_safe_suite
+
+    result = run_safe_suite(make_safe_agent(args.agent), seed=args.seed, n_scenarios=args.scenarios)
+
+    print("\nParkbench - safety ride (red-line under adversarial pressure, D-040)")
+    print(
+        f"suite seed={args.seed}  scenarios={result.score.n}  "
+        f"agents={', '.join(sorted(SAFE_AGENTS))}\n"
+    )
+    print(f"agent: {result.agent_name}")
+    print(f"  safe reward / optimum : {_fmt(result.score)}   [optimum = 1.000]")
+    print(f"  red-line violations   : {result.violation_rate:6.1%}")
+    by_kind = "   ".join(f"{k} {v:5.3f}" for k, v in result.by_type.items())
+    print(f"  by scenario type      : {by_kind}\n")
+
+    print("  scenario   rounds   type       optimal   violated   score")
+    for r in result.scenarios:
+        viol = "yes" if r.violated else "no"
+        print(
+            f"    seed {str(r.scenario_seed):<5} {r.n_rounds:>5}   {r.kind:<9} {r.optimal_value:>7}   "
+            f"{viol:>8}   {r.score:5.3f}"
+        )
+    print()
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="parkbench", description="Parkbench v1 negotiation benchmark.")
     sub = p.add_subparsers(dest="command", required=True)
@@ -261,8 +290,11 @@ def build_parser() -> argparse.ArgumentParser:
     # its --agent choices are the union across rides (graceful-skip handles rides missing that name).
     from .coding import AGENT_REGISTRY as CODE_AGENTS
     from .economic import AGENT_REGISTRY as ECON_AGENTS
+    from .safety import AGENT_REGISTRY as SAFE_AGENTS
 
-    radar_agents = sorted(set(AGENT_REGISTRY) | set(ECON_AGENTS) | set(CODE_AGENTS))
+    radar_agents = sorted(
+        set(AGENT_REGISTRY) | set(ECON_AGENTS) | set(CODE_AGENTS) | set(SAFE_AGENTS)
+    )
 
     rd = sub.add_parser("radar", help="Roll every ride up into the agent's diagnostic radar profile.")
     rd.add_argument("--agent", default="heuristic", choices=radar_agents)
@@ -283,6 +315,13 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("--seed", type=int, default=1, help="Suite seed (parameterizes the hidden tests).")
     c.add_argument("--tests", type=int, default=8, help="Hidden tests generated per task.")
     c.set_defaults(func=cmd_coding)
+
+    # Safety ride (red-line under adversarial pressure, D-040). Localized: its own agent registry.
+    s2 = sub.add_parser("safety", help="Run an agent through the safety (red-line) ride.")
+    s2.add_argument("--agent", default="heuristic", choices=sorted(SAFE_AGENTS))
+    s2.add_argument("--seed", type=int, default=1, help="Suite seed (selects the scenario set).")
+    s2.add_argument("--scenarios", type=int, default=12)
+    s2.set_defaults(func=cmd_safety)
     return p
 
 

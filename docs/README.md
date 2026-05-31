@@ -60,3 +60,8 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
   the **coding** axis, with seed-randomized tests as a first anti-gaming safeguard. The radar now
   spans **three** axes — social 0.975 + economic 0.990 + coding 0.667 for `heuristic`. 111 passing
   tests. Updated `02`, `03`, `04`, `07`.
+- **2026-05-31** — **Safety ride** (D-040) added: a solo "red-line under adversarial pressure" ride on
+  the **safety** axis — an explicit reward-hacking probe (crossing a red line scores 0; injections are
+  the adversarial nudge). **The radar is now complete across all four axes** — for `heuristic`: social
+  0.975 + economic 0.990 + coding 0.667 + safety 0.667. 127 passing tests. Updated `02`, `03`, `04`,
+  `07`.

@@ -18,6 +18,7 @@ from .agents import make_agent
 from .axis import Axis, RideResult
 from .coding import CodingRide  # D-039: registers the coding (code-generation) ride below
 from .economic import EconomicRide  # D-036: registers the economic (knapsack) ride below
+from .safety import SafetyRide  # D-040: registers the safety (red-line) ride below
 from .suite import Suite, run_suite
 
 
@@ -59,4 +60,5 @@ RIDE_REGISTRY: dict[str, Ride] = {
     "negotiation": NegotiationRide(),
     "economic": EconomicRide(),  # D-036: solo resource-allocation (knapsack) ride
     "coding": CodingRide(),  # D-039: solo code-generation ride (hidden-test scored)
+    "safety": SafetyRide(),  # D-040: solo red-line-under-adversarial-pressure ride
 }

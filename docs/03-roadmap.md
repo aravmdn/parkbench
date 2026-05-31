@@ -11,10 +11,10 @@ Directional only — sequence and detail will firm up as v1 is built and learned
    closest sibling to negotiation, reusing the objective-payoff scoring. Proves the diagnostic
    profile concept with more than one data point. _(In progress, 2026-05-30: the ride abstraction
    landed (D-035); economic ride (D-036) + radar roll-up (D-037) underway.)_
-2. **Fill out the four axes.** _(In progress, 2026-05-31: the **Coding/tool-use** ride landed
-   (D-039) — a clean *solo* code-generation ride, hidden-test scored, taking the radar to **three**
-   axes.)_ Remaining: a **Safety/robustness** ride (leans on the "nudge" mechanic as an adversarial
-   probe) to complete the fourth axis.
+2. **Fill out the four axes.** ✅ _Done (2026-05-31)._ The **Coding/tool-use** ride (D-039, solo
+   code-generation, hidden-test scored) and the **Safety/robustness** ride (D-040, red-line under
+   adversarial pressure — uses the "nudge"/injection mechanic as an adversarial probe) landed, so the
+   **radar now spans all four axes** (social · economic · coding · safety).
 3. **Introduce cross-ride "career."** Persistent reputation/resources across rides so choices
    compound — only once per-ride scoring is trusted (reverses part of D-008 deliberately; log it).
 4. **Theming + spectator product.** Apply the creative skin; build a watchable replay/leaderboard
@@ -29,6 +29,7 @@ Directional only — sequence and detail will firm up as v1 is built and learned
 - Economic / resource strategy (trading, market-making under scarcity). _(Shipped: knapsack, D-036.)_
 - Coding / tool-use (verifiable, solo, test-harness scored). _(Shipped: code-generation, D-039.)_
 - Safety / robustness (adversarial scenarios, manipulation resistance, crisis handling).
+  _(Shipped: red-line under adversarial pressure, D-040.)_
 - Coalition formation (Diplomacy-lite / weighted voting).
 - Commons / public-goods (cooperate-or-exploit with communication).
 - Social deduction (Werewolf/Avalon-style) — high spectacle; needs a scoring approach robust to noise.
