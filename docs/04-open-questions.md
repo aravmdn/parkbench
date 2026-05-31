@@ -1,6 +1,6 @@
 # 04 — Open Questions
 
-**Status:** Living · **Last updated:** 2026-05-30
+**Status:** Living · **Last updated:** 2026-05-31
 
 Questions still genuinely open. When one is resolved it becomes an entry in the decision log
 ([`02-decisions.md`](02-decisions.md)) and is listed under "Resolved" below.
@@ -10,7 +10,12 @@ below (D-027–D-030)._
 
 ## Open — cross-cutting (post-v1)
 
-- Anti-gaming / reward-hacking safeguards as more ride types are added.
+- **Anti-gaming / reward-hacking safeguards** as more ride types are added. _First concrete
+  down-payments landed with the coding ride (D-039): **seed-randomized hidden tests** that defeat
+  answer-memorization, and a flagged need to **sandbox + time-bound untrusted code** (the coding
+  harness currently assumes cooperative candidates). The general question — safeguards across all
+  ride types — stays open._
+- A **safety/robustness** ride to complete the four-axis radar (roadmap #2).
 
 ## Resolved
 

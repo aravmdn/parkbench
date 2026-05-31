@@ -177,6 +177,36 @@ def cmd_economic(args: argparse.Namespace) -> None:
     print()
 
 
+def cmd_coding(args: argparse.Namespace) -> None:
+    # Imported lazily so the core CLI has no dependency on the coding ride unless used (D-039).
+    from .coding import AGENT_REGISTRY as CODE_AGENTS
+    from .coding import make_agent as make_code_agent
+    from .coding import run_suite as run_code_suite
+
+    result = run_code_suite(make_code_agent(args.agent), seed=args.seed, n_tests=args.tests)
+
+    print("\nParkbench - coding ride (solo code-generation, hidden-test scored, D-039)")
+    print(
+        f"suite seed={args.seed}  tasks={result.score.n}  tests/task={args.tests}  "
+        f"agents={', '.join(sorted(CODE_AGENTS))}\n"
+    )
+    print(f"agent: {result.agent_name}")
+    print(f"  pass rate (tests passed) : {_fmt(result.score)}   [optimum = 1.000]")
+    print(f"  compile rate             : {result.compile_rate:6.1%}")
+    tiers = {1: "easy", 2: "medium", 3: "hard"}
+    by_tier = "   ".join(f"{tiers.get(t, t)} {s:5.3f}" for t, s in sorted(result.by_difficulty.items()))
+    print(f"  by difficulty            : {by_tier}\n")
+
+    print("  task                 diff     passed/total   score")
+    for r in result.tasks:
+        flag = "" if r.compiled else "  (no compile)"
+        print(
+            f"    {r.task:<18} {tiers.get(r.difficulty, r.difficulty):<7} "
+            f"{r.passed:>6}/{r.total:<6}  {r.score:5.3f}{flag}"
+        )
+    print()
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="parkbench", description="Parkbench v1 negotiation benchmark.")
     sub = p.add_subparsers(dest="command", required=True)
@@ -227,20 +257,32 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--no-log", action="store_true", help="Do not write a run log.")
     s.set_defaults(func=cmd_serve)
 
+    # Each ride owns its own roster (D-035); the radar can profile any agent any ride can score, so
+    # its --agent choices are the union across rides (graceful-skip handles rides missing that name).
+    from .coding import AGENT_REGISTRY as CODE_AGENTS
+    from .economic import AGENT_REGISTRY as ECON_AGENTS
+
+    radar_agents = sorted(set(AGENT_REGISTRY) | set(ECON_AGENTS) | set(CODE_AGENTS))
+
     rd = sub.add_parser("radar", help="Roll every ride up into the agent's diagnostic radar profile.")
-    rd.add_argument("--agent", default="heuristic", choices=sorted(AGENT_REGISTRY))
+    rd.add_argument("--agent", default="heuristic", choices=radar_agents)
     rd.add_argument("--seed", type=int, default=1, help="Seed passed to each ride.")
     rd.add_argument("--json", action="store_true", help="Emit the profile as JSON instead of a chart.")
     rd.set_defaults(func=cmd_radar)
 
     # Economic ride (solo resource-allocation / knapsack, D-036). Localized: its own agent registry.
-    from .economic import AGENT_REGISTRY as ECON_AGENTS
-
     e = sub.add_parser("economic", help="Run an agent through the economic (knapsack) ride.")
     e.add_argument("--agent", default="greedy", choices=sorted(ECON_AGENTS))
     e.add_argument("--seed", type=int, default=1, help="Suite seed (selects the scenario set).")
     e.add_argument("--scenarios", type=int, default=12)
     e.set_defaults(func=cmd_economic)
+
+    # Coding ride (solo code-generation, hidden-test scored, D-039). Localized: its own agent registry.
+    c = sub.add_parser("coding", help="Run an agent through the coding (code-generation) ride.")
+    c.add_argument("--agent", default="heuristic", choices=sorted(CODE_AGENTS))
+    c.add_argument("--seed", type=int, default=1, help="Suite seed (parameterizes the hidden tests).")
+    c.add_argument("--tests", type=int, default=8, help="Hidden tests generated per task.")
+    c.set_defaults(func=cmd_coding)
     return p
 
 
