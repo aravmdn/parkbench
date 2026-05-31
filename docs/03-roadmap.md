@@ -15,10 +15,15 @@ Directional only — sequence and detail will firm up as v1 is built and learned
    code-generation, hidden-test scored) and the **Safety/robustness** ride (D-040, red-line under
    adversarial pressure — uses the "nudge"/injection mechanic as an adversarial probe) landed, so the
    **radar now spans all four axes** (social · economic · coding · safety).
-3. **Introduce cross-ride "career."** Persistent reputation/resources across rides so choices
-   compound — only once per-ride scoring is trusted (reverses part of D-008 deliberately; log it).
-4. **Theming + spectator product.** Apply the creative skin; build a watchable replay/leaderboard
-   experience for mindshare.
+3. **Introduce cross-ride "career."** ✅ _Done (2026-05-31)._ The **career** (D-041) is the first
+   cross-ride coupling: every ride declares an `integrity` signal, **reputation = the product** of
+   them, and **`career_score = mean_capability × reputation`** — so misconduct anywhere discounts
+   capability everywhere (it deliberately reverses part of D-008, logged in D-041). It makes a
+   reward-hacker pay: `greedy`, the economic star, lands last (below `random`) because its red-line
+   violations collapse its reputation. See [`07-multi-ride.md`](07-multi-ride.md).
+4. **Theming + spectator product.** _Started (2026-05-31):_ a **career leaderboard** (D-042,
+   `parkbench leaderboard`) ranks agents by career score — the first watchable surface. Still to do:
+   apply the creative skin and a career/radar-aware static replay/leaderboard viewer for mindshare.
 5. **Grow the BYO ecosystem.** A first HTTP/JSON connection protocol now exists (D-027); next is
    hardening + documenting it and lowering the barrier for third parties to plug in agents.
 6. **Revisit commercial models** (D-013) only after meaningful adoption: eval-as-a-service, public

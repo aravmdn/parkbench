@@ -503,3 +503,68 @@ ride needing NLP to detect manipulation (non-deterministic, unscorable rigorousl
 structurally instead); a multi-agent adversary (this is deliberately the clean solo contrast, D-006);
 mixing this ride's injections into the off-record nudge path of D-029 (those are human, off-record;
 these are scored probes); sharing another ride's `Agent` interface (each ride owns its own, D-035).
+
+### D-041 · 2026-05-31 · Cross-ride career = reputation-weighted radar (capability × reputation)
+**Decision:** Introduce the project's first **cross-ride coupling** — a *career* (roadmap #3) — the
+deliberate, logged partial reversal of "independent rides" (D-008) now that per-ride scoring is
+trusted (D-039/D-040). Every ride additively declares, alongside its capability `score`, an
+**`integrity` signal in `[0, 1]`** in its `RideResult.detail` (each ride owns its own, per D-035):
+the safety ride's = `1 − violation_rate` (the flagship — crossing a red line), the economic ride's =
+`feasible_rate` (staying within budget), the coding ride's = `compile_rate` (shipping code that
+compiles), and the negotiation ride's = **1.0** (neutral — no hard rule to *violate*; a low deal rate
+already costs efficiency, so it must not be double-counted as misconduct). A career is built **on top
+of** the radar (`build_radar`), reusing its deterministic registry-ordered visitation and its
+graceful skip of rides with no roster entry (D-037). **Reputation = the product of the per-ride
+integrity signals** across the tour (multiplicative trust that *compounds*: hard to earn — every ride
+clean — and easy to lose — one ride dirty), and the headline **`career_score = mean_capability ×
+reputation ∈ [0, 1]`**. Like the radar, a *missing* ride is a coverage gap, not a failure: both
+capability and reputation are computed over the rides that actually scored the agent (D-037's
+"missing ≠ zero"). New module `src/parkbench/career.py` (`CareerLeg`, `CareerProfile` with derived
+`mean_capability`/`reputation`/`career_score`, `build_career`, `render_career`, `to_dict`); a
+localized `parkbench career --agent <radar-union> --seed 1 [--json]` subcommand. The only shared
+edits are one `integrity` key per ride detail (additive) and the additive CLI subcommand.
+**Why:** The independent per-axis radar (D-007) structurally cannot express that *misconduct
+anywhere should discount capability everywhere* — that an agent's standing is one thing, made of how
+it behaved across the whole park. A career makes that real and, crucially, **makes a reward-hacker
+pay**: it is the project's strongest answer yet to the open anti-gaming question
+([`04-open-questions.md`](04-open-questions.md)). Multiplicative reputation matches the safety ethos
+("violation = 0", D-040) — one serious breach dominates — while the integrity signals are normally
+exactly 1.0 for honest-but-imperfect play (feasibility/compilation), so the product punishes genuine
+rule-breaking, not mere suboptimality.
+**Result:** seed 1 — `optimal` **1.000** (capable *and* clean) > `heuristic` **0.550** > `random`
+**0.151** > `greedy` **0.146**. The headline diagnostic: `greedy` is the economic *star* (0.989,
+essentially tied with the `optimal` ceiling) yet lands **dead last — below `random`** — because its
+67 % safety-violation rate collapses its reputation to 0.333 and discounts its entire career. The
+per-axis radar shows this only as a low safety bar; the career shows it as a single ruined number.
+Fully reproducible (career is a deterministic function of the radar). Stdlib-only (D-023). +16 tests
+in `tests/test_career.py` (suite total 127 → 143). See [`07-multi-ride.md`](07-multi-ride.md).
+**Implements:** roadmap #3; partially reverses D-008 (logged here per the no-scope-creep rule).
+**Rejected:** a **sequential earnings ledger** where reputation gates each leg's earnings as the tour
+proceeds (genuinely path-dependent, but its score depends on an arbitrary ride *order* — bad for a
+reproducible benchmark; the trust trajectory is still surfaced in `legs` for transparency without the
+order-sensitivity); **mean** (not product) reputation (too forgiving — a 67 %-violation agent would
+keep 83 % reputation); folding integrity into the negotiation ride via `deal_rate` (double-counts
+capability already priced into efficiency); penalizing a *missing* ride as integrity/score 0
+(contradicts D-037 "missing ≠ zero"); a single blended capability-and-conduct score (loses the
+diagnostic split the radar exists to provide, D-007).
+
+### D-042 · 2026-05-31 · Career leaderboard = rank the baseline ladder by career score (spectator down-payment)
+**Decision:** Add a `parkbench leaderboard [--seed 1] [--agents a,b,c] [--json]` subcommand that
+ranks a roster of agents by their career score (D-041), descending, ties broken by agent name for a
+deterministic order. The default roster is the **deterministic reference ladder shared across the
+solo rides** — `random`, `greedy`, `heuristic`, `optimal`. The live-network `llm` agent is excluded
+by default (it needs a key and only covers the social axis, so a single-ride career would rank
+misleadingly against full-tour agents); `--agents` overrides the roster. Pure presentation over
+`build_career` — no new scoring. This is a small **spectator-product** down-payment (roadmap #4),
+built only because the career (D-041) now gives a single rankable number with a story behind it.
+**Why:** A ranked board is the most legible surface for the career's headline insight (the
+reward-hacker's fall) and the first concrete step toward the "watchable" product (roadmap #4 / the
+vision's mindshare wedge) without committing to a UI. Reusing `build_career` keeps it a thin,
+honest view; the `n_rides`/`skipped` columns keep coverage differences (e.g. `optimal` skips the
+social ride) visible rather than hidden.
+**Result:** `optimal` 1.000 > `heuristic` 0.550 > `random` 0.151 > `greedy` 0.146. Covered by the
+career tests + CLI; reproducible. Stdlib-only (D-023).
+**Rejected:** including `llm` in the default roster (network dependency + a one-ride coverage
+artifact); a single composite cross-agent score (a leaderboard is a ranking, not a new metric);
+building a web/HTML leaderboard now (premature — the static viewer extension is the next roadmap-#4
+step, deferred).

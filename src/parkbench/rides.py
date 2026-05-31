@@ -51,6 +51,10 @@ class NegotiationRide:
                 "efficiency": profile.efficiency.mean,
                 "own_value": profile.own_value.mean,
                 "deal_rate": profile.deal_rate,
+                # Cross-ride integrity signal for the career roll-up (D-041): the negotiation ride
+                # has no hard rule to *violate* (walking away from a bad deal is legitimate, and a
+                # low deal rate already costs efficiency), so conduct here is neutral — 1.0.
+                "integrity": 1.0,
             },
         )
 

@@ -12,15 +12,22 @@ below (D-027–D-030)._
 
 - **Anti-gaming / reward-hacking safeguards** as more ride types are added. _Concrete down-payments
   have landed: the coding ride (D-039) uses **seed-randomized hidden tests** that defeat
-  answer-memorization, and the safety ride (D-040) is an explicit reward-hacking probe — crossing a
-  red line scores 0 no matter the reward, and the radar exposes `greedy` as a reward-hacker. Still
-  open: the general cross-ride question, and **sandboxing + time-bounding untrusted code** (the
-  coding harness currently assumes cooperative candidates)._
-- **Cross-ride "career"** (roadmap #3): persistent reputation/resources across rides, now that all
-  four single-ride axes are scored and trusted. Deferred until per-ride scoring is proven (it is).
+  answer-memorization; the safety ride (D-040) is an explicit reward-hacking probe (crossing a red
+  line scores 0 no matter the reward); and the **cross-ride career (D-041)** now makes misconduct
+  anywhere discount capability everywhere — a reward-hacker's reputation collapse drags its whole
+  career below an incompetent agent's, so reward-hacking is penalised across rides, not just exposed
+  on one axis. Still open: **sandboxing + time-bounding untrusted code** (the coding harness still
+  assumes cooperative candidates — folded into BYO-protocol hardening, roadmap #5), and continued
+  vigilance as new ride types arrive._
 
 ## Resolved
 
+- **2026-05-31** — **Cross-ride "career"** resolved as **D-041** (+ leaderboard **D-042**): the first
+  cross-ride coupling. Each ride declares an `integrity` signal; **reputation = the product** of them
+  and **`career_score = mean_capability × reputation`**, so misconduct anywhere discounts capability
+  everywhere. Built on top of the radar (reuses its deterministic skip); a reward-hacker (`greedy`)
+  now ranks last, below `random`. Deliberately reverses part of D-008 (logged in D-041). See
+  [`07-multi-ride.md`](07-multi-ride.md).
 - **2026-05-30** — **HTTP/JSON server** for external BYO agents built as **D-027** (park-hosted,
   agent-polled, stdlib only; reuses the protocol/engine/runlog unchanged). It realises the wire
   connection D-015 deferred from the core build (D-026). Design in

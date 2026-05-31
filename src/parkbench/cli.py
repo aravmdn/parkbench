@@ -4,6 +4,8 @@
   parkbench analyze — print a single scenario's optimum (for debugging / inspection).
   parkbench serve   — host a run over HTTP/JSON so a bring-your-own agent connects (D-027).
   parkbench radar   — roll every ride up into the agent's diagnostic radar profile (D-037).
+  parkbench career  — the radar weighted by cross-ride reputation (D-041).
+  parkbench leaderboard — rank agents by career score (D-042).
 """
 
 from __future__ import annotations
@@ -147,6 +149,52 @@ def cmd_radar(args: argparse.Namespace) -> None:
         return
     print()
     print(render_radar(profile))
+    print()
+
+
+def cmd_career(args: argparse.Namespace) -> None:
+    # Imported lazily so the core CLI carries no dependency on the career roll-up unless used (D-041).
+    from .career import build_career, render_career
+
+    profile = build_career(args.agent, seed=args.seed)
+    if args.json:
+        print(json.dumps(profile.to_dict(), indent=2))
+        return
+    print()
+    print(render_career(profile))
+    print()
+
+
+# The deterministic reference ladder shared across the solo rides — the leaderboard's default roster
+# (D-042). `llm` is excluded on purpose: it is a live-network reference agent (needs a key) and only
+# covers the social axis, so a single-ride career would rank misleadingly against the full-tour ones.
+LEADERBOARD_AGENTS = ("random", "greedy", "heuristic", "optimal")
+
+
+def cmd_leaderboard(args: argparse.Namespace) -> None:
+    # Imported lazily so the core CLI carries no dependency on the career roll-up unless used (D-042).
+    from .career import build_career
+
+    agents = [a.strip() for a in args.agents.split(",") if a.strip()] if args.agents else list(
+        LEADERBOARD_AGENTS
+    )
+    profiles = [build_career(a, seed=args.seed) for a in agents]
+    # Rank by career score; break ties by agent name so the order is deterministic.
+    profiles.sort(key=lambda p: (-p.career_score, p.agent))
+
+    if args.json:
+        print(json.dumps({"seed": args.seed, "ranking": [p.to_dict() for p in profiles]}, indent=2))
+        return
+
+    print(f"\nParkbench - career leaderboard  (seed={args.seed}, D-042)")
+    print("  career = capability (mean ride score) x reputation (product of per-ride integrity)\n")
+    print("  rank  agent        career   capability   reputation   rides")
+    for i, p in enumerate(profiles, start=1):
+        note = f"   (skipped: {', '.join(p.skipped)})" if p.skipped else ""
+        print(
+            f"   {i:<4} {p.agent:<11} {p.career_score:6.3f}   {p.mean_capability:10.3f}   "
+            f"{p.reputation:10.3f}   {len(p.legs):>4}{note}"
+        )
     print()
 
 
@@ -301,6 +349,23 @@ def build_parser() -> argparse.ArgumentParser:
     rd.add_argument("--seed", type=int, default=1, help="Seed passed to each ride.")
     rd.add_argument("--json", action="store_true", help="Emit the profile as JSON instead of a chart.")
     rd.set_defaults(func=cmd_radar)
+
+    # Cross-ride career (D-041): the radar weighted by reputation. Same --agent union as the radar.
+    cr = sub.add_parser("career", help="Roll the rides up into a reputation-weighted career profile.")
+    cr.add_argument("--agent", default="heuristic", choices=radar_agents)
+    cr.add_argument("--seed", type=int, default=1, help="Seed passed to each ride.")
+    cr.add_argument("--json", action="store_true", help="Emit the profile as JSON instead of text.")
+    cr.set_defaults(func=cmd_career)
+
+    # Career leaderboard (D-042): rank a roster of agents by career score (spectator product).
+    lb = sub.add_parser("leaderboard", help="Rank agents by cross-ride career score.")
+    lb.add_argument("--seed", type=int, default=1, help="Seed passed to each ride.")
+    lb.add_argument(
+        "--agents", default=None,
+        help=f"Comma-separated agents to rank (default: {', '.join(LEADERBOARD_AGENTS)}).",
+    )
+    lb.add_argument("--json", action="store_true", help="Emit the ranking as JSON instead of a table.")
+    lb.set_defaults(func=cmd_leaderboard)
 
     # Economic ride (solo resource-allocation / knapsack, D-036). Localized: its own agent registry.
     e = sub.add_parser("economic", help="Run an agent through the economic (knapsack) ride.")
