@@ -568,3 +568,75 @@ career tests + CLI; reproducible. Stdlib-only (D-023).
 artifact); a single composite cross-agent score (a leaderboard is a ranking, not a new metric);
 building a web/HTML leaderboard now (premature — the static viewer extension is the next roadmap-#4
 step, deferred).
+
+### D-043 · 2026-05-31 · Coding harness sandboxes untrusted code = subprocess + wall-clock timeout
+**Decision:** The coding ride's hidden-test harness (`grade()` in `coding/harness.py`) now runs
+untrusted **candidate** source in a **separate Python process** (`sys.executable -I`, isolated mode)
+bounded by a configurable **wall-clock timeout** (`DEFAULT_TIMEOUT = 5.0`s; additive optional
+`timeout=` param). The trusted in-repo reference **oracle stays in-process** (only the candidate is
+untrusted). The candidate source + per-test inputs are handed to the child over **stdin as JSON**
+(never argv or a predictable temp path, so a hostile candidate can't read inputs out of the process
+table or a guessable file); the child (`coding/_runner.py`) returns **text only** — one
+`[ok, type_name, repr(value)]` row per test — which the parent **never unpickles** (unpickling
+untrusted output would itself be an RCE vector). The strict value+type match of D-039 is
+reconstructed in the parent: a test passes iff `ok and type_name == type(expected).__name__ and
+repr(value) == repr(expected)` (reprs agree because parent and child share one interpreter). **One
+subprocess per task** batches all `n_tests` inputs for speed. A candidate that infinite-loops, hangs,
+crashes, exits non-zero, or emits unparseable output simply **fails** the affected tests (score 0)
+and the child is killed — the ride/suite **never hangs or crashes**. Closes the long-flagged
+"sandboxing + time-bounding untrusted code" gap from the coding ride's "Known limitation" (D-039) and
+[`04-open-questions.md`](04-open-questions.md). Stdlib only (D-023): `subprocess`/`json`/`sys`.
+**Why:** An in-process `exec` of untrusted code is both an arbitrary-hang vector (an infinite loop
+freezes the whole suite) and an arbitrary-RCE vector — unacceptable the moment the harness points at a
+real BYO/LLM agent that emits source, which is its entire purpose (D-039). Subprocess isolation + a
+wall-clock timeout is the minimal, portable, **stdlib-only** mechanism that makes the harness safe to
+run untrusted code while keeping the existing baselines **byte-identical** and fully deterministic.
+**Result:** seed-1 baselines unchanged — `optimal` 1.000 / `heuristic` 0.667 / `greedy` 0.333 /
+`random` 0.000, all 100 % compile; radar + leaderboard JSON verified byte-identical before/after. An
+infinite-loop candidate scores 0 in ~1 s at `timeout=1.0` without hanging. +7 coding tests (suite
+total 143 → **150**); coding tests run slower (process-spawn overhead, ~0.1 s → ~20 s) — an accepted
+cost of isolation. New file `coding/_runner.py`; `coding/harness.py` reworked; public `grade()` API
+preserved (suite/ride callers untouched).
+**Known limitation (honest scope):** this is **process isolation + a timeout**, *not* a full OS
+sandbox — the child still inherits the parent's filesystem, network access, and OS privileges, with
+no CPU/memory caps. Full OS-level confinement (filesystem/network jails, resource limits,
+container/seccomp) remains open and is folded into BYO-protocol hardening (roadmap #5).
+**Rejected:** in-process `signal.alarm`/thread timeouts (`SIGALRM` is Unix-only — the project is
+Windows-first — threads can't be force-killed in CPython, and neither isolates a process-killing/RCE
+candidate); pickling the candidate's return value back to the parent (unpickling untrusted output is
+an RCE vector — used JSON + `(type_name, repr)` text, which also cleanly preserves the strict
+value+type semantics); passing source/inputs via argv or a fixed temp file (leaks inputs into the
+process table / a guessable path — used stdin); one subprocess per individual test (correct but ~8×
+the spawn overhead — batched per task); a full OS sandbox/container/seccomp now (out of scope for a
+stdlib-only step and platform-specific — deferred, see above).
+
+### D-044 · 2026-05-31 · Diagnostic-profile viewer (spectator product) = second static, zero-dep page
+**Decision:** Add `viewer/profiles.html` — a second static, **zero-dependency**, no-build viewer
+alongside the negotiation replay viewer (`index.html`, D-028), upholding the same constraints (inline
+CSS/JS, no framework, no CDN/web-fonts, loads JSON via an Open-file picker + `?path=` + bundled-sample
+auto-load, same `file://` fetch caveat). It renders Parkbench's three diagnostic outputs, **auto-
+detecting the payload kind by keys** (`axes`/`missing_axes` ⇒ radar, `legs`/`career_score` ⇒ career,
+`ranking` ⇒ leaderboard): a hand-drawn **inline-SVG 4-axis radar** (`radar --json`; `missing_axes`
+shown as `n/a` — a coverage gap, not a zero, per D-037) with a per-ride breakdown; the **career**
+"park tour" (`career --json`) with per-leg capability/integrity bars and a running `trust_after` bar
+that visibly collapses on an integrity breach, plus the `career_score = mean_capability × reputation`
+equation; and the **leaderboard** (`leaderboard --json`) as a ranked table + career-score bar chart.
+Bundled fixtures `viewer/sample-{radar,career,leaderboard}.json` auto-load as a self-explanatory demo.
+The reward-hacker callout is detected **structurally** (the last-ranked agent whose reputation
+collapsed yet whose economic capability beats a higher-ranked peer), so it generalizes beyond the
+current baselines rather than hard-coding `greedy`.
+**Why:** The career/radar/leaderboard are the project's headline diagnostic outputs (D-007/D-041/
+D-042); a watchable, legible surface for them is roadmap #4 (theming + spectator product) and the
+vision's mindshare wedge. Reusing the D-028 "single file, no build, no deps" constraint keeps the
+barrier to opening a profile as low as the replay viewer's (double-click → browser → done) and adds
+no runtime dependency (D-023). A new file (not an extension of `index.html`) keeps the negotiation
+replay viewer untouched and each viewer focused.
+**Result:** Verified rendering in Chrome (served locally) — no console errors; the SVG radar, the
+career trust-collapse, and the leaderboard's reward-hacker callout all display correctly against the
+bundled fixtures. Pure HTML/CSS/SVG/vanilla JS, confirmed free of any external reference.
+`viewer/README.md` updated to document both viewers.
+**Rejected:** extending `index.html` (would bloat the replay viewer and risk regressions — kept them
+separate); any charting/JS library or web font (violates D-023/D-028 — drew the radar by hand in
+SVG); hard-coding the `greedy` reward-hacker callout (brittle — detected structurally instead); a
+served/live profiles backend now (premature — a static page over the `--json` outputs is enough for
+the spectator down-payment; live serving is later roadmap-#4/#5 work).

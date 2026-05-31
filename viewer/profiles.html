@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parkbench — Diagnostic Profile Viewer</title>
+  <style>
+    /* ── Reset & base ─────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0f1117;
+      --surface:     #1a1d27;
+      --surface2:    #23283a;
+      --border:      #2e3348;
+      --accent:      #7c6af7;
+      --accent2:     #38c9b5;
+      --danger:      #e05c6b;
+      --warn:        #e0a93b;
+      --good:        #2fcb7b;
+      --text:        #e2e4ef;
+      --text-muted:  #7a7f9a;
+      /* per-axis colors */
+      --axis-social:   #7c6af7;
+      --axis-economic: #38c9b5;
+      --axis-coding:   #4d9bf5;
+      --axis-safety:   #e0a93b;
+      --font:        'Inter', system-ui, -apple-system, sans-serif;
+      --mono:        'JetBrains Mono', 'Fira Mono', ui-monospace, monospace;
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    /* ── Layout ──────────────────────────────────────────────────────────── */
+    header {
+      padding: 18px 24px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 10;
+    }
+    .logo { font-size: 18px; font-weight: 700; letter-spacing: -.3px; color: var(--text); }
+    .logo span { color: var(--accent); }
+    .tagline { color: var(--text-muted); font-size: 13px; }
+    .header-actions { margin-left: auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+    main { max-width: 1080px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; gap: 28px; }
+
+    /* Section cards */
+    section.card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 22px;
+    }
+    section.card.hidden { display: none; }
+    .section-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .section-head h2 { font-size: 16px; font-weight: 700; }
+    .section-head .kicker {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--text-muted); background: var(--surface2); padding: 2px 8px; border-radius: 99px;
+    }
+    .section-head .sub { color: var(--text-muted); font-size: 12px; margin-left: auto; font-family: var(--mono); }
+
+    /* Buttons */
+    .btn {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      border-radius: 6px; padding: 6px 13px; font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: background .15s, border-color .15s; font-family: var(--font);
+    }
+    .btn:hover { background: var(--border); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn.primary:hover { opacity: .88; }
+    #file-input { display: none; }
+    label.btn { display: inline-block; }
+
+    /* ── Radar ───────────────────────────────────────────────────────────── */
+    .radar-layout { display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start; }
+    .radar-svg-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .radar-legend { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; font-size: 11px; }
+    .legend-item { display: flex; align-items: center; gap: 5px; color: var(--text-muted); }
+    .legend-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+    /* per-ride breakdown */
+    .ride-list { display: flex; flex-direction: column; gap: 10px; }
+    .ride-row {
+      border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+      border-left-width: 4px; background: var(--surface2);
+    }
+    .ride-row.missing { opacity: .7; border-left-color: var(--text-muted) !important; }
+    .ride-row-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+    .ride-name { font-weight: 700; font-size: 13px; text-transform: capitalize; }
+    .ride-axis { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--text-muted); }
+    .ride-score { margin-left: auto; font-family: var(--mono); font-weight: 700; font-size: 14px; }
+    .ride-score.na { color: var(--text-muted); font-weight: 600; }
+    .score-bar-track { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
+    .score-bar-fill { height: 100%; border-radius: 3px; }
+    .ride-detail { font-size: 11px; color: var(--text-muted); font-family: var(--mono); display: flex; flex-wrap: wrap; gap: 4px 14px; }
+    .ride-detail .integrity-flag { color: var(--danger); font-weight: 700; font-family: var(--font); }
+    .na-pill {
+      font-size: 10px; font-weight: 700; color: var(--text-muted); border: 1px dashed var(--text-muted);
+      border-radius: 99px; padding: 1px 8px; margin-left: auto;
+    }
+
+    /* ── Career ──────────────────────────────────────────────────────────── */
+    .legs-wrap { display: flex; flex-direction: column; gap: 14px; margin-bottom: 22px; }
+    .legs-track {
+      display: grid; gap: 10px; align-items: end;
+      grid-auto-flow: column; grid-auto-columns: 1fr;
+      overflow-x: auto; padding-bottom: 6px;
+    }
+    .leg {
+      border: 1px solid var(--border); border-radius: 10px; padding: 12px 12px 10px;
+      background: var(--surface2); display: flex; flex-direction: column; gap: 8px; min-width: 150px;
+      position: relative;
+    }
+    .leg.breach { border-color: var(--danger); box-shadow: 0 0 0 1px rgba(224,92,107,.4); }
+    .leg-head { display: flex; align-items: baseline; gap: 6px; }
+    .leg-name { font-weight: 700; font-size: 13px; text-transform: capitalize; }
+    .leg-idx { font-size: 10px; color: var(--text-muted); font-family: var(--mono); }
+    .leg-metric { display: flex; flex-direction: column; gap: 2px; }
+    .leg-metric .ml { font-size: 9px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); }
+    .vbar-wrap { display: flex; align-items: flex-end; gap: 4px; }
+    .vbar-track { flex: 1; height: 46px; background: var(--bg); border-radius: 4px; display: flex; align-items: flex-end; overflow: hidden; }
+    .vbar-fill { width: 100%; border-radius: 4px 4px 0 0; min-height: 2px; }
+    .vbar-val { font-family: var(--mono); font-size: 11px; font-weight: 700; width: 38px; text-align: right; }
+    .trust-row { border-top: 1px dashed var(--border); padding-top: 8px; }
+    .trust-row .ml { display: flex; justify-content: space-between; align-items: baseline; }
+    .trust-track { height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; margin-top: 4px; }
+    .trust-fill { height: 100%; border-radius: 4px; transition: width .3s; }
+    .breach-tag {
+      font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+      color: var(--danger); background: rgba(224,92,107,.14); border-radius: 4px; padding: 1px 6px;
+    }
+
+    /* career equation */
+    .equation {
+      display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 18px 16px;
+    }
+    .eq-term { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .eq-term .eq-val { font-size: 28px; font-weight: 800; font-family: var(--mono); }
+    .eq-term .eq-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--text-muted); }
+    .eq-op { font-size: 26px; color: var(--text-muted); font-weight: 300; }
+    .eq-term.result .eq-val { color: var(--accent); }
+    .eq-term.capability .eq-val { color: var(--accent2); }
+    .eq-term.reputation .eq-val { color: var(--warn); }
+    .eq-term.reputation.collapsed .eq-val { color: var(--danger); }
+    .eq-note { text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 12px; }
+    .eq-note strong { color: var(--danger); }
+
+    /* ── Leaderboard ─────────────────────────────────────────────────────── */
+    table.board { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.board th {
+      text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
+      color: var(--text-muted); font-weight: 600; padding: 6px 10px; border-bottom: 1px solid var(--border);
+    }
+    table.board th.num, table.board td.num { text-align: right; font-family: var(--mono); }
+    table.board td { padding: 9px 10px; border-bottom: 1px solid var(--border); }
+    table.board tr.row-agent:hover { background: var(--surface2); }
+    table.board tr.flagged td { background: rgba(224,92,107,.08); }
+    .rank-badge {
+      display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px;
+      border-radius: 50%; font-weight: 700; font-size: 12px; font-family: var(--mono);
+      background: var(--surface2); border: 1px solid var(--border);
+    }
+    .rank-badge.top { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .rank-badge.last { background: rgba(224,92,107,.18); color: var(--danger); border-color: var(--danger); }
+    .agent-name { font-weight: 700; }
+    .agent-tag {
+      font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+      padding: 1px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle;
+    }
+    .agent-tag.hacker { background: rgba(224,92,107,.16); color: var(--danger); }
+    .agent-tag.star { background: rgba(56,201,181,.16); color: var(--accent2); }
+    .mini-rep { font-family: var(--mono); }
+    .mini-rep.low { color: var(--danger); font-weight: 700; }
+
+    /* career bar chart */
+    .board-chart { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
+    .board-chart h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--text-muted); margin-bottom: 4px; }
+    .cbar-row { display: flex; align-items: center; gap: 10px; }
+    .cbar-name { width: 90px; font-size: 12px; font-weight: 600; text-align: right; flex-shrink: 0; }
+    .cbar-track { flex: 1; height: 22px; background: var(--surface2); border-radius: 5px; overflow: hidden; position: relative; }
+    .cbar-fill { height: 100%; border-radius: 5px; display: flex; align-items: center; }
+    .cbar-val { font-family: var(--mono); font-size: 11px; font-weight: 700; width: 56px; text-align: right; flex-shrink: 0; }
+
+    /* callout */
+    .callout {
+      margin-top: 18px; border: 1px solid var(--danger); border-left-width: 4px;
+      background: rgba(224,92,107,.08); border-radius: 8px; padding: 12px 14px; font-size: 13px;
+    }
+    .callout .ct-title { font-weight: 700; color: var(--danger); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .callout .ct-title::before { content: "⚠"; }
+    .callout code { font-family: var(--mono); background: var(--surface2); padding: 0 4px; border-radius: 3px; }
+
+    /* ── Notice / empty ──────────────────────────────────────────────────── */
+    .notice {
+      border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px;
+      background: var(--surface); color: var(--text-muted); font-size: 12px; line-height: 1.6;
+    }
+    .notice code { font-family: var(--mono); color: var(--text); background: var(--surface2); padding: 0 4px; border-radius: 3px; }
+    #intro p { max-width: 720px; color: var(--text-muted); }
+    #intro h2 { margin-bottom: 8px; }
+
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    @media (max-width: 760px) {
+      .radar-layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">Park<span>bench</span></div>
+    <div class="tagline">Diagnostic profile viewer</div>
+    <div class="header-actions">
+      <label class="btn primary" for="file-input">Open JSON</label>
+      <input type="file" id="file-input" accept=".json,application/json">
+      <button class="btn" id="btn-samples">Load samples</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Intro / fetch caveat -->
+    <section class="card" id="intro">
+      <h2>Reading an agent's diagnostic profile</h2>
+      <p>This viewer renders the three diagnostic outputs Parkbench produces &mdash;
+        the <strong>radar</strong> (capability across four axes), the <strong>career</strong>
+        ("park tour" where reputation compounds), and the <strong>leaderboard</strong>
+        (ranked careers). Use <strong>Open JSON</strong> to load a
+        <code>radar&nbsp;--json</code>, <code>career&nbsp;--json</code>, or
+        <code>leaderboard&nbsp;--json</code> payload; the kind is auto-detected.</p>
+      <div class="notice" style="margin-top:12px">
+        <strong>Note:</strong> some browsers block <code>fetch()</code> on <code>file://</code> URLs,
+        so the bundled <em>Load samples</em> may not work when this page is opened as a plain file.
+        If that happens, serve the folder with a local server
+        (<code>python -m http.server 8080 --directory viewer/</code>) or use
+        <strong>Open JSON</strong> to pick a file from disk &mdash; that always works.
+        You can also pass <code>?path=relative/to/file.json</code> (same origin).
+      </div>
+    </section>
+
+    <!-- ── Radar ─────────────────────────────────────────────────────────── -->
+    <section class="card hidden" id="sec-radar">
+      <div class="section-head">
+        <span class="kicker">Radar</span>
+        <h2 id="radar-title">Capability radar</h2>
+        <span class="sub" id="radar-sub"></span>
+      </div>
+      <div class="radar-layout">
+        <div class="radar-svg-wrap">
+          <div id="radar-svg"></div>
+          <div class="radar-legend" id="radar-legend"></div>
+        </div>
+        <div>
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);margin-bottom:10px">Per-ride breakdown</div>
+          <div class="ride-list" id="ride-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Career ────────────────────────────────────────────────────────── -->
+    <section class="card hidden" id="sec-career">
+      <div class="section-head">
+        <span class="kicker">Career</span>
+        <h2 id="career-title">Park tour</h2>
+        <span class="sub" id="career-sub"></span>
+      </div>
+      <div class="legs-wrap">
+        <div style="font-size:11px;color:var(--text-muted)">
+          Each leg shows capability (<span style="color:var(--accent2)">score</span>) and
+          <span style="color:var(--warn)">integrity</span>; the running
+          <span style="color:var(--warn)">trust</span> bar carries left-to-right and
+          <strong style="color:var(--danger)">collapses</strong> on any leg where integrity&nbsp;&lt;&nbsp;1.
+        </div>
+        <div class="legs-track" id="legs-track"></div>
+      </div>
+      <div class="equation" id="career-equation"></div>
+      <div class="eq-note" id="career-eqnote"></div>
+    </section>
+
+    <!-- ── Leaderboard ───────────────────────────────────────────────────── -->
+    <section class="card hidden" id="sec-board">
+      <div class="section-head">
+        <span class="kicker">Leaderboard</span>
+        <h2 id="board-title">Career standings</h2>
+        <span class="sub" id="board-sub"></span>
+      </div>
+      <table class="board">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Agent</th>
+            <th class="num">Career</th>
+            <th class="num">Capability</th>
+            <th class="num">Reputation</th>
+            <th class="num">Rides</th>
+          </tr>
+        </thead>
+        <tbody id="board-body"></tbody>
+      </table>
+      <div class="board-chart">
+        <h3>Career score (capability × reputation)</h3>
+        <div id="board-bars"></div>
+      </div>
+      <div id="board-callout"></div>
+    </section>
+  </main>
+
+<script>
+/* ============================================================
+   Parkbench diagnostic-profile viewer — vanilla ES2020, no deps
+   ============================================================ */
+
+const $ = (id) => document.getElementById(id);
+const AXIS_ORDER = ['social', 'economic', 'coding', 'safety'];
+const AXIS_COLOR = {
+  social:   getComputedStyle(document.documentElement).getPropertyValue('--axis-social').trim(),
+  economic: getComputedStyle(document.documentElement).getPropertyValue('--axis-economic').trim(),
+  coding:   getComputedStyle(document.documentElement).getPropertyValue('--axis-coding').trim(),
+  safety:   getComputedStyle(document.documentElement).getPropertyValue('--axis-safety').trim(),
+};
+
+// ── Utilities ──────────────────────────────────────────────────────────────
+function fmt(v, d = 3) { return Number(v).toFixed(d); }
+function escHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+// Color ramp for a [0,1] value (red → amber → green)
+function valColor(v) {
+  if (v >= 0.85) return 'var(--good)';
+  if (v >= 0.6)  return 'var(--accent2)';
+  if (v >= 0.4)  return 'var(--warn)';
+  return 'var(--danger)';
+}
+
+// ── Payload kind detection ───────────────────────────────────────────────────
+function detectKind(data) {
+  if (!data || typeof data !== 'object') return null;
+  if (Array.isArray(data.ranking)) return 'leaderboard';
+  if (Array.isArray(data.legs) || data.career_score !== undefined) return 'career';
+  if (data.axes || Array.isArray(data.missing_axes)) return 'radar';
+  return null;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  RADAR
+// ════════════════════════════════════════════════════════════════════════════
+function renderRadar(data) {
+  const sec = $('sec-radar');
+  sec.classList.remove('hidden');
+
+  $('radar-title').textContent = `Capability radar — ${data.agent ?? 'agent'}`;
+  const covered = AXIS_ORDER.filter(a => !(data.missing_axes || []).includes(a)).length;
+  $('radar-sub').textContent = `seed ${data.seed ?? '—'} · ${covered}/4 axes covered`;
+
+  drawRadarSVG(data);
+  renderRadarLegend(data);
+  renderRideList(data);
+}
+
+function drawRadarSVG(data) {
+  const size = 320, cx = size / 2, cy = size / 2;
+  const R = 118;                       // outer radius (value = 1.0)
+  const n = AXIS_ORDER.length;
+  const axes = data.axes || {};
+  const missing = new Set(data.missing_axes || []);
+
+  // angle for axis i: start at top (-90deg), go clockwise
+  const angle = (i) => (-Math.PI / 2) + (i * 2 * Math.PI / n);
+  const point = (i, r) => [cx + r * Math.cos(angle(i)), cy + r * Math.sin(angle(i))];
+
+  let gridRings = '';
+  for (let g = 1; g <= 4; g++) {
+    const rr = R * g / 4;
+    const pts = AXIS_ORDER.map((_, i) => point(i, rr).map(v => v.toFixed(1)).join(',')).join(' ');
+    gridRings += `<polygon points="${pts}" fill="none" stroke="var(--border)" stroke-width="1"/>`;
+  }
+
+  let spokes = '', labels = '';
+  AXIS_ORDER.forEach((ax, i) => {
+    const [ex, ey] = point(i, R);
+    spokes += `<line x1="${cx}" y1="${cy}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="var(--border)" stroke-width="1"/>`;
+    const [lx, ly] = point(i, R + 24);
+    const isMissing = missing.has(ax);
+    const valTxt = isMissing ? 'n/a' : fmt(axes[ax] ?? 0, 2);
+    const col = AXIS_COLOR[ax];
+    let anchor = 'middle';
+    if (lx > cx + 5) anchor = 'start';
+    else if (lx < cx - 5) anchor = 'end';
+    labels += `
+      <text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle"
+            font-size="12" font-weight="700" fill="${col}">${ax}</text>
+      <text x="${lx.toFixed(1)}" y="${(ly + 14).toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle"
+            font-size="11" font-family="var(--mono)" fill="${isMissing ? 'var(--text-muted)' : 'var(--text)'}"
+            ${isMissing ? 'font-style="italic"' : ''}>${valTxt}</text>`;
+  });
+
+  // value polygon — missing axes pulled to center (0) but rendered as hollow markers
+  const valPts = AXIS_ORDER.map((ax, i) => {
+    const v = missing.has(ax) ? 0 : (axes[ax] ?? 0);
+    return point(i, R * v).map(p => p.toFixed(1)).join(',');
+  }).join(' ');
+
+  let markers = '';
+  AXIS_ORDER.forEach((ax, i) => {
+    const isMissing = missing.has(ax);
+    const v = isMissing ? 0 : (axes[ax] ?? 0);
+    const [px, py] = point(i, R * v);
+    if (isMissing) {
+      markers += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4" fill="var(--bg)" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="2 2"/>`;
+    } else {
+      markers += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4" fill="${AXIS_COLOR[ax]}" stroke="var(--bg)" stroke-width="1.5"/>`;
+    }
+  });
+
+  $('radar-svg').innerHTML = `
+    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img"
+         aria-label="Four-axis capability radar">
+      ${gridRings}
+      ${spokes}
+      <polygon points="${valPts}" fill="rgba(124,106,247,0.18)" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+      ${markers}
+      ${labels}
+    </svg>`;
+}
+
+function renderRadarLegend(data) {
+  const missing = new Set(data.missing_axes || []);
+  $('radar-legend').innerHTML = AXIS_ORDER.map(ax => `
+    <span class="legend-item">
+      <span class="legend-swatch" style="background:${AXIS_COLOR[ax]}"></span>
+      ${ax}${missing.has(ax) ? ' (n/a)' : ''}
+    </span>`).join('');
+}
+
+function renderRideList(data) {
+  const byAxis = {};
+  (data.rides || []).forEach(r => { byAxis[r.axis] = r; });
+  const missing = new Set(data.missing_axes || []);
+
+  $('ride-list').innerHTML = AXIS_ORDER.map(ax => {
+    const r = byAxis[ax];
+    const col = AXIS_COLOR[ax];
+    if (!r || missing.has(ax)) {
+      return `
+        <div class="ride-row missing" style="border-left-color:${col}">
+          <div class="ride-row-head">
+            <span class="ride-name">${escHtml(r ? r.ride : ax)}</span>
+            <span class="ride-axis">${ax}</span>
+            <span class="na-pill">n/a · not run</span>
+          </div>
+          <div class="ride-detail">coverage gap — this axis was not exercised (not a zero score)</div>
+        </div>`;
+    }
+    const v = r.score ?? 0;
+    const d = r.detail || {};
+    const integrity = d.integrity;
+    const breached = integrity !== undefined && integrity < 1;
+    return `
+      <div class="ride-row" style="border-left-color:${col}">
+        <div class="ride-row-head">
+          <span class="ride-name">${escHtml(r.ride)}</span>
+          <span class="ride-axis">${escHtml(r.axis)}</span>
+          <span class="ride-score" style="color:${valColor(v)}">${fmt(v)}</span>
+        </div>
+        <div class="score-bar-track"><div class="score-bar-fill" style="width:${(v*100).toFixed(1)}%;background:${col}"></div></div>
+        <div class="ride-detail">${renderRideDetail(d)}${breached ? `<span class="integrity-flag">integrity ${fmt(integrity,2)} ✗</span>` : ''}</div>
+      </div>`;
+  }).join('');
+}
+
+function renderRideDetail(d) {
+  const keys = ['deal_rate','feasible_rate','compile_rate','violation_rate','n_scenarios','n_tasks','ci95','std','own_value'];
+  const parts = [];
+  keys.forEach(k => {
+    if (d[k] === undefined) return;
+    const isCount = k.startsWith('n_');
+    parts.push(`<span>${k.replace(/_/g,' ')}: ${isCount ? d[k] : fmt(d[k], 3)}</span>`);
+  });
+  if (d.by_type)       parts.push(`<span>by type: ${Object.entries(d.by_type).map(([t,v])=>`${t} ${fmt(v,2)}`).join(', ')}</span>`);
+  if (d.by_difficulty) parts.push(`<span>by difficulty: ${Object.entries(d.by_difficulty).map(([t,v])=>`d${t} ${fmt(v,2)}`).join(', ')}</span>`);
+  return parts.join('');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  CAREER
+// ════════════════════════════════════════════════════════════════════════════
+function renderCareer(data) {
+  const sec = $('sec-career');
+  sec.classList.remove('hidden');
+
+  $('career-title').textContent = `Park tour — ${data.agent ?? 'agent'}`;
+  $('career-sub').textContent = `seed ${data.seed ?? '—'} · ${data.n_rides ?? (data.legs||[]).length} legs`;
+
+  renderLegs(data.legs || []);
+  renderCareerEquation(data);
+}
+
+function renderLegs(legs) {
+  $('legs-track').innerHTML = legs.map((leg, i) => {
+    const axisCol = AXIS_COLOR[leg.axis] || 'var(--accent)';
+    const breach = leg.integrity < 1;
+    const score = leg.score ?? 0;
+    const integ = leg.integrity ?? 1;
+    const trust = leg.trust_after ?? 1;
+    return `
+      <div class="leg ${breach ? 'breach' : ''}">
+        <div class="leg-head">
+          <span class="leg-idx">${i + 1}</span>
+          <span class="leg-name">${escHtml(leg.ride)}</span>
+          ${breach ? '<span class="breach-tag" style="margin-left:auto">breach</span>' : ''}
+        </div>
+
+        <div class="leg-metric">
+          <span class="ml">capability</span>
+          <div class="vbar-wrap">
+            <div class="vbar-track"><div class="vbar-fill" style="height:${(score*100).toFixed(1)}%;background:${axisCol}"></div></div>
+            <span class="vbar-val" style="color:${valColor(score)}">${fmt(score)}</span>
+          </div>
+        </div>
+
+        <div class="leg-metric">
+          <span class="ml">integrity</span>
+          <div class="vbar-wrap">
+            <div class="vbar-track"><div class="vbar-fill" style="height:${(integ*100).toFixed(1)}%;background:${breach ? 'var(--danger)' : 'var(--warn)'}"></div></div>
+            <span class="vbar-val" style="color:${breach ? 'var(--danger)' : 'var(--warn)'}">${fmt(integ,2)}</span>
+          </div>
+        </div>
+
+        <div class="leg-metric trust-row">
+          <span class="ml" style="display:flex;justify-content:space-between">
+            <span>trust after</span>
+            <span style="font-family:var(--mono);color:${valColor(trust)}">${fmt(trust,3)}</span>
+          </span>
+          <div class="trust-track"><div class="trust-fill" style="width:${(trust*100).toFixed(1)}%;background:${valColor(trust)}"></div></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderCareerEquation(data) {
+  const cap = data.mean_capability ?? 0;
+  const rep = data.reputation ?? 0;
+  const career = data.career_score ?? (cap * rep);
+  const collapsed = rep < 1;
+
+  $('career-equation').innerHTML = `
+    <div class="eq-term capability">
+      <span class="eq-val">${fmt(cap)}</span>
+      <span class="eq-lbl">mean capability</span>
+    </div>
+    <span class="eq-op">×</span>
+    <div class="eq-term reputation ${collapsed ? 'collapsed' : ''}">
+      <span class="eq-val">${fmt(rep)}</span>
+      <span class="eq-lbl">reputation</span>
+    </div>
+    <span class="eq-op">=</span>
+    <div class="eq-term result">
+      <span class="eq-val">${fmt(career)}</span>
+      <span class="eq-lbl">career score</span>
+    </div>`;
+
+  if (collapsed) {
+    $('career-eqnote').innerHTML =
+      `Reputation <strong>collapsed to ${fmt(rep,3)}</strong> after an integrity breach &mdash; ` +
+      `capable on paper (${fmt(cap)}), but the multiplier drags the career score down to ${fmt(career)}. ` +
+      `Capability you can't trust isn't worth much.`;
+  } else {
+    $('career-eqnote').textContent =
+      `Clean run: reputation held at ${fmt(rep,2)}, so the career score tracks capability directly.`;
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  LEADERBOARD
+// ════════════════════════════════════════════════════════════════════════════
+function renderLeaderboard(data) {
+  const sec = $('sec-board');
+  sec.classList.remove('hidden');
+
+  const ranking = data.ranking || [];
+  $('board-title').textContent = 'Career standings';
+  $('board-sub').textContent = `seed ${data.seed ?? '—'} · ${ranking.length} agents`;
+
+  const econOf = (p) => {
+    const leg = (p.legs || []).find(l => l.axis === 'economic');
+    return leg ? (leg.score ?? 0) : -1;
+  };
+  const lastIdx = ranking.length - 1;
+  const last = ranking[lastIdx];
+
+  // Reward-hacker story: the LAST-ranked agent whose reputation collapsed (< 1) despite
+  // strong raw economic capability. We confirm "economically strong" by checking its
+  // economic leg beats at least one higher-ranked agent (capability wasted by the breach).
+  const lastEcon = last ? econOf(last) : -1;
+  const lastRepLow = last && (last.reputation ?? 1) < 1;
+  const econStrong = last && ranking.some((p, i) => i < lastIdx && econOf(p) >= 0 && lastEcon > econOf(p));
+  const hacker = (lastRepLow && econStrong && lastEcon >= 0) ? last : null;
+  const hackerEcon = hacker ? lastEcon : -1;
+
+  // Table
+  $('board-body').innerHTML = ranking.map((p, i) => {
+    const isTop = i === 0, isLast = i === lastIdx;
+    const repLow = (p.reputation ?? 1) < 1;
+    const isHacker = hacker && p === hacker;
+    let tag = '';
+    if (isHacker) tag = '<span class="agent-tag hacker" title="economically strong, but reputation collapsed and it ranks last">reward-hacker</span>';
+    return `
+      <tr class="row-agent ${isHacker ? 'flagged' : ''}">
+        <td><span class="rank-badge ${isTop ? 'top' : ''} ${isLast ? 'last' : ''}">${i + 1}</span></td>
+        <td><span class="agent-name">${escHtml(p.agent)}</span>${tag}</td>
+        <td class="num" style="color:${valColor(p.career_score)};font-weight:700">${fmt(p.career_score)}</td>
+        <td class="num">${fmt(p.mean_capability)}</td>
+        <td class="num"><span class="mini-rep ${repLow ? 'low' : ''}">${fmt(p.reputation, 3)}${repLow ? ' ✗' : ''}</span></td>
+        <td class="num">${p.n_rides ?? (p.legs||[]).length}</td>
+      </tr>`;
+  }).join('');
+
+  // Bar chart (scaled to max career score)
+  const maxCareer = Math.max(...ranking.map(p => p.career_score ?? 0), 0.0001);
+  $('board-bars').innerHTML = ranking.map((p, i) => {
+    const w = ((p.career_score ?? 0) / maxCareer) * 100;
+    const isHacker = hacker && p === hacker;
+    const col = isHacker ? 'var(--danger)' : (i === 0 ? 'var(--accent)' : valColor(p.career_score));
+    return `
+      <div class="cbar-row">
+        <span class="cbar-name">${escHtml(p.agent)}</span>
+        <div class="cbar-track"><div class="cbar-fill" style="width:${w.toFixed(1)}%;background:${col}"></div></div>
+        <span class="cbar-val">${fmt(p.career_score)}</span>
+      </div>`;
+  }).join('');
+
+  // Callout
+  if (hacker) {
+    const above = ranking[lastIdx - 1];
+    $('board-callout').innerHTML = `
+      <div class="callout">
+        <div class="ct-title">The reward-hacker paradox</div>
+        <code>${escHtml(hacker.agent)}</code> is an <strong>economic standout</strong>
+        (economic capability ${fmt(hackerEcon)}) &mdash; yet it ranks
+        <strong>last (#${ranking.length})</strong>${above ? `, below <code>${escHtml(above.agent)}</code>` : ''}.
+        Its reputation collapsed to <strong>${fmt(hacker.reputation, 3)}</strong> after an integrity
+        breach, and because <code>career = capability × reputation</code>, that multiplier sinks it
+        to ${fmt(hacker.career_score)}. Raw capability without trust loses the tour.
+      </div>`;
+  } else {
+    $('board-callout').innerHTML = '';
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  DISPATCH / LOADING
+// ════════════════════════════════════════════════════════════════════════════
+function hideAllSections() {
+  ['sec-radar', 'sec-career', 'sec-board'].forEach(id => $(id).classList.add('hidden'));
+}
+
+function render(data, kind) {
+  kind = kind || detectKind(data);
+  if (kind === 'radar') renderRadar(data);
+  else if (kind === 'career') renderCareer(data);
+  else if (kind === 'leaderboard') renderLeaderboard(data);
+  else throw new Error('Unrecognized payload (expected radar, career, or leaderboard JSON)');
+  // Scroll the freshly-shown section into view (only for explicit single loads).
+  return kind;
+}
+
+function loadSingle(data) {
+  const kind = detectKind(data);
+  if (!kind) { alert('Unrecognized JSON: expected a radar, career, or leaderboard payload.'); return; }
+  hideAllSections();
+  render(data, kind);
+  $('intro').classList.add('hidden');
+  $(kind === 'radar' ? 'sec-radar' : kind === 'career' ? 'sec-career' : 'sec-board')
+    .scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── File picker ──────────────────────────────────────────────────────────────
+$('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try { loadSingle(JSON.parse(ev.target.result)); }
+    catch (err) { alert('Could not parse JSON: ' + err.message); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+// ── Load all three bundled samples (demo mode) ───────────────────────────────
+async function loadBundledSamples() {
+  const files = [
+    ['sample-radar.json', 'radar'],
+    ['sample-career.json', 'career'],
+    ['sample-leaderboard.json', 'leaderboard'],
+  ];
+  let anyLoaded = false;
+  hideAllSections();
+  for (const [path, kind] of files) {
+    try {
+      const resp = await fetch(path);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      render(data, kind);
+      anyLoaded = true;
+    } catch (err) {
+      console.warn('Could not load bundled sample', path, err);
+    }
+  }
+  if (anyLoaded) {
+    $('intro').classList.remove('hidden'); // keep the caveat note visible in demo mode
+  } else {
+    alert('Could not load the bundled samples.\n\nThis usually means the browser blocked file:// fetches. ' +
+          'Serve the viewer/ folder with a local server, or use "Open JSON" to pick a file manually.');
+  }
+  return anyLoaded;
+}
+$('btn-samples').addEventListener('click', loadBundledSamples);
+
+// ── ?path= query param ───────────────────────────────────────────────────────
+async function loadFromQueryParam() {
+  const path = new URLSearchParams(window.location.search).get('path');
+  if (!path) return false;
+  try {
+    const resp = await fetch(path);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    loadSingle(await resp.json());
+    return true;
+  } catch (err) {
+    console.error('Failed to load from ?path=', path, err);
+    return false;
+  }
+}
+
+// ── Init: ?path= wins; otherwise auto-load the three samples as a demo ───────
+(async function init() {
+  const loaded = await loadFromQueryParam();
+  if (!loaded) await loadBundledSamples();
+})();
+</script>
+</body>
+</html>

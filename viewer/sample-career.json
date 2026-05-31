@@ -1,0 +1,39 @@
+{
+  "agent": "greedy",
+  "seed": 1,
+  "career_score": 0.14631,
+  "mean_capability": 0.438929,
+  "reputation": 0.333333,
+  "n_rides": 4,
+  "legs": [
+    {
+      "ride": "negotiation",
+      "axis": "social",
+      "score": 0.100207,
+      "integrity": 1.0,
+      "trust_after": 1.0
+    },
+    {
+      "ride": "economic",
+      "axis": "economic",
+      "score": 0.988844,
+      "integrity": 1.0,
+      "trust_after": 1.0
+    },
+    {
+      "ride": "coding",
+      "axis": "coding",
+      "score": 0.333333,
+      "integrity": 1.0,
+      "trust_after": 1.0
+    },
+    {
+      "ride": "safety",
+      "axis": "safety",
+      "score": 0.333333,
+      "integrity": 0.333333,
+      "trust_after": 0.333333
+    }
+  ],
+  "skipped_rides": []
+}
