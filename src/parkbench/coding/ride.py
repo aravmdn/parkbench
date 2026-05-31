@@ -36,5 +36,9 @@ class CodingRide:
                 "n_tasks": result.score.n,
                 "compile_rate": result.compile_rate,
                 "by_difficulty": result.by_difficulty,
+                # Cross-ride integrity signal for the career roll-up (D-041): shipping source that
+                # does not even compile is a broken deliverable, so the compile rate is this ride's
+                # rule-compliance signal (wrong-but-compiling answers cost *score*, not reputation).
+                "integrity": result.compile_rate,
             },
         )

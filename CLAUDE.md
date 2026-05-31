@@ -54,26 +54,32 @@ added a ride abstraction (D-034/D-035), the **radar roll-up** (D-037), **agent i
 in run logs (D-038), and **all four scored rides**: negotiation (social, D-010), a **solo Economic
 knapsack ride** (D-036), a **solo Coding code-generation ride** (D-039, hidden-test scored with
 seed-randomized tests), and a **solo Safety red-line ride** (D-040, an adversarial reward-hacking
-probe). Reproducible: **127 passing tests**. Design + formulas: `docs/06-v1-architecture.md` and
-`docs/07-multi-ride.md`.
+probe). The phase then landed the **first cross-ride coupling**: a **career** (D-041) — reputation
+that compounds across rides — and a **leaderboard** (D-042). Reproducible: **143 passing tests**.
+Design + formulas: `docs/06-v1-architecture.md` and `docs/07-multi-ride.md`.
 
-- **Headline:** the radar for `heuristic` now spans **all four** axes — **social 0.975**
-  (negotiation) + **economic 0.990** (knapsack) + **coding 0.667** (code-generation) + **safety
-  0.667** (red-line). The radar's diagnostic value shows in `greedy`: economic 0.989 (strong) but
-  safety 0.333 (a reward-hacker). Per-ride (seed 1): safety optimal 1.000 > heuristic 0.667 > greedy
-  0.333 > random 0.276; coding optimal 1.000 > heuristic 0.667 > greedy 0.333 > random 0.000;
-  negotiation efficiency heuristic 0.975 > random 0.881 > greedy 0.100 (per-persona own-value
-  cooperative 0.772 → fair 0.554 → slippery 0.511 → tough 0.356).
-- **Next** (`docs/03-roadmap.md`, `docs/04-open-questions.md`): the four single-ride axes are done and
-  trusted, so the roadmap turns to **cross-ride "career"** (#3 — persistent reputation/resources),
-  **theming + spectator product** (#4), and **growing/hardening the BYO ecosystem** (#5). Cross-cutting:
-  continued **anti-gaming safeguards** (D-039/D-040 made real starts; still open: cross-ride safeguards
-  + **sandboxing/time-bounding untrusted code**); LLM house personas remain a fast-follow (D-024).
-- **Verify:** `uv venv && uv pip install -e ".[dev]"`, then `pytest` (127 pass),
+- **Headline:** the radar for `heuristic` spans **all four** axes — **social 0.975** (negotiation) +
+  **economic 0.990** (knapsack) + **coding 0.667** (code-generation) + **safety 0.667** (red-line).
+  The **career (D-041)** turns that into one cross-ride number: `career_score = mean_capability ×
+  reputation`, where **reputation = the product of each ride's `integrity` signal** (safety
+  non-violation · economic feasibility · coding compile · social neutral). It makes a reward-hacker
+  pay — seed 1 leaderboard: **optimal 1.000 > heuristic 0.550 > random 0.151 > greedy 0.146**, i.e.
+  `greedy` (the economic *star* at 0.989) lands **dead last, below `random`**, because its 67 %
+  red-line violation rate collapses its reputation to 0.333. Per-ride (seed 1): safety optimal 1.000 >
+  heuristic 0.667 > greedy 0.333 > random 0.276; coding optimal 1.000 > heuristic 0.667 > greedy 0.333
+  > random 0.000; negotiation efficiency heuristic 0.975 > random 0.881 > greedy 0.100.
+- **Next** (`docs/03-roadmap.md`, `docs/04-open-questions.md`): roadmap **#3 cross-ride career is
+  done**; the focus turns to the rest of **theming + spectator product** (#4 — a career/radar-aware
+  static viewer beyond the `leaderboard` down-payment) and **growing/hardening the BYO ecosystem**
+  (#5). Cross-cutting: the career is the deepest **anti-gaming** move yet (misconduct anywhere now
+  costs the whole career); still open: **sandboxing/time-bounding untrusted code** (folded into #5);
+  LLM house personas remain a fast-follow (D-024).
+- **Verify:** `uv venv && uv pip install -e ".[dev]"`, then `pytest` (143 pass),
   `parkbench run --agent heuristic --seed 1`, `parkbench economic --agent greedy`,
-  `parkbench coding --agent heuristic`, `parkbench safety --agent heuristic`, and
-  `parkbench radar --agent heuristic` (4-axis profile). Live LLM: set `OPENROUTER_API_KEY` (+ optional
-  `OPENROUTER_MODEL`), then `parkbench run --agent llm --seed 1`.
+  `parkbench coding --agent heuristic`, `parkbench safety --agent heuristic`,
+  `parkbench radar --agent heuristic` (4-axis profile), `parkbench career --agent greedy` (the
+  reward-hacker's reputation collapse), and `parkbench leaderboard` (the ranked board). Live LLM: set
+  `OPENROUTER_API_KEY` (+ optional `OPENROUTER_MODEL`), then `parkbench run --agent llm --seed 1`.
 
 ## Conventions for growing the docs
 

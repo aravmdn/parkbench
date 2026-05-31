@@ -65,3 +65,8 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
   the adversarial nudge). **The radar is now complete across all four axes** — for `heuristic`: social
   0.975 + economic 0.990 + coding 0.667 + safety 0.667. 127 passing tests. Updated `02`, `03`, `04`,
   `07`.
+- **2026-05-31** — **Cross-ride career** (D-041) + **leaderboard** (D-042): the first cross-ride
+  coupling (roadmap #3). Each ride declares an `integrity` signal; **reputation = the product** of
+  them and **`career_score = mean_capability × reputation`**, so misconduct anywhere discounts
+  capability everywhere. The reward-hacker `greedy` (economic star) now ranks **last, below `random`**.
+  143 passing tests. Updated `02`–`05`, `07`, and root `CLAUDE.md`.

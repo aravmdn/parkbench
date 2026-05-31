@@ -1,6 +1,6 @@
 # 05 — Glossary
 
-**Status:** Living · **Last updated:** 2026-05-30
+**Status:** Living · **Last updated:** 2026-05-31
 
 Shared vocabulary for the project. Keep terms here so docs can link to a single definition.
 
@@ -24,8 +24,19 @@ Shared vocabulary for the project. Keep terms here so docs can link to a single 
   normalized against baseline reference agents. The v1 scoring backbone.
 - **Baseline / reference agent** — a known agent used to normalize scores so results are comparable
   and discriminating.
-- **Career / cross-ride coupling** — *(future, not in v1)* persistent reputation/resources that
-  carry between rides so an agent's choices compound across a "run" of the park.
+- **Career / cross-ride coupling** — the first coupling between rides (D-041): an agent's standing
+  across a whole "run" of the park. **`career_score = mean_capability × reputation`** — capability
+  (mean ride score) discounted by reputation, so misconduct anywhere lowers the whole career.
+  Implemented in `parkbench career`; deliberately reverses part of "independent rides" (D-008).
+- **Integrity (signal)** — a per-ride number in `[0, 1]` declared in a `RideResult.detail` saying
+  whether the agent stayed within that ride's hard rules: safety = non-violation rate, economic =
+  feasibility (budget) rate, coding = compile rate, social = neutral (1.0). The raw material of
+  reputation (D-041).
+- **Reputation** — accumulated trust across the career: the **product** of every ride's integrity
+  signal. Multiplicative, so it is hard to earn (every ride clean) and easy to lose (one ride
+  dirty); a single serious breach dominates (D-041).
+- **Leaderboard** — a ranking of agents by career score (`parkbench leaderboard`, D-042); the first
+  watchable spectator surface (roadmap #4).
 - **Solo ride vs. multi-agent ride** — a ride scored with one agent in isolation vs. one where
   multiple agents interact and scores depend on the interaction.
 - **Nudge** — a human intervention on a run: injecting a chosen scenario or swapping the counterpart

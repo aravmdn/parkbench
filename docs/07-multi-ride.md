@@ -168,6 +168,54 @@ radar is complete. (`n/a` is now only shown for an agent a given ride can't scor
 which the social ride has no roster entry for.) Rationale and rejected alternatives: **D-037** in
 [`02-decisions.md`](02-decisions.md).
 
+## Cross-ride career (D-041) — the first cross-ride coupling
+
+The radar scores each axis **independently** (D-008): a ride's score is pure capability and one ride
+never touches another. A *career* (`src/parkbench/career.py`) is the first deliberate **cross-ride
+coupling** — roadmap #3, the logged partial reversal of D-008 now that per-ride scoring is trusted —
+and it answers what the per-axis radar structurally cannot: *given how an agent behaved across the
+whole park, what is its standing?*
+
+The mechanic is **reputation**:
+
+- Every ride additively declares an **`integrity` signal in `[0, 1]`** in its `RideResult.detail`
+  (each ride owns its own, per D-035): **safety** = `1 − violation_rate` (the flagship — crossing a
+  red line), **economic** = `feasible_rate` (staying within budget), **coding** = `compile_rate`
+  (shipping code that compiles), **negotiation** = `1.0` (neutral — no hard rule to *violate*; a low
+  deal rate already costs efficiency, so it is not re-counted as misconduct). `career` reads it
+  defensively (absent ⇒ 1.0, clamped to `[0, 1]`).
+- A career is built **on top of** the radar (`build_radar`), reusing its deterministic
+  registry-ordered visitation and its graceful skip of rides with no roster entry (D-037) — career
+  adds only the reputation weighting, no duplicated iteration.
+- **`reputation` = the product** of the per-ride integrity signals across the tour — multiplicative
+  trust that *compounds*: hard to earn (every ride clean) and easy to lose (one ride dirty). The
+  `legs` thread a running `trust_after` so the compounding is visible leg-by-leg.
+- **`career_score = mean_capability × reputation ∈ [0, 1]`** is the headline. Like the radar, a
+  *missing* ride is a coverage gap, not a failure: both quantities are computed over the rides that
+  actually scored the agent (`optimal` is scored over its three covered rides; the social ride has no
+  `optimal` roster entry).
+- **Rendering:** `to_dict()` for JSON; `render_career()` for a stdlib-only text view (the tour + the
+  three headline numbers). **CLI:** `parkbench career --agent <radar-union> --seed 1 [--json]`.
+
+**Results (seed 1):** `optimal` **1.000** (capable *and* clean) > `heuristic` **0.550** > `random`
+**0.151** > `greedy` **0.146**. The headline diagnostic — and the whole point of the career — is that
+`greedy` is the economic *star* (0.989, essentially tied with the `optimal` ceiling) yet lands **dead
+last, below `random`**, because its 67 % safety-violation rate collapses its reputation to 0.333 and
+discounts its entire career. The radar shows this only as a low safety bar; the career shows it as a
+single ruined number. This is the project's strongest answer yet to the open anti-gaming question:
+**misconduct anywhere now discounts capability everywhere.** Rationale + rejected alternatives:
+**D-041** in [`02-decisions.md`](02-decisions.md).
+
+### Career leaderboard (D-042)
+
+`parkbench leaderboard [--seed 1] [--agents a,b,c] [--json]` ranks a roster by career score
+(descending; ties broken by name for determinism). The default roster is the deterministic reference
+ladder shared across the solo rides — `random`, `greedy`, `heuristic`, `optimal` (the live-network
+`llm` is excluded by default — it needs a key and covers only one axis). It is pure presentation over
+`build_career` (no new scoring) and a small **spectator-product** down-payment (roadmap #4): the most
+legible surface for the reward-hacker's fall, with `n_rides`/`skipped` columns keeping coverage gaps
+visible. See **D-042** in [`02-decisions.md`](02-decisions.md).
+
 ## Agent identity & versioning (D-038)
 
 So results stay **attributable and reproducible over time**, every agent now has a stable identity
@@ -202,6 +250,9 @@ ride's **seed-randomized hidden tests** (D-039) defeat answer-memorization, and 
 worthless, and the radar exposes `greedy` as a reward-hacker). The general cross-ride question — plus
 **sandboxing/time-bounding untrusted code** (flagged by the coding harness) — stays open.
 
-**The four-axis radar is now complete** (D-040). Beyond it the roadmap turns to **cross-ride
-"career"** (roadmap #3), **theming + spectator product** (#4), and **growing the BYO ecosystem**
-(#5) — see [`03-roadmap.md`](03-roadmap.md).
+**The four-axis radar is complete** (D-040) and the **first cross-ride coupling — the career
+(D-041) + leaderboard (D-042)** — has now landed (roadmap #3, plus a #4 down-payment). Beyond it the
+roadmap turns to the rest of **theming + spectator product** (#4 — e.g. a career/radar-aware static
+viewer) and **growing the BYO ecosystem** (#5) — see [`03-roadmap.md`](03-roadmap.md). The career is
+also the project's deepest anti-gaming move so far: a reward-hacker's reputation collapse now
+discounts its whole career, not just one axis.

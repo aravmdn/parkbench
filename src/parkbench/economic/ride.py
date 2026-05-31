@@ -35,5 +35,9 @@ class EconomicRide:
                 "std": result.score.std,
                 "n_scenarios": result.score.n,
                 "feasible_rate": result.feasible_rate,
+                # Cross-ride integrity signal for the career roll-up (D-041): staying within the
+                # budget is the ride's hard constraint, so feasibility *is* rule-compliance — an
+                # infeasible (over-budget) allocation is a constraint breach that costs reputation.
+                "integrity": result.feasible_rate,
             },
         )
