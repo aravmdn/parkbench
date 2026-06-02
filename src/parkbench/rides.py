@@ -17,6 +17,7 @@ from typing import Protocol, runtime_checkable
 from .agents import make_agent
 from .axis import Axis, RideResult
 from .coding import CodingRide  # D-039: registers the coding (code-generation) ride below
+from .commons import CommonsRide  # D-045: registers the commons (public-goods) ride below
 from .economic import EconomicRide  # D-036: registers the economic (knapsack) ride below
 from .safety import SafetyRide  # D-040: registers the safety (red-line) ride below
 from .suite import Suite, run_suite
@@ -62,6 +63,7 @@ class NegotiationRide:
 # Rides available for radar roll-up. New rides add themselves here.
 RIDE_REGISTRY: dict[str, Ride] = {
     "negotiation": NegotiationRide(),
+    "commons": CommonsRide(),  # D-045: multi-agent public-goods ride (2nd on the social axis)
     "economic": EconomicRide(),  # D-036: solo resource-allocation (knapsack) ride
     "coding": CodingRide(),  # D-039: solo code-generation ride (hidden-test scored)
     "safety": SafetyRide(),  # D-040: solo red-line-under-adversarial-pressure ride
