@@ -640,3 +640,60 @@ separate); any charting/JS library or web font (violates D-023/D-028 — drew th
 SVG); hard-coding the `greedy` reward-hacker callout (brittle — detected structurally instead); a
 served/live profiles backend now (premature — a static page over the `--json` outputs is enough for
 the spectator down-payment; live serving is later roadmap-#4/#5 work).
+
+### D-045 · 2026-06-02 · Fifth ride = multi-agent public-goods ("commons"), 2nd ride on the social axis
+**Decision:** Add the project's **fifth** ride — a **multi-agent**, finitely-repeated **public-goods
+(commons) game** on the **social** axis (D-005). It is the **second multi-agent ride** (after
+negotiation, D-010) and the **first ride to share an axis with another**, so the radar roll-up
+(D-037) now averages two real rides on `social` for the first time (validating "per-axis mean when
+several rides share an axis"). Each of `n_players` players (test agent A is player 0; the rest are a
+fixed, deterministic **house cast**, D-004) starts each round with endowment `E` and contributes
+`c ∈ [0, E]` to a pool that is multiplied by `m` and split evenly: `payoff_i = (E − c_i) +
+m·Σc/n_players`. With `1 < m < n_players` it is a genuine social dilemma (own-contribution return
+`m/n < 1`, group return `m > 1`). The house cast is an **unconditional cooperator**, a **grim-trigger
+reciprocator** that conditions on **A** (cooperates fully until A first drops below the cooperation
+bar `E//2`, then defects forever — the strategic lever that makes cooperating pay), and an
+**unconditional defector**. Scoring keeps the objective-payoff-vs-baselines backbone (D-011/D-019) as
+a **best/worst-response bracket**: `score = (achieved − worst)/(best − worst)`, clamped to `[0, 1]`,
+where `best`/`worst` are the exact max/min total payoff against the fixed cast, **brute-forced** over a
+discretized strategy space (`levels = {0, E//2, E}`, so `≤ 3**7 = 2187` sequences — instant). The ride
+owns its **own** agent interface (`CommonsAgent.contribute(round_idx, history, scenario) -> int`,
+D-035); the four baselines reuse the shared roster names — `random` (uniform level each round),
+`greedy` (the pure free-rider — contributes 0 always), `heuristic` (a reciprocating conditional
+cooperator that meets the bar while the society cooperates), `optimal` (replays the brute-forced best
+response — cooperate to sustain the reciprocator, then defect on the final round; the 1.0 ceiling).
+Wrapped as `CommonsRide` (`name="commons"`, `axis="social"`), registered as `"commons"` in
+`RIDE_REGISTRY`, with a localized `parkbench commons --agent <name> --seed 1` subcommand; the commons
+roster is folded into the `radar --agent` union (its names already overlap). The ride's cross-ride
+**integrity is 1.0 (neutral)**, exactly like negotiation (D-041): free-riding is a legitimate if
+poorly-rewarded strategy whose cost is already priced into the score, so it must not be double-counted
+as misconduct. New package `src/parkbench/commons/`; the only shared edits are one `RIDE_REGISTRY`
+line + import, the additive CLI subcommand, and the radar union.
+**Why:** Multi-agent dynamics are the project's defensible wedge (`00-vision.md`), and the radar's
+per-axis-mean aggregation (D-037) had never actually been exercised by two rides sharing an axis — a
+second **social** ride does both. A public-goods game adds *cooperation under a social dilemma* (a
+genuinely different social skill from bilateral bargaining) while staying reproducible (the
+deterministic house cast, D-004) and rigorously scorable (an exact best/worst bracket, no LLM judge).
+It also **generalizes the reward-hacker story**: a society that reciprocates makes naive exploitation
+the *worst* policy, so the free-rider `greedy` — the economic ride's star — finishes last here too.
+Stdlib-only (D-023).
+**Result:** seed 1, 12 games — `optimal` 1.000 > `heuristic` 0.951 > `random` 0.492 > `greedy` 0.469;
+`greedy` is the **worst** baseline (the reward-hacker punished by reciprocity), and the exact best
+response `(4,4,4,4,4,4,0)` shows textbook backward-induction endgame defection. The social axis is now
+the **mean of two rides**: for `heuristic`, social = mean(negotiation 0.975, commons 0.951) = 0.963.
+New career headline (seed 1): `optimal` 1.000 > `heuristic` 0.567 > `random` 0.154 > `greedy` 0.148 —
+`greedy` stays dead last (reputation collapse from safety **plus** now the worst social capability).
+Fully reproducible (same seed ⇒ identical games ⇒ identical scores). 164 passing tests (150 → 164,
++14 in `tests/test_commons.py`). Implements the D-035 ride contract; see
+[`07-multi-ride.md`](07-multi-ride.md).
+**Rejected:** a non-reactive (open-loop) cast (then defecting strictly dominates — cooperation could
+never pay and the ride would just measure "do you correctly free-ride"); a one-round-memory
+tit-for-tat reciprocator (the marginal return of cooperating one round doesn't cover its cost, so the
+best response collapses to always-defect — the grim trigger is what makes cooperation worthwhile);
+continuous (un-discretized) contributions (the exact best/worst bracket would no longer be
+brute-forceable — discretized to {0, E//2, E}, with non-level plays simply clamped to ≤ 1.0); an
+`achieved/optimal` score with floor 0 (every play earns *something*, so it would never approach 0 and
+the baselines would bunch — the worst-response floor spreads them); a non-neutral integrity signal
+(free-riding is legitimate strategy, not a rule violation — its cost is already in the score, cf. the
+negotiation ride's neutral integrity, D-041); sharing another ride's `Agent` interface (each ride owns
+its own, D-035).

@@ -42,7 +42,7 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 | `docs/05-glossary.md` | Shared vocabulary (ride, house cast, BYO agent, radar profile, …). |
 | `docs/06-v1-architecture.md` | How the v1 core + follow-ups are built — modules, formulas, how to run, results. |
 
-## Current status (2026-05-31)
+## Current status (2026-06-02)
 
 **v1 + the post-v1 multi-ride phase are on `main`; the four-axis diagnostic radar is complete.** The
 negotiation ride runs end-to-end: engine, seeded scenario generator, objective-payoff scoring,
@@ -55,32 +55,37 @@ in run logs (D-038), and **all four scored rides**: negotiation (social, D-010),
 knapsack ride** (D-036), a **solo Coding code-generation ride** (D-039, hidden-test scored with
 seed-randomized tests), and a **solo Safety red-line ride** (D-040, an adversarial reward-hacking
 probe). The phase then landed the **first cross-ride coupling**: a **career** (D-041) — reputation
-that compounds across rides — and a **leaderboard** (D-042). Most recently: the coding harness is
-**sandboxed + time-bounded** (D-043, subprocess + wall-clock timeout), and a static zero-dependency
+that compounds across rides — and a **leaderboard** (D-042). The coding harness is **sandboxed +
+time-bounded** (D-043, subprocess + wall-clock timeout), and a static zero-dependency
 **diagnostic-profile viewer** renders the radar/career/leaderboard (D-044, `viewer/profiles.html`).
-Reproducible: **150 passing tests**. Design + formulas: `docs/06-v1-architecture.md` and
-`docs/07-multi-ride.md`.
+Most recently the park gained a **fifth ride — a multi-agent Commons public-goods ride** (D-045), the
+**second ride on the social axis**, so the radar's per-axis mean is now exercised by two real rides
+(social = mean(negotiation, commons)). Reproducible: **164 passing tests**. Design + formulas:
+`docs/06-v1-architecture.md` and `docs/07-multi-ride.md`.
 
-- **Headline:** the radar for `heuristic` spans **all four** axes — **social 0.975** (negotiation) +
-  **economic 0.990** (knapsack) + **coding 0.667** (code-generation) + **safety 0.667** (red-line).
-  The **career (D-041)** turns that into one cross-ride number: `career_score = mean_capability ×
-  reputation`, where **reputation = the product of each ride's `integrity` signal** (safety
-  non-violation · economic feasibility · coding compile · social neutral). It makes a reward-hacker
-  pay — seed 1 leaderboard: **optimal 1.000 > heuristic 0.550 > random 0.151 > greedy 0.146**, i.e.
-  `greedy` (the economic *star* at 0.989) lands **dead last, below `random`**, because its 67 %
-  red-line violation rate collapses its reputation to 0.333. Per-ride (seed 1): safety optimal 1.000 >
-  heuristic 0.667 > greedy 0.333 > random 0.276; coding optimal 1.000 > heuristic 0.667 > greedy 0.333
-  > random 0.000; negotiation efficiency heuristic 0.975 > random 0.881 > greedy 0.100.
+- **Headline:** the radar for `heuristic` spans **all four** axes — **social 0.963** (mean of
+  negotiation 0.975 + commons 0.951) + **economic 0.990** (knapsack) + **coding 0.667**
+  (code-generation) + **safety 0.667** (red-line). The **career (D-041)** turns that into one
+  cross-ride number: `career_score = mean_capability × reputation`, where **reputation = the product
+  of each ride's `integrity` signal** (safety non-violation · economic feasibility · coding compile ·
+  social neutral). It makes a reward-hacker pay — seed 1 leaderboard: **optimal 1.000 > heuristic
+  0.567 > random 0.154 > greedy 0.148**, i.e. `greedy` (the economic *star* at 0.989) lands **dead
+  last, below `random`**, because its 67 % red-line violation rate collapses its reputation to 0.333
+  (and since D-045 it is *also* the worst social baseline). Per-ride (seed 1): commons optimal 1.000 >
+  heuristic 0.951 > random 0.492 > greedy 0.469 (free-rider punished by reciprocity); safety optimal
+  1.000 > heuristic 0.667 > greedy 0.333 > random 0.276; coding optimal 1.000 > heuristic 0.667 >
+  greedy 0.333 > random 0.000; negotiation efficiency heuristic 0.975 > random 0.881 > greedy 0.100.
 - **Next** (`docs/03-roadmap.md`, `docs/04-open-questions.md`): roadmap **#3 (career) is done** and
   **#4 (spectator product) is well underway** — `leaderboard` (D-042) + the `profiles.html` viewer
   (D-044); remaining #4 is the creative theme/skin and possibly live/served profiles. **#5
   (BYO ecosystem)**: the coding harness is now sandboxed (D-043); next is documenting/hardening the
   HTTP protocol and a **full OS sandbox** (FS/network/resource confinement) for untrusted code — the
   one anti-gaming item still open. LLM house personas remain a fast-follow (D-024).
-- **Verify:** `uv venv && uv pip install -e ".[dev]"`, then `pytest` (150 pass; the coding tests
-  spawn subprocesses, so the suite now takes ~30s),
+- **Verify:** `uv venv && uv pip install -e ".[dev]"`, then `pytest` (164 pass; the coding tests
+  spawn subprocesses, so the suite now takes ~40s),
   `parkbench run --agent heuristic --seed 1`, `parkbench economic --agent greedy`,
   `parkbench coding --agent heuristic`, `parkbench safety --agent heuristic`,
+  `parkbench commons --agent optimal` (the multi-agent public-goods ride),
   `parkbench radar --agent heuristic` (4-axis profile), `parkbench career --agent greedy` (the
   reward-hacker's reputation collapse), and `parkbench leaderboard` (the ranked board). Spectator
   viewer: `python -m http.server 8080 --directory viewer/` then open `/profiles.html` (or open the

@@ -1,6 +1,6 @@
 # 03 — Roadmap
 
-**Status:** Living · **Last updated:** 2026-05-31
+**Status:** Living · **Last updated:** 2026-06-02
 
 Directional only — sequence and detail will firm up as v1 is built and learned from. v1 itself is in
 [`01-v1-scope.md`](01-v1-scope.md).
@@ -40,7 +40,8 @@ Directional only — sequence and detail will firm up as v1 is built and learned
 - Safety / robustness (adversarial scenarios, manipulation resistance, crisis handling).
   _(Shipped: red-line under adversarial pressure, D-040.)_
 - Coalition formation (Diplomacy-lite / weighted voting).
-- Commons / public-goods (cooperate-or-exploit with communication).
+- Commons / public-goods (cooperate-or-exploit). _(Shipped: multi-agent public-goods game, D-045 —
+  the second social-axis ride; first to exercise the radar's per-axis mean.)_
 - Social deduction (Werewolf/Avalon-style) — high spectacle; needs a scoring approach robust to noise.
 
 > Anything here is **not** committed. Promote an item only via a decision entry in

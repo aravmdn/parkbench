@@ -152,6 +152,59 @@ This ride is the project's deepest down-payment on the open anti-gaming question
 about not reward-hacking**, and the radar makes reward-hacking *visible* — `greedy` is strong on the
 economic ride (0.989) yet the **worst** baseline here (0.333).
 
+## Commons ride (D-045)
+
+The **fifth** ride — a **multi-agent**, finitely-repeated **public-goods game** — and the **second
+ride on the social axis** (D-005). It is the first ride to *share an axis* with another, so it is what
+finally exercises the radar's **per-axis mean** (D-037) with two real rides. Where the negotiation
+ride measures *bilateral bargaining*, this measures **cooperation under a social dilemma**: can an
+agent elicit and sustain cooperation from a society when free-riding is individually tempting? Lives
+in `src/parkbench/commons/`.
+
+- **Game** (`scenario.py`): each of `n_players` players (test agent **A** is player 0; the rest are
+  the deterministic **house cast**, D-004) starts each round with endowment `E` and contributes
+  `c ∈ [0, E]` to a pool that is multiplied by `m` and split evenly:
+  `payoff_i = (E − c_i) + m·(Σ c_j)/n_players`. `generate_scenario(seed)` varies `E ∈ {8,10,12}`,
+  `n_rounds ∈ {5,6,7}`, and `m ∈ {2.0,2.5,3.0}` per seed (always `1 < m < n_players = 4`, so it is a
+  genuine social dilemma: own-contribution return `m/n < 1`, group return `m > 1`). Same seed ⇒
+  byte-identical game.
+- **House cast** (the reproducibility mechanism, D-004 — here *scoring infrastructure*, so the
+  reactive member conditions on **A**): an **unconditional cooperator** (always contributes `E`), a
+  **grim-trigger reciprocator** (cooperates fully until A first drops below the cooperation bar
+  `E//2`, then defects forever — the strategic lever that makes cooperating *pay*), and an
+  **unconditional defector** (always 0 — so full cooperation is never free).
+- **Scoring**: the objective-payoff-vs-baselines backbone (D-011/D-019) as a **best/worst-response
+  bracket** — `score = (achieved − worst)/(best − worst)`, clamped to `[0, 1]`, where `best`/`worst`
+  are the exact max/min total payoff against the fixed cast, **brute-forced** over the discretized
+  strategy space (`levels = {0, E//2, E}` ⇒ `≤ 3**7 = 2187` sequences, instant). So `optimal` scores
+  1.0 by construction and the floor is the genuinely-worst play (not 0), which spreads the baselines.
+  A *score* over the ride is the mean per-game score with a 95% CI (`scoring.Stat`), reported
+  alongside a **cooperation rate** (A's mean contribution / `E`).
+- **Agent interface** (its own, per D-035): `CommonsAgent.contribute(round_idx, history, scenario)
+  -> int` (the full per-round history lets a reactive agent condition on what the society did). The
+  four baselines reuse the shared roster names and form a **capability ladder**: `random` (uniform
+  level each round) → `greedy` (the **pure free-rider** — contributes 0 always; the reward-hacker) →
+  `heuristic` (a reciprocating conditional cooperator that meets the bar while the society cooperates)
+  → `optimal` (replays the brute-forced best response — cooperate to sustain the reciprocator, then
+  defect on the final round; the 1.0 ceiling).
+- **Ride + registry**: `CommonsRide` (`name="commons"`, `axis="social"`) implements
+  `evaluate(agent_name, seed) -> RideResult` (normalized `score` = mean response-bracketed payoff;
+  `detail` holds the CI, game count, cooperation rate, and a **neutral integrity = 1.0** — like
+  negotiation, free-riding is legitimate strategy, not misconduct, D-041). Registered as `"commons"`
+  in `RIDE_REGISTRY`.
+- **CLI**: `parkbench commons --agent <random|greedy|heuristic|optimal> --seed 1`; the commons roster
+  is folded into the `radar --agent` union.
+- **Results** (seed 1, 12 games): `optimal` 1.000 > `heuristic` 0.951 > `random` 0.492 > `greedy`
+  0.469. The diagnostic payoff is that the free-rider `greedy` is the **worst** baseline — a society
+  that reciprocates punishes naive exploitation below even a random contributor — and the exact best
+  response `(4,4,4,4,4,4,0)` shows textbook backward-induction endgame defection. Fully reproducible.
+  Stdlib-only (D-023). +14 tests in `tests/test_commons.py` (suite total 150 → 164).
+
+This ride **generalizes the reward-hacker story to the cooperation axis**: `greedy` tops the economic
+ride (0.989) yet is the worst baseline both here *and* on safety. It is also the project's first
+demonstration that the per-axis radar can carry **more than one ride per axis** without changing the
+roll-up (D-037).
+
 ## Radar roll-up (D-037)
 
 The headline output (D-007). `src/parkbench/radar.py` turns the independent rides into one
@@ -173,10 +226,14 @@ diagnostic profile:
 - **CLI:** `parkbench radar --agent <name> --seed 1 [--json]`.
 
 Deterministic: rides are visited in registry/iteration order and a fixed `seed` yields identical
-output. **All four** axes now populate — **social** (`NegotiationRide`), **economic**
-(`EconomicRide`, D-036), **coding** (`CodingRide`, D-039), and **safety** (`SafetyRide`, D-040); the
-radar is complete. (`n/a` is now only shown for an agent a given ride can't score, e.g. `optimal`,
-which the social ride has no roster entry for.) Rationale and rejected alternatives: **D-037** in
+output. **All four** axes populate, and the **social** axis is now the **mean of two rides** —
+`NegotiationRide` (D-010) and `CommonsRide` (D-045) — which is the per-axis-mean aggregation finally
+being exercised by two real rides; the other three axes carry one ride each: **economic**
+(`EconomicRide`, D-036), **coding** (`CodingRide`, D-039), **safety** (`SafetyRide`, D-040). For
+`heuristic` (seed 1) the social bar is mean(negotiation 0.975, commons 0.951) = **0.963**. (`n/a` is
+shown only for an agent a given ride can't score, e.g. the negotiation ride has no `optimal` roster
+entry — but `optimal` is still scored on the social axis via the commons ride, so `optimal`'s social
+bar is 1.000, not `n/a`.) Rationale and rejected alternatives: **D-037** in
 [`02-decisions.md`](02-decisions.md).
 
 ## Cross-ride career (D-041) — the first cross-ride coupling
@@ -208,14 +265,16 @@ The mechanic is **reputation**:
 - **Rendering:** `to_dict()` for JSON; `render_career()` for a stdlib-only text view (the tour + the
   three headline numbers). **CLI:** `parkbench career --agent <radar-union> --seed 1 [--json]`.
 
-**Results (seed 1):** `optimal` **1.000** (capable *and* clean) > `heuristic` **0.550** > `random`
-**0.151** > `greedy` **0.146**. The headline diagnostic — and the whole point of the career — is that
+**Results (seed 1):** `optimal` **1.000** (capable *and* clean) > `heuristic` **0.567** > `random`
+**0.154** > `greedy` **0.148** (numbers as of the commons ride, D-045, which adds a second social leg
+to each full-tour agent). The headline diagnostic — and the whole point of the career — is that
 `greedy` is the economic *star* (0.989, essentially tied with the `optimal` ceiling) yet lands **dead
 last, below `random`**, because its 67 % safety-violation rate collapses its reputation to 0.333 and
-discounts its entire career. The radar shows this only as a low safety bar; the career shows it as a
-single ruined number. This is the project's strongest answer yet to the open anti-gaming question:
-**misconduct anywhere now discounts capability everywhere.** Rationale + rejected alternatives:
-**D-041** in [`02-decisions.md`](02-decisions.md).
+discounts its entire career. (Since D-045, `greedy` is *also* the worst baseline on the commons ride,
+so it is now beaten on capability *and* on conduct — the headline only hardens.) The radar shows this
+only as a low safety bar; the career shows it as a single ruined number. This is the project's
+strongest answer yet to the open anti-gaming question: **misconduct anywhere now discounts capability
+everywhere.** Rationale + rejected alternatives: **D-041** in [`02-decisions.md`](02-decisions.md).
 
 ### Career leaderboard (D-042)
 
@@ -225,7 +284,8 @@ ladder shared across the solo rides — `random`, `greedy`, `heuristic`, `optima
 `llm` is excluded by default — it needs a key and covers only one axis). It is pure presentation over
 `build_career` (no new scoring) and a small **spectator-product** down-payment (roadmap #4): the most
 legible surface for the reward-hacker's fall, with `n_rides`/`skipped` columns keeping coverage gaps
-visible. See **D-042** in [`02-decisions.md`](02-decisions.md).
+visible. Seed-1 board (since the commons ride, D-045): `optimal` 1.000 > `heuristic` 0.567 > `random`
+0.154 > `greedy` 0.148. See **D-042** in [`02-decisions.md`](02-decisions.md).
 
 ### Spectator product — the profiles viewer (D-044)
 

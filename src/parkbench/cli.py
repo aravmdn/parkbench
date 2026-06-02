@@ -255,6 +255,34 @@ def cmd_coding(args: argparse.Namespace) -> None:
     print()
 
 
+def cmd_commons(args: argparse.Namespace) -> None:
+    # Imported lazily so the core CLI has no dependency on the commons ride unless used (D-045).
+    from .commons import AGENT_REGISTRY as COMMONS_AGENTS
+    from .commons import make_agent as make_commons_agent
+    from .commons import run_suite as run_commons_suite
+
+    result = run_commons_suite(
+        make_commons_agent(args.agent), seed=args.seed, n_scenarios=args.scenarios
+    )
+
+    print("\nParkbench - commons ride (multi-agent public-goods / cooperation, D-045)")
+    print(
+        f"suite seed={args.seed}  games={result.score.n}  "
+        f"agents={', '.join(sorted(COMMONS_AGENTS))}\n"
+    )
+    print(f"agent: {result.agent_name}")
+    print(f"  payoff vs best/worst response : {_fmt(result.score)}   [optimum = 1.000]")
+    print(f"  cooperation rate (contrib / E): {result.cooperation_rate:6.1%}\n")
+
+    print("  game        rounds   E    m     worst   best    achieved   coop    score")
+    for r in result.scenarios:
+        print(
+            f"    seed {str(r.scenario_seed):<5} {r.n_rounds:>5}  {r.endowment:>3}  {r.multiplier:>3.1f}  "
+            f"{r.worst:>6.1f}  {r.best:>6.1f}  {r.achieved:>8.1f}   {r.cooperation:4.0%}   {r.score:5.3f}"
+        )
+    print()
+
+
 def cmd_safety(args: argparse.Namespace) -> None:
     # Imported lazily so the core CLI has no dependency on the safety ride unless used (D-040).
     from .safety import AGENT_REGISTRY as SAFE_AGENTS
@@ -337,11 +365,16 @@ def build_parser() -> argparse.ArgumentParser:
     # Each ride owns its own roster (D-035); the radar can profile any agent any ride can score, so
     # its --agent choices are the union across rides (graceful-skip handles rides missing that name).
     from .coding import AGENT_REGISTRY as CODE_AGENTS
+    from .commons import AGENT_REGISTRY as COMMONS_AGENTS
     from .economic import AGENT_REGISTRY as ECON_AGENTS
     from .safety import AGENT_REGISTRY as SAFE_AGENTS
 
     radar_agents = sorted(
-        set(AGENT_REGISTRY) | set(ECON_AGENTS) | set(CODE_AGENTS) | set(SAFE_AGENTS)
+        set(AGENT_REGISTRY)
+        | set(COMMONS_AGENTS)
+        | set(ECON_AGENTS)
+        | set(CODE_AGENTS)
+        | set(SAFE_AGENTS)
     )
 
     rd = sub.add_parser("radar", help="Roll every ride up into the agent's diagnostic radar profile.")
@@ -387,6 +420,13 @@ def build_parser() -> argparse.ArgumentParser:
     s2.add_argument("--seed", type=int, default=1, help="Suite seed (selects the scenario set).")
     s2.add_argument("--scenarios", type=int, default=12)
     s2.set_defaults(func=cmd_safety)
+
+    # Commons ride (multi-agent public-goods / cooperation, D-045). Localized: its own agent registry.
+    cm = sub.add_parser("commons", help="Run an agent through the commons (public-goods) ride.")
+    cm.add_argument("--agent", default="heuristic", choices=sorted(COMMONS_AGENTS))
+    cm.add_argument("--seed", type=int, default=1, help="Suite seed (selects the game set).")
+    cm.add_argument("--scenarios", type=int, default=12)
+    cm.set_defaults(func=cmd_commons)
     return p
 
 

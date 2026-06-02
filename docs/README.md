@@ -75,3 +75,10 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
   untrusted-code gap; baselines byte-identical), and a static zero-dependency **diagnostic-profile
   viewer** (D-044, `viewer/profiles.html`) renders the radar/career/leaderboard outputs (roadmap #4).
   **150 passing tests.** Updated `02`–`05`, `07`, and root `CLAUDE.md`.
+- **2026-06-02** — **Commons ride** (D-045): the project's **second multi-agent ride** and **second
+  ride on the social axis** — a finitely-repeated public-goods game scored against the exact
+  best/worst response to a fixed reactive house cast. It is the first ride to *share an axis*, so the
+  radar's per-axis **mean** is now exercised by two real rides (social = mean(negotiation, commons)).
+  The free-rider `greedy` is the *worst* baseline, generalizing the reward-hacker story to
+  cooperation; the career headline only hardens (seed 1: optimal 1.000 > heuristic 0.567 > random
+  0.154 > greedy 0.148). **164 passing tests.** Updated `02`, `03`, `07`, and root `CLAUDE.md`.
