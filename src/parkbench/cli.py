@@ -77,6 +77,15 @@ def cmd_run(args: argparse.Namespace) -> None:
     print()
 
 
+def cmd_map(args: argparse.Namespace) -> None:
+    # Imported lazily so the core CLI carries no dependency on the skin unless used (D-046).
+    from .theme import render_park_map
+
+    print()
+    print(render_park_map())
+    print()
+
+
 def cmd_analyze(args: argparse.Namespace) -> None:
     sc = generate_scenario(args.seed, args.issues, args.levels)
     an = analyze(sc)
@@ -341,6 +350,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Flag this run off-record so it is excluded from canonical profiles.",
     )
     r.set_defaults(func=cmd_run, compare_floor=True)
+
+    # The park skin (D-046): an ASCII map of every ride as a themed attraction. Pure presentation.
+    m = sub.add_parser("map", help="Show the themed park map of all rides (attractions by land).")
+    m.set_defaults(func=cmd_map)
 
     a = sub.add_parser("analyze", help="Print a single scenario's optimum.")
     a.add_argument("--seed", type=int, default=1)
