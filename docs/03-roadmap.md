@@ -21,11 +21,14 @@ Directional only — sequence and detail will firm up as v1 is built and learned
    capability everywhere (it deliberately reverses part of D-008, logged in D-041). It makes a
    reward-hacker pay: `greedy`, the economic star, lands last (below `random`) because its red-line
    violations collapse its reputation. See [`07-multi-ride.md`](07-multi-ride.md).
-4. **Theming + spectator product.** _Well underway (2026-05-31):_ a **career leaderboard** (D-042,
-   `parkbench leaderboard`) ranks agents by career score, and a static, zero-dependency
+4. **Theming + spectator product.** _Well underway:_ a **career leaderboard** (D-042,
+   `parkbench leaderboard`) ranks agents by career score; a static, zero-dependency
    **diagnostic-profile viewer** (D-044, `viewer/profiles.html`) renders the radar (inline-SVG),
-   career (trust-collapse), and leaderboard (reward-hacker callout) from the `--json` outputs. Still
-   to do: apply the creative skin/theme and possibly live/served profiles for mindshare.
+   career (trust-collapse), and leaderboard (reward-hacker callout) from the `--json` outputs; and the
+   **creative skin is now applied** (D-046, 2026-06-03) as a presentation-only layer — `theme.py`
+   (lands = axes, attractions = rides), a `parkbench map` command, and a themed landing page
+   `viewer/park.html`. See [`08-theming.md`](08-theming.md). Still to do: richer per-ride art and
+   possibly **live/served profiles** for mindshare.
 5. **Grow the BYO ecosystem.** A first HTTP/JSON connection protocol exists (D-027), and the coding
    harness is now **sandboxed + time-bounded** (D-043, subprocess + wall-clock timeout) so it is safe
    to point at untrusted BYO code. Next: document/harden the protocol, lower the barrier for third

@@ -1,12 +1,24 @@
 # Parkbench Viewers
 
-Two static, dependency-free HTML viewers. No build step, no server required — open either
+Three static, dependency-free HTML pages. No build step, no server required — open any
 file directly in any modern browser (modulo the `file://` fetch caveat noted below).
 
 | File | What it shows |
 |------|---------------|
+| `park.html` | **Park map (start here)** — the themed entrance: every ride as an attraction, links to the viewers (D-046). |
 | `index.html` | **Replay viewer** — step/auto-play through a negotiation `run.json` (`parkbench run`). |
 | `profiles.html` | **Diagnostic profile viewer** — radar, career, and leaderboard payloads. |
+
+---
+
+# Park map (`park.html`)
+
+The themed landing page (decision D-046) — the web face of the `parkbench map` command. It presents
+every scored ride as an **attraction** grouped into the four **lands** (the skill axes, D-005), and
+links to the replay and diagnostic viewers as the park's "souvenir booth". Pure static HTML/CSS/JS,
+no fetch, no dependencies — `file://` works fine (double-click it). The attraction list **mirrors
+`src/parkbench/theme.py`** (the static page can't import Python); the Python side is the source of
+truth and is test-guarded against the ride registry, so keep the two in sync when adding a ride.
 
 ---
 

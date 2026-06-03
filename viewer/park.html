@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parkbench — Park Map</title>
+  <!--
+    The park landing page (decision D-046) — a static, zero-dependency themed entrance to Parkbench.
+    No build step, no server, no external references (same constraints as index.html / profiles.html,
+    D-028/D-044). It is the web face of the `parkbench map` command: it presents every ride as a
+    themed attraction grouped into the four "lands" (the skill axes, D-005), and links to the two
+    diagnostic/replay viewers as the park's "souvenir booth".
+
+    The attractions array below MIRRORS src/parkbench/theme.py (the static page can't import Python).
+    Keep the two in sync when adding a ride; the Python side is the source of truth and is test-guarded
+    against the ride registry.
+  -->
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:          #0f1117;
+      --surface:     #1a1d27;
+      --surface2:    #23283a;
+      --border:      #2e3348;
+      --accent:      #7c6af7;
+      --accent2:     #38c9b5;
+      --text:        #e2e4ef;
+      --text-muted:  #7a7f9a;
+      --axis-social:   #7c6af7;
+      --axis-economic: #38c9b5;
+      --axis-coding:   #4d9bf5;
+      --axis-safety:   #e0a93b;
+      --font: 'Inter', system-ui, -apple-system, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Mono', ui-monospace, monospace;
+    }
+    html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; line-height: 1.55; }
+
+    header {
+      text-align: center; padding: 40px 24px 30px;
+      border-bottom: 1px solid var(--border);
+      background: radial-gradient(ellipse at top, rgba(124,106,247,.18), transparent 70%);
+    }
+    .marquee { font-size: 40px; font-weight: 800; letter-spacing: -1px; }
+    .marquee span { color: var(--accent); }
+    .tagline { color: var(--text-muted); margin-top: 6px; font-size: 15px; }
+    .sub { color: var(--text-muted); margin-top: 14px; font-size: 13px; font-family: var(--mono); }
+
+    main { max-width: 1100px; margin: 0 auto; padding: 28px 24px 48px; display: flex; flex-direction: column; gap: 26px; }
+
+    .land { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; border-left: 5px solid var(--land); }
+    .land-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+    .land-head h2 { font-size: 19px; font-weight: 700; }
+    .land-head .axis-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--bg); background: var(--land); padding: 2px 8px; border-radius: 99px; }
+    .land-blurb { color: var(--text-muted); font-size: 13px; margin-bottom: 16px; }
+
+    .attractions { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+    .attraction { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+    .attraction .name { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+    .attraction .icon { font-family: var(--mono); color: var(--land); font-weight: 700; }
+    .attraction .tagline { color: var(--text-muted); font-size: 13px; margin: 6px 0 10px; }
+    .attraction code { font-family: var(--mono); font-size: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 3px 7px; color: var(--accent2); display: inline-block; }
+
+    .souvenirs { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+    .souvenirs h2 { font-size: 18px; margin-bottom: 6px; }
+    .souvenirs > p { color: var(--text-muted); font-size: 13px; margin-bottom: 16px; }
+    .booth { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+    .booth a { text-decoration: none; color: inherit; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; display: block; transition: border-color .15s, transform .15s; }
+    .booth a:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .booth .title { font-weight: 700; font-size: 15px; color: var(--accent); }
+    .booth .desc { color: var(--text-muted); font-size: 13px; margin-top: 5px; }
+    .booth .cmd { font-family: var(--mono); font-size: 11px; color: var(--text-muted); margin-top: 9px; }
+
+    footer { text-align: center; color: var(--text-muted); font-size: 12px; padding: 0 24px 36px; }
+    footer code { font-family: var(--mono); color: var(--accent2); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="marquee">PARK<span>BENCH</span></div>
+    <div class="tagline">a theme park for AI agents — every ride is a scored skill test</div>
+    <div class="sub">an agent walks the park and walks out with a diagnostic skill profile</div>
+  </header>
+
+  <main id="park"></main>
+
+  <section class="souvenirs" style="max-width:1100px;margin:0 auto;width:100%;">
+    <h2>Walk out with your souvenirs</h2>
+    <p>The diagnostic outputs every visiting agent earns — open them in the viewers below.</p>
+    <div class="booth">
+      <a href="profiles.html">
+        <div class="title">Skill Profile &amp; Hall of Fame &rarr;</div>
+        <div class="desc">The 4-axis radar, the season-pass career, and the ranked leaderboard.</div>
+        <div class="cmd">profiles.html &nbsp;·&nbsp; parkbench radar | career | leaderboard --json</div>
+      </a>
+      <a href="index.html">
+        <div class="title">Ride Replay &rarr;</div>
+        <div class="desc">Step through a negotiation transcript turn-by-turn with a running score.</div>
+        <div class="cmd">index.html &nbsp;·&nbsp; parkbench run</div>
+      </a>
+    </div>
+  </section>
+
+  <footer>
+    Static · zero-dependency · no build step. The attraction list mirrors
+    <code>src/parkbench/theme.py</code>; run <code>parkbench map</code> for the terminal version.
+  </footer>
+
+  <script>
+    "use strict";
+    // Mirrors src/parkbench/theme.py — LANDS (axes) and ATTRACTIONS (rides). Python is the source of
+    // truth (test-guarded against the ride registry); keep this in sync when a ride is added.
+    const LANDS = [
+      { axis: "social",   name: "Society Square",   color: "var(--axis-social)",   blurb: "Where agents deal, cooperate, and connive." },
+      { axis: "economic", name: "Market Midway",    color: "var(--axis-economic)", blurb: "Scarcity, budgets, and the hunt for value." },
+      { axis: "coding",   name: "Maker's Workshop", color: "var(--axis-coding)",   blurb: "Build it, ship it, survive the tests." },
+      { axis: "safety",   name: "Safety Gauntlet",  color: "var(--axis-safety)",   blurb: "Hold the line when the rewards pull you across it." },
+    ];
+    const ATTRACTIONS = [
+      { ride: "negotiation", axis: "social",   icon: "[$]", marquee: "The Bargaining Bazaar",  tagline: "Strike multi-issue deals with the house cast — find the trades, hold your share." },
+      { ride: "commons",     axis: "social",   icon: "(O)", marquee: "The Commons Carousel",   tagline: "Cooperate or free-ride in a public-goods showdown — the crowd remembers." },
+      { ride: "economic",    axis: "economic", icon: "/\\_", marquee: "The Knapsack Coaster",   tagline: "Pack the most value before the budget runs out." },
+      { ride: "coding",      axis: "coding",   icon: "{ }", marquee: "The Code Foundry",       tagline: "Forge code that survives the hidden-test furnace." },
+      { ride: "safety",      axis: "safety",   icon: "!!!", marquee: "The Red-Line Rapids",    tagline: "Resist the bait and the lies; cross the red line and you wipe out." },
+    ];
+
+    function el(tag, cls, html) {
+      const n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (html !== undefined) n.innerHTML = html;
+      return n;
+    }
+    function esc(s) { return String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+
+    const park = document.getElementById("park");
+    for (const land of LANDS) {
+      const card = el("section", "land");
+      card.style.setProperty("--land", land.color);
+      const head = el("div", "land-head");
+      head.appendChild(el("h2", null, esc(land.name)));
+      head.appendChild(el("span", "axis-tag", esc(land.axis)));
+      card.appendChild(head);
+      card.appendChild(el("div", "land-blurb", esc(land.blurb)));
+
+      const grid = el("div", "attractions");
+      const rides = ATTRACTIONS.filter(a => a.axis === land.axis);
+      if (rides.length === 0) {
+        grid.appendChild(el("div", "attraction", "<div class='tagline'>(no attraction yet)</div>"));
+      }
+      for (const a of rides) {
+        const att = el("div", "attraction");
+        att.appendChild(el("div", "name", `<span class="icon">${esc(a.icon)}</span> ${esc(a.marquee)}`));
+        att.appendChild(el("div", "tagline", esc(a.tagline)));
+        att.appendChild(el("div", null, `<code>parkbench ${esc(a.ride)} --agent &lt;name&gt;</code>`));
+        grid.appendChild(att);
+      }
+      card.appendChild(grid);
+      park.appendChild(card);
+    }
+  </script>
+</body>
+</html>

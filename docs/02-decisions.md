@@ -697,3 +697,36 @@ the baselines would bunch — the worst-response floor spreads them); a non-neut
 (free-riding is legitimate strategy, not a rule violation — its cost is already in the score, cf. the
 negotiation ride's neutral integrity, D-041); sharing another ride's `Agent` interface (each ride owns
 its own, D-035).
+
+### D-046 · 2026-06-03 · Apply the park skin = presentation-only theme layer + `parkbench map` + landing page
+**Decision:** Apply the creative theme-park **skin** (roadmap #4), now that the mechanics are settled
+(D-012's "theme later"). The skin is **pure presentation** — it never imports scoring/engine code and
+never changes a number, so it can never affect a result. A new module `src/parkbench/theme.py` holds
+the theme tables and renderer: **`LANDS`** (one themed land per skill axis, D-005 — Society Square /
+Market Midway / Maker's Workshop / Safety Gauntlet), **`ATTRACTIONS`** (one themed attraction per
+scored ride, **keyed by the ride's registry name** so the skin tracks the mechanics), and
+**`render_park_map()`** which builds an **ASCII** (terminal-safe, like the rest of the CLI) park map
+from the ride registry + theme tables — the four lands, each attraction with how to ride it, and the
+diagnostic outputs skinned as "souvenirs". A new CLI subcommand **`parkbench map`** prints it. A
+third static, **zero-dependency** web page **`viewer/park.html`** (alongside `index.html` D-028 and
+`profiles.html` D-044, same no-build/no-deps/no-CDN constraints) is the themed entrance: the marquee,
+the four lands as colored cards (per-axis colors shared with `profiles.html`), each attraction, and a
+"souvenir booth" linking to the replay and diagnostic viewers. The **one enforced invariant**
+(test-guarded): every registered ride has a themed attraction, so a ride can't ship un-themed. Docs:
+new [`08-theming.md`](08-theming.md). The only shared edit is the additive `map` subcommand.
+**Why:** Watchability/mindshare is the project's second strategic wedge (`00-vision.md`), and a
+legible "what is this park?" surface — a single screen listing every ride as an attraction — is the
+cheapest concrete step on roadmap #4 beyond the diagnostic viewers (D-042/D-044). Keeping the skin
+strictly presentation-only honors D-012 (a skin must never be able to move a score) and D-023 (no new
+dependency). Keying attractions by registry name + the coverage test keeps the skin honest as rides
+are added. `park.html` has no `fetch`, so it opens with a plain double-click (`file://`).
+**Result:** `parkbench map` renders all five rides across the four lands; `viewer/park.html` verified
+rendering in Chrome (served locally) with no console errors. Pure HTML/CSS/JS + ASCII text, no
+external reference. +7 tests in `tests/test_theme.py` (suite total 164 → 171). Stdlib-only (D-023).
+**Rejected:** baking theming into the ride/scoring code (would violate D-012 — the skin could then
+affect results; kept it a separate read-only layer); a charting/JS library or web font for `park.html`
+(violates D-023/D-028); non-ASCII glyphs in the CLI map (the rest of the CLI is ASCII for terminal
+portability — em-dashes rendered as mojibake on a Windows console, so the map is ASCII too); auto-
+generating `park.html`'s attraction list from Python at build time (there is no build step — D-028 —
+so it mirrors `theme.py`, with the Python side test-guarded as the source of truth); a live/served
+profiles backend now (deferred — later roadmap #4/#5, see [`08-theming.md`](08-theming.md)).

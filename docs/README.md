@@ -24,6 +24,7 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
 | 05 | [`05-glossary.md`](05-glossary.md) | Shared vocabulary. | Living |
 | 06 | [`06-v1-architecture.md`](06-v1-architecture.md) | How the v1 core is built — modules, scoring formulas, how to run, results. | Stable |
 | 07 | [`07-multi-ride.md`](07-multi-ride.md) | Post-v1: the ride abstraction, the radar roll-up, and added rides. | Living |
+| 08 | [`08-theming.md`](08-theming.md) | The creative skin (roadmap #4): the park theme, `parkbench map`, and the landing page. | Living |
 
 ### Reference
 
@@ -82,3 +83,8 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
   The free-rider `greedy` is the *worst* baseline, generalizing the reward-hacker story to
   cooperation; the career headline only hardens (seed 1: optimal 1.000 > heuristic 0.567 > random
   0.154 > greedy 0.148). **164 passing tests.** Updated `02`, `03`, `07`, and root `CLAUDE.md`.
+- **2026-06-03** — **Park skin** (D-046, roadmap #4): the creative theme applied as a presentation-only
+  layer — `src/parkbench/theme.py` (lands = axes, attractions = rides), a `parkbench map` command, and
+  a third static zero-dependency page `viewer/park.html` (the themed entrance, links the viewers). New
+  doc [`08-theming.md`](08-theming.md). The skin never touches scoring (D-012). **171 passing tests.**
+  Updated `02`, `03`, root `CLAUDE.md`, and `viewer/README.md`.
