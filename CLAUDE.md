@@ -42,7 +42,7 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 | `docs/05-glossary.md` | Shared vocabulary (ride, house cast, BYO agent, radar profile, …). |
 | `docs/06-v1-architecture.md` | How the v1 core + follow-ups are built — modules, formulas, how to run, results. |
 
-## Current status (2026-06-03)
+## Current status (2026-06-04)
 
 **v1 + the post-v1 multi-ride phase are on `main`; the four-axis diagnostic radar is complete.** The
 negotiation ride runs end-to-end: engine, seeded scenario generator, objective-payoff scoring,
@@ -60,11 +60,14 @@ time-bounded** (D-043, subprocess + wall-clock timeout), and a static zero-depen
 **diagnostic-profile viewer** renders the radar/career/leaderboard (D-044, `viewer/profiles.html`).
 The park gained a **fifth ride — a multi-agent Commons public-goods ride** (D-045), the **second ride
 on the social axis**, so the radar's per-axis mean is now exercised by two real rides (social =
-mean(negotiation, commons)). Most recently the **creative skin** landed (D-046, roadmap #4): a
-presentation-only `theme.py` (lands = axes, attractions = rides), a `parkbench map` command, and a
-third static zero-dependency page `viewer/park.html` (the themed entrance). Reproducible: **171
-passing tests**. Design + formulas: `docs/06-v1-architecture.md`, `docs/07-multi-ride.md`, and
-`docs/08-theming.md`.
+mean(negotiation, commons)). The **creative skin** landed (D-046, roadmap #4): a presentation-only
+`theme.py` (lands = axes, attractions = rides), a `parkbench map` command, and a third static
+zero-dependency page `viewer/park.html` (the themed entrance). Most recently, on the **BYO/hardening
+track (roadmap #5)**: the HTTP/JSON wire protocol is now **documented as a language-agnostic spec**
+(D-047, `docs/09-byo-protocol.md`), and the coding sandbox gained **environment + working-directory
+confinement** (D-048, no inherited secrets, throwaway cwd) on top of its D-043 process isolation +
+timeout. Reproducible: **174 passing tests**. Design + formulas: `docs/06-v1-architecture.md`,
+`docs/07-multi-ride.md`, `docs/08-theming.md`, and `docs/09-byo-protocol.md`.
 
 - **Headline:** the radar for `heuristic` spans **all four** axes — **social 0.963** (mean of
   negotiation 0.975 + commons 0.951) + **economic 0.990** (knapsack) + **coding 0.667**
@@ -81,11 +84,12 @@ passing tests**. Design + formulas: `docs/06-v1-architecture.md`, `docs/07-multi
 - **Next** (`docs/03-roadmap.md`, `docs/04-open-questions.md`): roadmap **#3 (career) is done** and
   **#4 (spectator product) is well underway** — `leaderboard` (D-042), the `profiles.html` viewer
   (D-044), and now the **creative skin** (D-046, `parkbench map` + `viewer/park.html`); remaining #4
-  is richer per-ride art and possibly live/served profiles. **#5 (BYO ecosystem)**: the coding harness
-  is now sandboxed (D-043); next is documenting/hardening the HTTP protocol and a **full OS sandbox**
-  (FS/network/resource confinement) for untrusted code — the one anti-gaming item still open. LLM
-  house personas remain a fast-follow (D-024).
-- **Verify:** `uv venv && uv pip install -e ".[dev]"`, then `pytest` (171 pass; the coding tests
+  is richer per-ride art and possibly live/served profiles. **#5 (BYO ecosystem)**: the wire protocol
+  is now **documented** (D-047) and the coding harness is sandboxed + **env/cwd-confined** (D-043 +
+  D-048); next is protocol *hardening* for public hosting (auth/TLS/rate limiting + a JSON Schema), BYO
+  connectors for the solo rides, and a **full OS sandbox** (network/abs-path/resource confinement) for
+  untrusted code — the one anti-gaming item still open. LLM house personas remain a fast-follow (D-024).
+- **Verify:** `uv venv && uv pip install -e ".[dev]"`, then `pytest` (174 pass; the coding tests
   spawn subprocesses, so the suite now takes ~40s),
   `parkbench map` (the themed park map), `parkbench run --agent heuristic --seed 1`,
   `parkbench economic --agent greedy`, `parkbench coding --agent heuristic`,
