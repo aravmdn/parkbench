@@ -29,10 +29,13 @@ Directional only — sequence and detail will firm up as v1 is built and learned
    (lands = axes, attractions = rides), a `parkbench map` command, and a themed landing page
    `viewer/park.html`. See [`08-theming.md`](08-theming.md). Still to do: richer per-ride art and
    possibly **live/served profiles** for mindshare.
-5. **Grow the BYO ecosystem.** A first HTTP/JSON connection protocol exists (D-027), and the coding
-   harness is now **sandboxed + time-bounded** (D-043, subprocess + wall-clock timeout) so it is safe
-   to point at untrusted BYO code. Next: document/harden the protocol, lower the barrier for third
-   parties, and add a **full OS sandbox** (FS/network/resource confinement) for untrusted code.
+5. **Grow the BYO ecosystem.** A first HTTP/JSON connection protocol exists (D-027) and is now
+   **documented as a wire spec** (D-047, [`09-byo-protocol.md`](09-byo-protocol.md)) so a third party
+   can implement an agent in any language. The coding harness is **sandboxed + time-bounded** (D-043)
+   and now also **environment/cwd-confined** (D-048, no inherited secrets, throwaway working dir) so it
+   is safer to point at untrusted BYO code. Next: harden the protocol for public hosting (auth/TLS/rate
+   limiting + a published JSON Schema), BYO connectors for the **solo** rides, and a **full OS sandbox**
+   (filesystem/network jails, CPU/memory caps) for untrusted code — the one anti-gaming item still open.
 6. **Revisit commercial models** (D-013) only after meaningful adoption: eval-as-a-service, public
    leaderboard + sponsorship, or a spectator/media product.
 

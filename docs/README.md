@@ -25,6 +25,7 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
 | 06 | [`06-v1-architecture.md`](06-v1-architecture.md) | How the v1 core is built — modules, scoring formulas, how to run, results. | Stable |
 | 07 | [`07-multi-ride.md`](07-multi-ride.md) | Post-v1: the ride abstraction, the radar roll-up, and added rides. | Living |
 | 08 | [`08-theming.md`](08-theming.md) | The creative skin (roadmap #4): the park theme, `parkbench map`, and the landing page. | Living |
+| 09 | [`09-byo-protocol.md`](09-byo-protocol.md) | The BYO agent HTTP/JSON wire protocol (roadmap #5) — endpoints, message shapes, determinism. | Living |
 
 ### Reference
 
@@ -88,3 +89,7 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
   a third static zero-dependency page `viewer/park.html` (the themed entrance, links the viewers). New
   doc [`08-theming.md`](08-theming.md). The skin never touches scoring (D-012). **171 passing tests.**
   Updated `02`, `03`, root `CLAUDE.md`, and `viewer/README.md`.
+- **2026-06-04** — **BYO protocol spec** (D-047, roadmap #5): documented the HTTP/JSON wire contract
+  (endpoints, message shapes, the poll loop, the determinism contract) in new
+  [`09-byo-protocol.md`](09-byo-protocol.md) so a third party can implement an agent in any language.
+  Docs-only; no code change.
