@@ -25,24 +25,60 @@ child reported a successful call **and** `type_name == type(expected).__name__` 
 `repr(value) == repr(expected)` (so e.g. a `bool` task isn't passed by returning 1/0). reprs are
 compared between the parent and a child running the *same* `sys.executable`, so they agree.
 
-Known limitation (honest scope): this gives **process isolation + a wall-clock timeout**, not a full
-OS sandbox — the child still runs with the parent's filesystem and network access and ambient OS
-privileges. Confining those (filesystem/network jails, CPU/memory caps, an OS sandbox or container)
-is the remaining BYO-hardening work tracked in ``docs/04-open-questions.md``.
+Isolation also covers the **environment and the working directory** (D-048): the child gets a minimal,
+allowlisted environment (so untrusted code can't read parent secrets out of ``os.environ``) and runs
+in a fresh throwaway directory that is deleted afterwards (so a relative file write lands in a sandbox,
+not the repo). See ``_child_env`` / ``_run_candidate``.
+
+Known limitation (honest scope): this is **process isolation + a wall-clock timeout + environment and
+cwd confinement**, not a full OS sandbox — the child still has **network access**, can reach the
+filesystem by **absolute path**, runs with the parent's OS privileges, and has **no CPU/memory/output
+caps**. Confining those (filesystem/network jails, resource limits, an OS sandbox or container) is the
+remaining BYO-hardening work tracked in ``docs/04-open-questions.md``.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import random
+import shutil
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 
 from .tasks import CodingTask
 
 DEFAULT_N_TESTS = 8
 DEFAULT_TIMEOUT = 5.0  # seconds of wall-clock for one task's whole subprocess (all n_tests inputs)
+
+# Environment confinement (D-048). `-I` already makes the child ignore PYTHON* config vars, user
+# site-packages, and the cwd — but the spawned process still *inherits the parent's whole
+# environment*, so untrusted candidate code could read secrets out of `os.environ` (e.g. an
+# `OPENROUTER_API_KEY` loaded by the CLI, D-033). We therefore hand the child a **minimal,
+# allowlisted** environment: only the variables an interpreter needs to start. It is an allowlist (not
+# a denylist) on purpose — a new secret in the parent env is dropped by default, never leaked. PATH is
+# included so the OS can resolve shared libs; the rest are the Windows/POSIX bootstrap essentials.
+_ENV_ALLOWLIST = (
+    "PATH", "PATHEXT", "COMSPEC",  # process/lib resolution
+    "SYSTEMROOT", "SYSTEMDRIVE", "WINDIR",  # Windows interpreter bootstrap
+    "TEMP", "TMP", "TMPDIR",  # temp dir for the child's own use
+    "LANG", "LC_ALL", "LC_CTYPE",  # locale (avoids spurious encoding differences)
+)
+
+
+def _child_env() -> dict:
+    """Build the minimal, allowlisted environment for the untrusted child (D-048).
+
+    Copies only the bootstrap variables in ``_ENV_ALLOWLIST`` from the parent; everything else
+    (including any secrets) is omitted, so a hostile candidate reading ``os.environ`` finds nothing
+    sensitive. ``PYTHONDONTWRITEBYTECODE`` is set so the child cannot scatter ``__pycache__`` into its
+    sandbox dir.
+    """
+    env = {k: os.environ[k] for k in _ENV_ALLOWLIST if k in os.environ}
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    return env
 
 
 @dataclass(frozen=True)
@@ -89,22 +125,31 @@ def _run_candidate(source: str, entry_point: str, inputs: list, timeout: float) 
     if not isinstance(source, str):
         return None
     request = json.dumps({"source": source, "entry_point": entry_point, "inputs": inputs})
+    # Run the child in a fresh throwaway directory (D-048) so any relative file the candidate writes
+    # lands in a sandbox dir we delete, not in the repo / caller's cwd. `-m parkbench.coding._runner`
+    # still resolves via the installed package on sys.path (not the cwd), so the change is safe.
+    sandbox = tempfile.mkdtemp(prefix="parkbench-cand-")
     try:
         # `-I` = isolated mode: ignore env vars (PYTHON*), user site-packages, and the cwd on sys.path,
         # so the child can't be steered by ambient state. We still inherit the parent's interpreter
-        # (`sys.executable`) so reprs match exactly.
+        # (`sys.executable`) so reprs match exactly. `env=`/`cwd=` add environment + filesystem-cwd
+        # confinement (D-048): a minimal allowlisted env (no inherited secrets) and a sandbox cwd.
         proc = subprocess.run(
             [sys.executable, "-I", "-m", "parkbench.coding._runner"],
             input=request,
             capture_output=True,
             text=True,
             timeout=timeout,
+            cwd=sandbox,
+            env=_child_env(),
         )
     except subprocess.TimeoutExpired:
         # `subprocess.run` already terminates (kills) the child before raising; nothing leaks.
         return None
     except Exception:  # pragma: no cover - spawn failure (e.g. interpreter missing) -> all fail
         return None
+    finally:
+        shutil.rmtree(sandbox, ignore_errors=True)
 
     if proc.returncode != 0:
         # Non-zero = didn't compile / no entry point / crashed / unparseable request: all tests fail.

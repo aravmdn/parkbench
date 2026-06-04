@@ -102,10 +102,15 @@ it is the clean solo contrast (D-006) to the multi-agent negotiation ride. Lives
 (`sys.executable -I`) under a wall-clock timeout (default 5s), so a candidate that infinite-loops,
 crashes, exits, or emits garbage just fails (score 0) and never hangs the ride. The strict value+type
 match is preserved across the boundary via a text-only protocol (no unpickling). Baselines are
-byte-identical; coding tests grew 16 → **23** (the suite spawns processes, so they run slower — an
-accepted cost). **Still not** a full OS sandbox: the child inherits the parent's filesystem/network
-access and OS privileges, with no resource caps — full confinement (FS/network jails, CPU/memory
-limits, container/seccomp) stays in BYO-protocol hardening ([`04-open-questions.md`](04-open-questions.md)).
+byte-identical; coding tests grew 16 → 23 (the suite spawns processes, so they run slower — an
+accepted cost). **D-048** then added **environment + working-directory confinement**: the child is
+spawned with a minimal allowlisted environment (so untrusted code can't read parent secrets from
+`os.environ`, e.g. an API key) and in a throwaway working directory that is deleted afterwards (so a
+relative file write lands in a sandbox, not the repo); +3 tests (→ **26**). **Still not** a full OS
+sandbox: the child retains network access, can reach the filesystem by absolute path, runs with the
+parent's OS privileges, and has no CPU/memory/output caps — full confinement (FS/network jails,
+resource limits, container/seccomp) stays in BYO-protocol hardening
+([`04-open-questions.md`](04-open-questions.md)).
 
 **Spectator viewer (D-044):** this ride's `coding --json` payload — and the radar/career/leaderboard
 JSON — is now visualized by `viewer/profiles.html` (see "Spectator product" below).
@@ -341,9 +346,10 @@ Anti-gaming / reward-hacking safeguards across rides remain an open question
 ride's **seed-randomized hidden tests** (D-039) defeat answer-memorization; the **safety ride**
 (D-040) is an explicit reward-hacking probe ("violation = 0" makes crossing a red line for reward
 worthless); the **career** (D-041) makes misconduct anywhere discount capability everywhere; and the
-coding harness now **sandboxes + time-bounds untrusted code** (D-043, subprocess + wall-clock
-timeout). What stays open is a **full OS sandbox** for untrusted code (FS/network/resource
-confinement, beyond process isolation + timeout) — folded into BYO-protocol hardening (roadmap #5).
+coding harness now **sandboxes + time-bounds untrusted code** (D-043, subprocess + wall-clock timeout)
+**and confines its environment + working directory** (D-048, no inherited secrets, throwaway cwd).
+What stays open is a **full OS sandbox** for untrusted code (network/abs-path/resource confinement,
+beyond process isolation + timeout + env/cwd) — folded into BYO-protocol hardening (roadmap #5).
 
 **The four-axis radar is complete** (D-040); the **first cross-ride coupling — the career (D-041) +
 leaderboard (D-042)** — has landed (roadmap #3); the diagnostic outputs now have a **static spectator

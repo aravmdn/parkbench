@@ -1,6 +1,6 @@
 # 04 — Open Questions
 
-**Status:** Living · **Last updated:** 2026-05-31
+**Status:** Living · **Last updated:** 2026-06-04
 
 Questions still genuinely open. When one is resolved it becomes an entry in the decision log
 ([`02-decisions.md`](02-decisions.md)) and is listed under "Resolved" below.
@@ -19,13 +19,26 @@ below (D-027–D-030)._
   on one axis. **Time-bounding + process isolation of untrusted code has now landed (D-043)**: the
   coding harness runs candidate source in an isolated subprocess under a wall-clock timeout, so a
   hanging/crashing/malicious candidate just fails (score 0) instead of freezing or compromising the
-  ride. Still open: a **full OS sandbox** for untrusted code (the child still inherits the parent's
-  filesystem/network/OS privileges, with no resource caps — filesystem/network jails, CPU/memory
-  limits, container/seccomp), folded into BYO-protocol hardening (roadmap #5); and continued
-  vigilance as new ride types arrive._
+  ride. **Environment + working-directory confinement has now landed too (D-048)**: the child runs
+  with a minimal allowlisted environment (so untrusted code can't read parent secrets from
+  `os.environ`) and in a throwaway working directory (so relative file writes don't touch the repo).
+  Still open: a **full OS sandbox** for untrusted code (the child still has network access, can reach
+  the filesystem by absolute path, runs with the parent's OS privileges, and has no CPU/memory/output
+  caps — filesystem/network jails, resource limits, container/seccomp), folded into BYO-protocol
+  hardening (roadmap #5); and continued vigilance as new ride types arrive._
 
 ## Resolved
 
+- **2026-06-04** — **Environment + working-directory confinement of untrusted code** resolved as
+  **D-048**: the coding harness spawns the candidate subprocess with a minimal allowlisted environment
+  (no inherited secrets in `os.environ`) and a throwaway working directory (relative file writes can't
+  touch the repo). Baselines byte-identical; +3 tests. Only a **full OS sandbox** (network/abs-path/
+  resource confinement) remains open (see above). See [`07-multi-ride.md`](07-multi-ride.md).
+- **2026-06-04** — **Documenting the BYO wire protocol** resolved as **D-047**: a language-agnostic
+  HTTP/JSON spec ([`09-byo-protocol.md`](09-byo-protocol.md)) for the D-027 server — endpoints,
+  message shapes, the poll loop, and the determinism contract — so a third party can implement an
+  agent from the doc alone. (Protocol *hardening* for public hosting — auth/TLS/rate limiting — stays
+  open under roadmap #5.)
 - **2026-05-31** — **Time-bounding + sandboxing untrusted code** (the coding harness's flagged
   limitation) resolved as **D-043**: candidate source runs in an isolated subprocess
   (`sys.executable -I`) under a wall-clock timeout, talking a text-only stdin/stdout protocol (no

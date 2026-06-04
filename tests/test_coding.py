@@ -128,6 +128,51 @@ def test_correct_candidate_still_scores_one_via_subprocess():
     assert grade(task, alt, seed=4).score == 1.0
 
 
+# --- environment & filesystem-cwd confinement (D-048) --------------------------------------
+
+def test_candidate_cannot_read_parent_secrets_from_env(monkeypatch):
+    # A secret in the parent environment (e.g. an API key loaded by the CLI, D-033) must NOT be
+    # visible to untrusted candidate code via os.environ — the child gets a minimal allowlisted env.
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-secret-should-not-leak")
+    monkeypatch.setenv("PARKBENCH_TEST_SECRET", "top-secret-value")
+    task = _task("add")
+    # The candidate returns a sentinel iff it can see either secret, else the correct sum. Strict
+    # value+type matching means "saw a secret" won't match the real sum for our inputs.
+    probe = (
+        "import os\n"
+        "def add(a, b):\n"
+        "    leaked = os.environ.get('OPENROUTER_API_KEY') or os.environ.get('PARKBENCH_TEST_SECRET')\n"
+        "    return -999999 if leaked else a + b\n"
+    )
+    res = grade(task, probe, seed=1)
+    assert res.compiled  # it ran fine in the child ...
+    assert res.passed == res.total  # ... and never saw a secret, so it just computed a + b correctly
+
+
+def test_child_env_excludes_secrets_but_keeps_bootstrap(monkeypatch):
+    from parkbench.coding.harness import _child_env
+
+    monkeypatch.setenv("PARKBENCH_TEST_SECRET", "top-secret-value")
+    env = _child_env()
+    assert "PARKBENCH_TEST_SECRET" not in env  # arbitrary parent vars are dropped (allowlist)
+    assert "PATH" in env  # but the interpreter-bootstrap essentials are kept
+
+
+def test_candidate_file_writes_do_not_land_in_cwd(tmp_path, monkeypatch):
+    # A candidate that writes a relative file must not pollute the caller's cwd — the child runs in a
+    # throwaway sandbox dir that is deleted afterwards.
+    monkeypatch.chdir(tmp_path)
+    task = _task("add")
+    polluter = (
+        "def add(a, b):\n"
+        "    open('candidate_was_here.txt', 'w').write('pwned')\n"
+        "    return a + b\n"
+    )
+    res = grade(task, polluter, seed=1)
+    assert res.passed == res.total  # the candidate is otherwise correct
+    assert not (tmp_path / "candidate_was_here.txt").exists()  # nothing leaked into our cwd
+
+
 # --- anti-gaming: seed-randomized hidden tests ---------------------------------------------
 
 def test_memorized_answers_do_not_generalize():

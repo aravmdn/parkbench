@@ -93,3 +93,7 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
   (endpoints, message shapes, the poll loop, the determinism contract) in new
   [`09-byo-protocol.md`](09-byo-protocol.md) so a third party can implement an agent in any language.
   Docs-only; no code change.
+- **2026-06-04** — **Coding sandbox hardening** (D-048): the untrusted-candidate subprocess now also
+  gets **environment + working-directory confinement** — a minimal allowlisted env (no inherited
+  secrets in `os.environ`) and a throwaway cwd (relative writes can't touch the repo). Baselines
+  byte-identical; **174 passing tests.** Updated `02`, `04`, `07`.

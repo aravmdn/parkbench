@@ -1,6 +1,6 @@
 # 02 — Decision Log
 
-**Status:** Living · **Last updated:** 2026-05-31
+**Status:** Living · **Last updated:** 2026-06-04
 
 Append-only log of decisions and their rationale (lightweight ADR style). When a decision is
 reversed or superseded, add a **new** entry referencing the old one rather than editing history.
@@ -730,3 +730,54 @@ portability — em-dashes rendered as mojibake on a Windows console, so the map 
 generating `park.html`'s attraction list from Python at build time (there is no build step — D-028 —
 so it mirrors `theme.py`, with the Python side test-guarded as the source of truth); a live/served
 profiles backend now (deferred — later roadmap #4/#5, see [`08-theming.md`](08-theming.md)).
+
+### D-047 · 2026-06-04 · Document the BYO HTTP/JSON protocol as a language-agnostic wire spec
+**Decision:** Write the BYO agent protocol (the server from D-027, implementing D-015) up as a
+standalone spec, [`09-byo-protocol.md`](09-byo-protocol.md), so a third party can implement an agent
+in **any** language from the doc alone — the "document the protocol" half of roadmap #5. It specifies
+the park-drives-the-loop design, the three endpoints (`GET /health`, `GET /observation`,
+`POST /action`) with every `status`/error code, the `Observation`/`Offer`/`Action` message shapes, the
+agent poll loop (with `client.drive_agent` as the worked reference), the determinism contract (the
+`new_match` re-seed handshake that makes a wire run byte-identical to an in-process run), information
+asymmetry (D-016 — only the agent's own utilities cross the wire), and the security/trust boundary.
+Docs-only; no code change.
+**Why:** A protocol nobody can implement isn't an ecosystem. The server has existed and been parity-
+tested since D-027, but the contract lived only in source docstrings; a single external-facing spec is
+the cheapest, highest-leverage step toward third-party agents (roadmap #5) and costs nothing in code.
+**Rejected:** a formal OpenAPI/JSON-Schema document now (heavier than a v1 spec needs — noted as a
+follow-up in the doc); changing the wire shapes to "clean them up" first (they are parity-tested and
+stable — documenting the real contract beats churning it); deferring docs until auth/TLS land (the
+read-only spec is independently useful and unblocks experimentation on `127.0.0.1`).
+
+### D-048 · 2026-06-04 · Coding sandbox gains environment + working-directory confinement
+**Decision:** Extend the coding ride's untrusted-candidate subprocess (D-043) with two further
+confinements, both stdlib-only and cross-platform (D-023): **(a) a minimal, allowlisted environment** —
+the child is spawned with only the interpreter-bootstrap variables (`PATH`, `SYSTEMROOT`, `TEMP`,
+locale, …; an **allowlist**, `_ENV_ALLOWLIST`/`_child_env`), so a hostile candidate reading
+`os.environ` can no longer see any secret the parent holds (e.g. an `OPENROUTER_API_KEY` the CLI loaded
+from `.env`, D-033) — a new parent secret is dropped by default, never leaked; and **(b) a throwaway
+working directory** — the child runs with `cwd=` a fresh `mkdtemp` dir that is `rmtree`'d afterwards, so
+a relative file the candidate writes lands in a sandbox we delete, not in the repo / caller's cwd.
+`PYTHONDONTWRITEBYTECODE` is set so the child can't scatter `__pycache__`. The change is inside
+`_run_candidate` in `coding/harness.py`; the public `grade()` API and the `-I`-isolated, text-only
+stdin/stdout protocol (D-043) are unchanged, and the baselines stay **byte-identical**.
+**Why:** D-043 closed the hang/crash/RCE-via-unpickling vectors but the child still **inherited the
+parent's full environment** (so untrusted code could exfiltrate secrets from `os.environ`) and ran in
+the **caller's cwd** (so it could litter or clobber files). Both are cheap, portable, fully testable
+wins (no OS-specific rlimits) that materially shrink the untrusted-code blast radius before the harness
+is pointed at real BYO/LLM-emitted source.
+**Result:** seed-1 coding baselines unchanged — `optimal` 1.000 / `heuristic` 0.667 / `greedy` 0.333 /
+`random` 0.000, all 100% compile. New tests prove a candidate cannot read a planted secret env var and
+that a candidate's relative file write does not appear in the caller's cwd. +3 coding tests (171 →
+**174**). Stdlib only (`os`/`tempfile`/`shutil`).
+**Known limitation (honest scope):** this is process isolation + timeout (D-043) **+ environment and
+cwd confinement** — still **not** a full OS sandbox. The child retains **network access**, can reach
+the filesystem by **absolute path**, runs with the parent's OS privileges, and has **no CPU/memory/
+output caps**. Full confinement (filesystem/network jails, resource limits, container/seccomp) remains
+open and folded into BYO-protocol hardening (roadmap #5; [`04-open-questions.md`](04-open-questions.md)).
+**Rejected:** a denylist that strips known-secret names (fragile — a new secret would leak by default;
+used an allowlist); POSIX `resource` rlimits / `preexec_fn` for CPU/memory caps now (Unix-only — the
+project is Windows-first — so it would be a no-op here and untestable; deferred to the full-OS-sandbox
+item); bounding the child's stdout size (worth doing, but needs `Popen` plumbing — left with the
+resource-cap work); a full container/seccomp sandbox now (platform-specific, out of scope for a
+stdlib-only step — deferred).
