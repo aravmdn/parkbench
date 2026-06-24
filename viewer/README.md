@@ -135,6 +135,11 @@ button handles all three.
 # Install the project (once)
 uv venv && uv pip install -e ".[dev]"
 
+# One command regenerates ALL committed spectator fixtures (these three samples + the
+# web/src/fixtures/ set), byte-identical to the per-command invocations below:
+parkbench export-profiles .   # run from the repo root
+
+# Or one at a time:
 # Radar (4-axis profile for one agent)
 parkbench radar --agent heuristic --seed 1 --json > viewer/sample-radar.json
 
@@ -145,4 +150,5 @@ parkbench career --agent greedy --seed 1 --json > viewer/sample-career.json
 parkbench leaderboard --seed 1 --json > viewer/sample-leaderboard.json
 ```
 
-(The viewer depends only on the JSON shape, not the invocation, so any seed/agent works.)
+(The viewer depends only on the JSON shape, not the invocation, so any seed/agent works.
+`sample-run.json` is different — it is a run *log*, produced by `parkbench run`, not exported.)

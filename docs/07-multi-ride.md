@@ -321,6 +321,18 @@ errors). Bundled fixtures: `viewer/sample-{radar,career,leaderboard}.json`. See 
 > [`12-validity.md`](12-validity.md) (D-061) for the convention. Viewers/fixtures ignore unknown
 > keys, so the stamp is transparent to the pages above.
 
+### Spectator fixture export (`parkbench export-profiles`, chunk-3 `live-profiles`)
+
+`parkbench export-profiles <out-dir> [--seed 1]` regenerates **every committed spectator fixture**
+in one deterministic command instead of hand-run copies: the four `web/src/fixtures/radar-*.json`
+files (heuristic/greedy/optimal/random) + `web/src/fixtures/leaderboard.json`, and the three
+`viewer/` bundled samples (`sample-radar.json` = radar heuristic, `sample-career.json` = career
+greedy, `sample-leaderboard.json`). Each file is produced by capturing the *existing* `--json` CLI
+path (same builders + the D-061 `benchmark_version` stamp), so every export is **byte-identical**
+to `parkbench <cmd> ... --json > <file>` — pointing `<out-dir>` at the repo root lands the files
+exactly where the committed fixtures live. (`viewer/sample-run.json` is a run *log* from
+`parkbench run`, not a `--json` payload, so it is not part of the set.)
+
 ## Agent identity & versioning (D-038)
 
 So results stay **attributable and reproducible over time**, every agent now has a stable identity

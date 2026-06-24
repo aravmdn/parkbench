@@ -6,6 +6,8 @@
   parkbench radar   — roll every ride up into the agent's diagnostic radar profile (D-037).
   parkbench career  — the radar weighted by cross-ride reputation (D-041).
   parkbench leaderboard — rank agents by career score (D-042).
+  parkbench export-profiles — regenerate every committed spectator fixture (web/ + viewer/) in one
+  deterministic command (chunk-3 `live-profiles`).
 """
 
 from __future__ import annotations
@@ -217,6 +219,56 @@ def cmd_leaderboard(args: argparse.Namespace) -> None:
             f"   {i:<4} {p.agent:<11} {p.career_score:6.3f}   {p.mean_capability:10.3f}   "
             f"{p.reputation:10.3f}   {len(p.legs):>4}{note}"
         )
+    print()
+
+
+# The committed spectator fixtures the export command regenerates (chunk-3 `live-profiles`):
+# web/ stats-screen + Hall-of-Fame fixtures, and the viewer/profiles.html bundled samples.
+# `viewer/sample-run.json` is a run *log* (written by `parkbench run`, not a `--json` payload),
+# so it is deliberately not part of this set.
+EXPORT_RADAR_AGENTS = ("heuristic", "greedy", "optimal", "random")
+
+
+def cmd_export_profiles(args: argparse.Namespace) -> None:
+    """Regenerate every committed spectator fixture into ``<out-dir>`` (chunk-3 `live-profiles`).
+
+    Each file is produced by re-running the *existing* ``--json`` CLI path (the same builders +
+    ``_emit_json`` stamp, captured instead of printed), so every export is byte-identical to
+    ``parkbench <cmd> ... --json > <file>`` — no serialization logic is duplicated here. Pointing
+    ``<out-dir>`` at the repo root lands the files exactly where the committed fixtures live.
+    """
+    import io
+    from contextlib import redirect_stdout
+    from pathlib import Path
+
+    def capture(cmd, **params) -> str:
+        # Reuse the existing subcommand verbatim; its stdout (payload + trailing newline) is
+        # exactly what a shell redirection of `parkbench ... --json` would have written.
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            cmd(argparse.Namespace(json=True, seed=args.seed, **params))
+        return buf.getvalue()
+
+    # Each distinct payload is built once; files sharing a command share the same bytes.
+    radars = {a: capture(cmd_radar, agent=a) for a in EXPORT_RADAR_AGENTS}
+    career_greedy = capture(cmd_career, agent="greedy")
+    leaderboard = capture(cmd_leaderboard, agents=None)
+
+    exports = [(f"web/src/fixtures/radar-{a}.json", radars[a]) for a in EXPORT_RADAR_AGENTS]
+    exports += [
+        ("web/src/fixtures/leaderboard.json", leaderboard),
+        ("viewer/sample-radar.json", radars["heuristic"]),
+        ("viewer/sample-career.json", career_greedy),
+        ("viewer/sample-leaderboard.json", leaderboard),
+    ]
+
+    out_root = Path(args.out_dir)
+    print(f"\nParkbench - export spectator fixtures  (seed={args.seed}, bench v{BENCHMARK_VERSION})")
+    for rel, text in exports:
+        path = out_root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8", newline="\n")
+        print(f"  wrote {path}  ({len(text.encode('utf-8'))} bytes)")
     print()
 
 
@@ -440,6 +492,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     lb.add_argument("--json", action="store_true", help="Emit the ranking as JSON instead of a table.")
     lb.set_defaults(func=cmd_leaderboard)
+
+    # Spectator fixture export (chunk-3 `live-profiles`, engine half): regenerate every committed
+    # web/ + viewer/ fixture from the versioned CLI in one deterministic command.
+    ex = sub.add_parser(
+        "export-profiles",
+        help="Regenerate every committed spectator fixture (web/ + viewer/) into a directory.",
+    )
+    ex.add_argument(
+        "out_dir", metavar="out-dir",
+        help="Root directory to write into (the repo root reproduces the committed fixture layout).",
+    )
+    ex.add_argument("--seed", type=int, default=1, help="Seed passed to each ride.")
+    ex.set_defaults(func=cmd_export_profiles)
 
     # Economic ride (solo resource-allocation / knapsack, D-036). Localized: its own agent registry.
     e = sub.add_parser("economic", help="Run an agent through the economic (knapsack) ride.")
