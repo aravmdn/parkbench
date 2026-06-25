@@ -96,7 +96,7 @@ adds/touches engine code (then Tier A too, stdlib-only + tested + baselines byte
   three `profiles.html` payload subtitles. `park.html` loads no JSON (static entrance), so it honestly
   gets no tag; `sample-run.json` is a run log (not CLI `--json`), left as-is — both noted here rather
   than faked. Shots: `autoloop/shots/2026-07-15-1005/`.
-- [ ] `live-profiles` — Replace (or offer as an alternative to) committed fixture JSON with a **live or
+- [x] `live-profiles` — Replace (or offer as an alternative to) committed fixture JSON with a **live or
   freshly-exported** data path: either (a) a small **read-only** `parkbench serve --profiles`-style HTTP
   endpoint that serves `radar`/`career`/`leaderboard` JSON on demand (Tier A: stdlib-only `http.server`
   subclass, no scoring logic, tested), or (b) if a live server is judged too large for one session, a
@@ -106,7 +106,11 @@ adds/touches engine code (then Tier A too, stdlib-only + tested + baselines byte
   in one session and note the choice in the PR/commit. **Done when:** the world can show data that did
   not require hand-editing fixture files into `web/src/fixtures/`, the chosen path is documented in
   `web/README.md`, `pytest` stays green if engine code changed, build is clean, screenshot committed
-  (Tier A+B).
+  (Tier A+B). ✅ landed — **option (b)**, the static-export path: `parkbench export-profiles <out-dir>`
+  regenerates all 8 committed fixtures (4 web radars + web leaderboard + 3 viewer samples)
+  byte-identical to the hand-run `--json` commands (same builders, same version stamp; 5 tests, 228
+  green); documented in `web/README.md` + `viewer/README.md` + `docs/07-multi-ride.md`. The live
+  HTTP endpoint (option a) stays a candidate for a future chunk. Shots: `autoloop/shots/2026-06-25-1030/`.
 - [ ] `byo-trainer` — Let a **BYO agent** (per the documented wire protocol, `docs/09-byo-protocol.md`)
   appear as a trainer in the world: given a BYO agent's identity + a completed run's JSON (fixture or
   live per `live-profiles`), render it as an additional palette-swapped trainer alongside the baselines,
