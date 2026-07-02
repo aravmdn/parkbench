@@ -1,6 +1,6 @@
 # 02 — Decision Log
 
-**Status:** Living · **Last updated:** 2026-06-04
+**Status:** Living · **Last updated:** 2026-07-02
 
 Append-only log of decisions and their rationale (lightweight ADR style). When a decision is
 reversed or superseded, add a **new** entry referencing the old one rather than editing history.
@@ -781,3 +781,31 @@ project is Windows-first — so it would be a no-op here and untestable; deferre
 item); bounding the child's stdout size (worth doing, but needs `Popen` plumbing — left with the
 resource-cap work); a full container/seccomp sandbox now (platform-specific, out of scope for a
 stdlib-only step — deferred).
+
+### D-049 · 2026-07-02 · Autonomous self-development loop (charter + push-to-main, ~every 5 h)
+**Decision:** Stand up an **autonomous self-development loop**: a scheduled agent runs one **lap**
+roughly **every 5 hours**, unattended, driven by a new charter [`10-autoloop.md`](10-autoloop.md).
+A lap = **one smallest-viable item** picked from the existing work queue (broken things first, then
+[`04-open-questions.md`](04-open-questions.md), then [`03-roadmap.md`](03-roadmap.md) order, then the
+`CLAUDE.md` **Next** bullets) → implement → keep the **full `pytest` suite green** and **baselines
+byte-identical** → sync docs + this decision log + the `CLAUDE.md` status → **push to `main`**. Per
+the owner's choice there is **no PR gate** (autonomous push). Because the gate is removed, the charter
+makes the objective signals load-bearing and the push conditional: **push to `main` only if the suite
+is green and the item is complete**; otherwise the lap parks its WIP on an `autoloop/wip-<ts>` branch
+and stops, so **`main` is never left red**. The charter's hard rules forbid the loop from
+reward-hacking its own metric — no weakening/skipping tests, no editing scoring to move numbers, test
+count is not a goal, secrets never committed, stop-and-park when blocked/ambiguous — and every lap must
+leave the repo resumable (`CLAUDE.md` rules 3 & 5). This is a **meta-process decision**, not a
+code/scoring change: no ride, formula, or baseline is touched.
+**Why:** The project already has the three things that make hands-off iteration safe — a **work queue**
+(roadmap/open-questions), a **verifiable, deterministic oracle** (`pytest` + seeded, byte-identical
+baselines), and a **definition of resumable/done** (the `CLAUDE.md` operating rules). The loop mostly
+operationalizes rules that already exist. It is deliberately ironic-aware: the loop's own failure mode
+is exactly the reward-hacking Parkbench studies, so the charter's #1 guardrail is that the loop may not
+game the test suite or the scoring.
+**Rejected:** a PR-per-lap human gate (owner chose autonomous push-to-main); commit-to-branch-no-PR
+(same); unbounded multi-item laps (drift/scope-creep — capped at one item, `git revert`-able); letting
+a lap push a red or half-finished `main` (the WIP-branch fallback prevents this); allowing the loop to
+edit tests/scoring to go green (that is the reward-hacking the project exists to catch — hard-forbidden);
+`ScheduleWakeup` self-pacing for the cadence (clamped to ≤1 h, can't express a 5 h interval — used a
+cron routine instead).

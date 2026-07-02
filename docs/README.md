@@ -26,6 +26,7 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
 | 07 | [`07-multi-ride.md`](07-multi-ride.md) | Post-v1: the ride abstraction, the radar roll-up, and added rides. | Living |
 | 08 | [`08-theming.md`](08-theming.md) | The creative skin (roadmap #4): the park theme, `parkbench map`, and the landing page. | Living |
 | 09 | [`09-byo-protocol.md`](09-byo-protocol.md) | The BYO agent HTTP/JSON wire protocol (roadmap #5) — endpoints, message shapes, determinism. | Living |
+| 10 | [`10-autoloop.md`](10-autoloop.md) | Charter for the autonomous self-development loop (D-049) — lap shape, work queue, guardrails, push-to-main rules, kill switch. | Living |
 
 ### Reference
 
@@ -97,3 +98,9 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
   gets **environment + working-directory confinement** — a minimal allowlisted env (no inherited
   secrets in `os.environ`) and a throwaway cwd (relative writes can't touch the repo). Baselines
   byte-identical; **174 passing tests.** Updated `02`, `04`, `07`.
+- **2026-07-02** — **Autonomous self-development loop** (D-049): meta-process, not a code/scoring
+  change. Added [`10-autoloop.md`](10-autoloop.md), the charter a scheduled agent reads to run one
+  **lap** (~every 5 h, unattended) — pick one queue item, implement, keep tests green + baselines
+  byte-identical, sync docs + decision log + status, and **push to `main` only if the suite is green
+  and the item is complete** (else park on an `autoloop/wip-*` branch; `main` never left red).
+  Docs-only. Updated `02`, `03`, root `CLAUDE.md`.

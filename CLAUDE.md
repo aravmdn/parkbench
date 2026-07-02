@@ -42,7 +42,7 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 | `docs/05-glossary.md` | Shared vocabulary (ride, house cast, BYO agent, radar profile, …). |
 | `docs/06-v1-architecture.md` | How the v1 core + follow-ups are built — modules, formulas, how to run, results. |
 
-## Current status (2026-06-04)
+## Current status (2026-07-02)
 
 **v1 + the post-v1 multi-ride phase are on `main`; the four-axis diagnostic radar is complete.** The
 negotiation ride runs end-to-end: engine, seeded scenario generator, objective-payoff scoring,
@@ -68,6 +68,15 @@ track (roadmap #5)**: the HTTP/JSON wire protocol is now **documented as a langu
 confinement** (D-048, no inherited secrets, throwaway cwd) on top of its D-043 process isolation +
 timeout. Reproducible: **174 passing tests**. Design + formulas: `docs/06-v1-architecture.md`,
 `docs/07-multi-ride.md`, `docs/08-theming.md`, and `docs/09-byo-protocol.md`.
+
+**As of 2026-07-02** the project also runs an **autonomous self-development loop** (D-049): a scheduled
+agent runs one **lap** ~every 5 h, unattended, governed by the charter `docs/10-autoloop.md`. A lap
+picks one item from the queue (broken things → `04-open-questions.md` → `03-roadmap.md` → the *Next*
+bullets below), implements it, keeps the suite green + baselines byte-identical, syncs docs + decision
+log + this status, and **pushes to `main` only if the suite is green and the item is complete** (else it
+parks WIP on an `autoloop/wip-*` branch — `main` is never left red). **No PR gate** (owner's choice). If
+you are a session (human or agent) landing here: **read `docs/10-autoloop.md` before running a lap.**
+Kill switch: `/schedule` → disable/delete the Parkbench autoloop routine.
 
 - **Headline:** the radar for `heuristic` spans **all four** axes — **social 0.963** (mean of
   negotiation 0.975 + commons 0.951) + **economic 0.990** (knapsack) + **coding 0.667**
