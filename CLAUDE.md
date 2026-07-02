@@ -69,14 +69,19 @@ confinement** (D-048, no inherited secrets, throwaway cwd) on top of its D-043 p
 timeout. Reproducible: **174 passing tests**. Design + formulas: `docs/06-v1-architecture.md`,
 `docs/07-multi-ride.md`, `docs/08-theming.md`, and `docs/09-byo-protocol.md`.
 
-**As of 2026-07-02** the project also runs an **autonomous self-development loop** (D-049): a scheduled
-agent runs one **lap** ~every 5 h, unattended, governed by the charter `docs/10-autoloop.md`. A lap
-picks one item from the queue (broken things → `04-open-questions.md` → `03-roadmap.md` → the *Next*
-bullets below), implements it, keeps the suite green + baselines byte-identical, syncs docs + decision
-log + this status, and **pushes to `main` only if the suite is green and the item is complete** (else it
-parks WIP on an `autoloop/wip-*` branch — `main` is never left red). **No PR gate** (owner's choice). If
-you are a session (human or agent) landing here: **read `docs/10-autoloop.md` before running a lap.**
-Kill switch: `/schedule` → disable/delete the Parkbench autoloop routine.
+**As of 2026-07-02** the project is set up to run an **autonomous build loop** (D-049, re-scoped by
+D-051) — governed by the charter `docs/10-autoloop.md`. It runs **locally, one fresh worker sub-session
+per lap** (a thin `/loop` driver dispatches each lap to a clean-context worker, so no session fills up,
+and it can drive the browser). It **genuinely builds forward** — engine features, new rides, and the new
+headline goal: the **Pokémon-style visual world** (D-050, `docs/11-visual-world.md`) — a separate `web/`
+front-end app (Kaplay, deps allowed) rendering the stdlib-only engine's JSON. The charter has **two
+verification tiers**: engine work must keep `pytest` green + baselines byte-identical; visual work must
+build clean **and commit screenshots** to `autoloop/shots/<ts>/` for async review. It pushes to `main`
+gate-free but only when the item is complete + its tier passes (else parks on `autoloop/wip-*`; `main`
+never left broken); an `autoloop/log.md` journal logs each lap. **No PR gate** (owner's choice). The old
+cloud cron routine is **retired/disabled**. If you are a session landing here: **read
+`docs/10-autoloop.md` + `docs/11-visual-world.md` before running a lap.** Kill switch: stop the local
+`/loop` session (and optionally delete the disabled cloud routine at claude.ai/code/routines).
 
 - **Headline:** the radar for `heuristic` spans **all four** axes — **social 0.963** (mean of
   negotiation 0.975 + commons 0.951) + **economic 0.990** (knapsack) + **coding 0.667**

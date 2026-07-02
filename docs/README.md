@@ -26,7 +26,8 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
 | 07 | [`07-multi-ride.md`](07-multi-ride.md) | Post-v1: the ride abstraction, the radar roll-up, and added rides. | Living |
 | 08 | [`08-theming.md`](08-theming.md) | The creative skin (roadmap #4): the park theme, `parkbench map`, and the landing page. | Living |
 | 09 | [`09-byo-protocol.md`](09-byo-protocol.md) | The BYO agent HTTP/JSON wire protocol (roadmap #5) — endpoints, message shapes, determinism. | Living |
-| 10 | [`10-autoloop.md`](10-autoloop.md) | Charter for the autonomous self-development loop (D-049) — lap shape, work queue, guardrails, push-to-main rules, kill switch. | Living |
+| 10 | [`10-autoloop.md`](10-autoloop.md) | Charter for the autonomous **build** loop (D-049/D-051) — local fresh-worker-per-lap, work queue, the two verification tiers, guardrails, push-to-main rules, kill switch. | Living |
+| 11 | [`11-visual-world.md`](11-visual-world.md) | The Pokémon-style visual spectator world (D-050) — the metaphor↔engine mapping, the engine↔front-end JSON split, the Kaplay stack, the art policy. | Draft |
 
 ### Reference
 
@@ -104,3 +105,11 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
   byte-identical, sync docs + decision log + status, and **push to `main` only if the suite is green
   and the item is complete** (else park on an `autoloop/wip-*` branch; `main` never left red).
   Docs-only. Updated `02`, `03`, root `CLAUDE.md`.
+- **2026-07-02** — **Loop re-scoped to a local build loop + the visual-world vision** (D-050, D-051):
+  the loop becomes a *genuinely build-forward* loop run **locally, fresh worker per lap** (dodges the
+  single-session context limit; can drive the browser). New doc [`11-visual-world.md`](11-visual-world.md)
+  captures the **Pokémon-style pixel park** (agents = trainers, rides = gyms) as a **separate `web/`
+  front-end app** (Kaplay, deps allowed) that renders the stdlib-only engine's JSON. The charter gains
+  **two verification tiers** (engine = tests green; visual = builds + screenshots committed for async
+  review) and an `autoloop/` journal + screenshots convention. The cloud cron is retired/disabled.
+  Docs + scaffolding only. Updated `02`, `03`, root `CLAUDE.md`, `10`.

@@ -809,3 +809,58 @@ a lap push a red or half-finished `main` (the WIP-branch fallback prevents this)
 edit tests/scoring to go green (that is the reward-hacking the project exists to catch — hard-forbidden);
 `ScheduleWakeup` self-pacing for the cadence (clamped to ≤1 h, can't express a 5 h interval — used a
 cron routine instead).
+
+### D-050 · 2026-07-02 · Front-of-house = a Pokémon-style animated pixel world (engine↔front-end split)
+**Decision:** Commit to a **visual spectator product**: an animated Game Boy / GBA-era **pixel world**
+where agents are **trainer characters** who walk the park and step into attractions ("gyms") to ride
+them, while the scores are the benchmark running underneath. It is the evolution of the static park
+skin (D-046) into a living world, and it **upholds D-012** — the world is **presentation only**, never
+computes or influences a score. Architecturally it introduces the project's first **engine↔front-end
+split**: the **engine stays Python, stdlib-only, pure, deterministic, test-gated** (D-023) and already
+emits everything as JSON (`radar/career/leaderboard --json`, run logs — the same contract the static
+viewers use, D-028/D-044); the **front-end is a new separate app in `web/`** that **is allowed
+dependencies and a build step** (the stdlib-only rule is an *engine* rule and does not bind the
+front-end). Stack: **Kaplay** (maintained Kaboom.js — pixel sprites/animation/tilemaps/scenes, tiny,
+low boilerplate); Phaser 3 is the heavier fallback. Art: **original** GB/GBA-style pixel art and/or
+**CC0-licensed** tilesets — **never ripped Nintendo/Pokémon assets** (the product must be publishable).
+The metaphor maps ~1:1 onto the engine (lands = axes, gyms = rides, trainers = agents, stats screen =
+radar, badges = career/reputation, Hall of Fame = leaderboard). Full framing in
+[`11-visual-world.md`](11-visual-world.md).
+**Why:** The vision (D-000/D-003) is a *watchable* arena; a vibrant pixel world is the mindshare wedge,
+and the Pokémon metaphor fits the existing engine so cleanly it's worth building for real rather than
+as chrome. Splitting engine from front-end lets the world use a proper game toolchain **without**
+compromising the engine's stdlib-only reproducibility guarantee.
+**Rejected:** extending the zero-dependency static viewers (D-028/D-044) into a full animated game
+(a real sprite/tilemap game wants a toolchain — kept the static pages as the simple entrance, added a
+separate app); putting any scoring in the front-end (violates D-012); ripped third-party sprites
+(copyright — original/CC0 only); relaxing the engine's stdlib-only rule (kept it; the exception is
+scoped to `web/`). Builds toward roadmap #4; the autoloop (D-051) is the builder.
+**Known open:** commissioning higher-quality art later ([`04-open-questions.md`](04-open-questions.md)).
+
+### D-051 · 2026-07-02 · Autoloop re-scoped: local, fresh-worker-per-lap, build-new, two verification tiers
+**Decision:** Re-scope the autonomous loop (D-049, first drafted as an unattended **cloud cron** doing
+**maintenance**) into a **local build loop**. Two changes: **(1) mechanism** — it runs **locally, one
+fresh worker sub-session per lap**: a thin `/loop` **driver** on the owner's machine dispatches each lap
+to a clean-context worker that does the whole lap and exits, so **no single session accumulates context**
+(the owner's explicit concern) and the loop can **drive the browser** (Claude-in-Chrome / headless) —
+which a cloud session cannot. The prior cloud routine (`trig_01XrJ4EqxMyqSfieC7zJnqwR`) is
+**retired/disabled**. **(2) scope** — the loop **genuinely builds new capability** (engine features,
+new rides, and the D-050 visual world), not just maintenance. To govern build-new without a PR gate the
+charter grows **two verification tiers**: **Tier A** (engine/Python) keeps the strict bar — `pytest`
+green, baselines byte-identical, stdlib-only; **Tier B** (front-end `web/`/visual) — the app must build
+clean **and the lap must commit screenshots** to `autoloop/shots/<ts>/` for **async owner review**
+(there is no automated oracle for "does it look right"), the front-end may use deps/a build step but
+never scoring logic (D-012), and only original/CC0 art. An `autoloop/log.md` journal records one line
+per lap. Push-to-main stays gate-free but conditional on the item being complete **and** its tier's
+verification passing (else park on `autoloop/wip-*`; `main` never left broken). The charter
+[`10-autoloop.md`](10-autoloop.md) is rewritten accordingly.
+**Why:** The owner wants the project to *genuinely build itself*, wants it **local** (to reach the
+browser for the heavily-visual product), and correctly flagged that a single long-lived local session
+would exhaust its context. Fresh-worker-per-lap solves all three: continuous local building, browser
+access, and bounded context — with the repo (docs/decision-log/status/journal/screenshots) as the
+cross-lap memory, exactly as the documentation-first discipline (`CLAUDE.md`) already requires.
+**Rejected:** the cloud cron (no browser access; wrong for a visual build loop); a single local session
+restarted periodically (the context-churn problem the owner named); a hard human gate per lap (owner
+chose gate-free async review via screenshots + `git revert`); one uniform verification bar (visual work
+has no `pytest` oracle — hence Tier B screenshots); letting the driver do project work (would grow its
+context — the driver only dispatches). Revises D-049.

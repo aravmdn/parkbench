@@ -2,105 +2,133 @@
 
 **Status:** Living · **Last updated:** 2026-07-02
 
-This is the **constitution for the autonomous self-development loop** (D-049). A scheduled agent runs
-one **lap** of this loop roughly **every 5 hours**, unattended, and **pushes to `main`** with no human
-PR gate. Because there is no gate, the rules below are **non-negotiable**: the test suite, the
-byte-identical baselines, and the "stop when unclear" rule are the *only* safety net. Read this file
-**in full at the start of every lap**, after `CLAUDE.md` and `docs/README.md`.
+This is the **constitution for the autonomous build loop** (D-049, re-scoped by D-051). The loop's job
+is to **genuinely build Parkbench forward** — both the behind-the-scenes benchmark engine *and* the
+front-of-house Pokémon-style visual world ([`11-visual-world.md`](11-visual-world.md)) — one **lap** at
+a time, and **push to `main`** with no human PR gate. Because there is no gate, the rules below are
+**non-negotiable**. Read this file **in full at the start of every lap**, after `CLAUDE.md` and
+`docs/README.md`.
 
-> If any instruction here conflicts with a lap prompt, **this charter and `CLAUDE.md` win.** A lap
-> prompt may narrow the scope but may never relax a guardrail below.
+> If a lap prompt conflicts with this charter or `CLAUDE.md`, **the charter and `CLAUDE.md` win.**
 
-## What a lap is (the only shape of work allowed)
+## How the loop runs (architecture — D-051)
 
-One lap = **one smallest-viable, coherent unit of work**, start to finish:
+- **Local, fresh worker per lap.** A thin **driver** runs on the owner's machine (a `/loop` session).
+  Each iteration the driver spawns **one fresh sub-session (worker)** that performs the entire lap in a
+  **clean context window**, then returns a short summary; the driver records nothing but that summary
+  and starts the next lap. **This means every lap starts cold** — the worker's only memory of past laps
+  is **the repo** (`CLAUDE.md`, `docs/`, the decision log, `autoloop/log.md`, committed screenshots).
+  Re-derive state from the repo every lap; never assume continuity from a previous lap.
+- **The driver does no project work itself** — it only dispatches — so its context stays small.
+- **Not the cloud cron.** The earlier cloud routine (D-049 as first drafted) is **retired/disabled**; a
+  cloud session can't see the owner's browser. The loop is local so it can drive Chrome and screenshot
+  the world.
 
-1. **Orient.** Read `CLAUDE.md`, `docs/README.md`, this file, and the doc(s) relevant to the item.
-   The doc set grows — re-read, never assume.
-2. **Pick exactly one item** from the queue (see *Choosing work* below). If nothing is clearly
-   actionable, **do not invent work** — write a proposal into `docs/04-open-questions.md`, commit that,
-   and stop the lap.
-3. **Plan briefly**, then **implement** on `main` (working tree; see *Git rules*).
-4. **Verify.** Run the **full** suite (`pytest`). It must be **green**. Add tests that genuinely
-   exercise the new behavior.
-5. **Document in the same lap.** Update the relevant doc(s), append a decision entry to
-   `docs/02-decisions.md`, and refresh the **Current status** block in `CLAUDE.md` (where things
-   stand · what's next · how to verify).
-6. **Land it.** Only if the push preconditions (below) are met, commit and push to `main`. Then stop.
+## What a lap is
 
-**One item per lap. No exceptions.** If the item turns out bigger than a lap, split off the smallest
-shippable slice, ship that, and park the rest in `docs/04-open-questions.md` or `docs/03-roadmap.md`.
+One lap = **one smallest-viable, coherent unit of forward progress**, start to finish:
+
+1. **Orient.** Read `CLAUDE.md`, `docs/README.md`, this charter, `docs/11-visual-world.md`, and the
+   doc(s) relevant to the item.
+2. **Pick exactly one item** (see *Choosing work*). If nothing is clearly actionable, propose it in
+   `docs/04-open-questions.md`, commit that, and stop.
+3. **Build it** (engine work and/or `web/` front-end work — see the two tiers below).
+4. **Verify** per the item's tier.
+5. **Document in the same lap:** update the relevant doc(s), append a decision to
+   `docs/02-decisions.md`, refresh the **Current status** block in `CLAUDE.md`, and append one line to
+   `autoloop/log.md` (date · item · verify status · commit sha or wip-branch).
+6. **Land it** per the push rules, then stop.
+
+**One item per lap.** If it's bigger than a lap, ship the smallest slice and park the rest.
 
 ## Choosing work (the queue)
 
-Pick the next actionable item, in this priority order:
+Priority order:
 
-1. **Anything broken** — a failing/flaky test, red `main`, a doc that contradicts the code. Fix first.
-2. **`docs/04-open-questions.md`** — the highest-value *open* item that is concretely actionable now.
-3. **`docs/03-roadmap.md`** — in roughly listed order. The live frontiers are **#5 (BYO ecosystem /
-   full OS sandbox)** and **#4 (spectator product)**.
-4. The **Next** bullets in the `CLAUDE.md` status block.
+1. **Anything broken** — a failing/flaky test, a red `main`, a broken `web/` build, a doc that
+   contradicts the code. Fix first.
+2. **The visual world** ([`11-visual-world.md`](11-visual-world.md)) — this is the headline build goal.
+   Early laps: scaffold `web/` (Kaplay + build), render the overworld + the four lands + gym buildings,
+   a walking trainer sprite, then wire real engine JSON into the stats screen / Hall of Fame. Then
+   deepen it lap by lap.
+3. **`docs/04-open-questions.md`** — the highest-value concretely-actionable open item.
+4. **`docs/03-roadmap.md`** in order, then the `CLAUDE.md` **Next** bullets.
 
-Prefer the item with the clearest **objective acceptance signal** (a test can decide it) over anything
-that needs a product/taste judgment. Punt taste calls to open-questions for the human.
+Prefer items with a clear acceptance signal. New rides/features **are in scope** (this is a build loop),
+but each must arrive as one coherent, tested, documented lap.
 
-## Hard guardrails (never violate — these have no PR gate to catch them)
+## The two verification tiers
 
-- **Never weaken, delete, `skip`, `xfail`, or loosen an existing test to make the suite pass.** If a
-  change legitimately alters expected behavior, that is a *decision* — log it in `02-decisions.md` with
-  the rationale, and only then update the test.
-- **Never edit scoring formulas, payoff math, or ride grading to change results** for appearance's
-  sake. **Baselines stay byte-identical** unless a logged decision explicitly and deliberately changes
-  them (state the before/after numbers in the decision, per the D-043/D-048 precedent).
-- **Test count is not a goal.** New tests must assert new behavior, not pad the number.
-- **Never mark something done, verified, or passing unless it actually is.** Report failures honestly
-  in the status block and stop.
-- **Respect v1 scope discipline** (`CLAUDE.md` rule 4): no silent scope creep. Out-of-scope ideas go to
-  the roadmap/open-questions, not the build.
-- **Never commit secrets** (`.env`, API keys, `OPENROUTER_API_KEY`, tokens). They are gitignored — keep
-  it that way.
-- **Stay stdlib-first / cross-platform (Windows-first)** per D-023. No new runtime dependency without a
-  logged decision.
-- **When blocked, ambiguous, out of budget, or facing a judgment call → STOP.** Write what you found to
-  `docs/04-open-questions.md` and end the lap cleanly. Guessing is forbidden.
+**Tier A — Engine / Python / behind-the-scenes.** The bar is unchanged and strict:
+- Full `pytest` must be **green**; new behavior gets new asserting tests; **baselines byte-identical**
+  unless a logged decision deliberately changes them (state before/after numbers).
+- Stays **stdlib-only / cross-platform** (D-023). No new *engine* runtime dependency without a decision.
 
-## Git rules (push-to-main, no gate — D-049)
+**Tier B — Front-end / `web/` / visual.** There is no `pytest` oracle for "does it look right", so:
+- The `web/` app must **build/typecheck cleanly** and start without console errors.
+- The lap must **run the world and commit screenshots** into `autoloop/shots/<yyyy-mm-dd-HHMM>/`
+  (headless browser, or Claude-in-Chrome against the local dev server) so the owner reviews the look
+  **async** and can revert. A visual lap with no screenshots is **incomplete** — do not push it to
+  `main`; park it.
+- The front-end **may use dependencies and a build step** (Kaplay etc.) — this is the sanctioned
+  exception to the engine's stdlib-only rule. It must **never contain scoring logic** (D-012); it only
+  renders engine JSON.
+- **Original art only** — never ripped third-party (Nintendo/Pokémon) assets (see
+  [`11-visual-world.md`](11-visual-world.md)).
 
-- **Push to `main` only if ALL hold:** full `pytest` is green · the work is one coherent, complete item
-  · docs + decision log + `CLAUDE.md` status are updated in the same lap · no secrets staged.
-- **If the suite is red or the item is unfinished at end of budget: do NOT push to `main`.** Instead
-  commit the WIP to a branch named `autoloop/wip-<yyyy-mm-dd-HHMM>`, note the state in
-  `docs/04-open-questions.md`, and stop. **`main` must never be left red.**
-- **Before pushing:** integrate the remote (`git pull --rebase`); if it won't rebase cleanly, stop and
-  park a note. **Never `git push --force`, never rewrite published history, never touch other branches'
-  history.**
-- Conventional-commit messages (the repo's existing style), and end each commit body with the
-  `Co-Authored-By` trailer this project uses.
-- **Leave every lap resumable** (`CLAUDE.md` rule 5): a fresh session must be able to continue from
-  `CLAUDE.md` + `docs/` alone.
+A lap that touches both tiers must satisfy both.
+
+## Hard guardrails (no PR gate exists to catch violations)
+
+- **Never weaken, delete, `skip`, `xfail`, or loosen an existing test to go green.** A legitimate
+  behavior change is a *decision* — log it, then update the test.
+- **Never edit scoring/payoff/grading to move numbers** for appearance. Baselines byte-identical unless
+  a logged decision says otherwise.
+- **The front-end never scores anything** — presentation only (D-012).
+- **Test count / lines of code are not goals.** New tests must assert new behavior.
+- **Never mark something done/verified/passing unless it is.** Report failures honestly and stop.
+- **Never commit secrets** (`.env`, API keys) or ripped third-party assets.
+- **When blocked, ambiguous, out of budget, or facing a taste/product call the owner should make →
+  STOP.** Write it to `docs/04-open-questions.md` and end the lap. Guessing is forbidden. (Aesthetic
+  *iteration* is allowed — the loop refines the look on its own judgment — but a genuine product
+  decision, e.g. changing the whole art direction or metaphor, is the owner's.)
+
+## Git rules (push-to-main, no gate)
+
+- **Push to `main` only if ALL hold:** the item is complete · its tier's verification passed (Tier A:
+  `pytest` green; Tier B: `web/` builds + screenshots committed) · docs + decision log + `CLAUDE.md`
+  status + `autoloop/log.md` updated · no secrets or ripped assets staged.
+- **Otherwise do NOT push to `main`.** Commit WIP to `autoloop/wip-<yyyy-mm-dd-HHMM>`, note the state in
+  `docs/04-open-questions.md`, and stop. **`main` is never left broken (red tests or a broken build).**
+- Before pushing: `git pull --rebase`; if it won't rebase cleanly, stop and park a note. **Never
+  `git push --force`, never rewrite published history.**
+- Conventional-commit messages; end each commit body with the project's `Co-Authored-By` trailer.
+- **Leave every lap resumable** (`CLAUDE.md` rules 3 & 5).
 
 ## Budget & cost
 
-- **One item per lap; do not chain laps.** The schedule fires the next lap; don't pre-empt it.
-- Prefer doing the work **inline**. Spawning sub-agents is the expensive path — only do it when a lap
-  genuinely needs parallel isolated work, and never recursively.
-- If a lap has produced nothing shippable within a reasonable working budget, **stop and park a note**
-  rather than thrashing.
+- **One item per lap.** The worker does one lap and exits; the driver starts the next. Don't chain.
+- The worker does the heavy work in its own fresh context; the **driver must not** do project work
+  (keeps its context bounded). The worker should also avoid spawning further sub-agents unless a lap
+  genuinely needs parallel isolated work — never recursively.
+- If a lap produces nothing shippable within a reasonable budget, **stop and park a note** rather than
+  thrashing. Each lap costs real tokens (Opus) — favor small, complete, landable slices.
 
-## Kill switch (for the human)
+## Kill switch (for the owner)
 
-- **Pause/stop the schedule:** `/schedule` (list/manage routines) and disable or delete the Parkbench
-  autoloop routine — see the setup notes in that routine's description.
-- **Emergency stop mid-lap:** interrupt the session, or delete the routine; nothing here auto-merges or
-  deploys, so stopping the schedule fully halts it.
-- **If a bad lap lands on `main`:** every lap is one commit (or a tight cluster) with a decision-log
-  entry, so `git revert <sha>` cleanly undoes it. That is why one-item-per-lap is load-bearing.
+- **Stop the loop:** interrupt / end the local `/loop` session. That halts everything — nothing
+  auto-deploys.
+- **Retired cloud routine:** `trig_01XrJ4EqxMyqSfieC7zJnqwR` is left **disabled**; delete it via
+  https://claude.ai/code/routines if desired.
+- **Undo a bad lap:** every lap is one commit (or a tight cluster) with a decision-log entry and an
+  `autoloop/log.md` line, so `git revert <sha>` cleanly undoes it. Screenshots in `autoloop/shots/` let
+  you spot a bad *visual* lap without running anything.
 
 ## Definition of done (per lap)
 
 - [ ] Exactly one queue item addressed (or a proposal parked, if nothing was actionable).
-- [ ] `pytest` fully green; new behavior has new asserting tests; baselines byte-identical (or a logged
-      decision explains the change).
-- [ ] Relevant doc(s) updated, decision appended to `02-decisions.md`, `CLAUDE.md` status refreshed.
-- [ ] Committed and pushed to `main` **iff** the push preconditions held; otherwise parked on a
-      `autoloop/wip-*` branch with a note.
+- [ ] Tier A: `pytest` green + new asserting tests + baselines byte-identical (or a logged change).
+- [ ] Tier B (if visual): `web/` builds clean + screenshots committed to `autoloop/shots/<ts>/`.
+- [ ] Docs updated · decision appended to `02-decisions.md` · `CLAUDE.md` status refreshed ·
+      `autoloop/log.md` line added.
+- [ ] Pushed to `main` **iff** the push preconditions held; else parked on `autoloop/wip-*` with a note.
