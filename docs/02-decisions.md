@@ -864,3 +864,35 @@ restarted periodically (the context-churn problem the owner named); a hard human
 chose gate-free async review via screenshots + `git revert`); one uniform verification bar (visual work
 has no `pytest` oracle — hence Tier B screenshots); letting the driver do project work (would grow its
 context — the driver only dispatches). Revises D-049.
+
+### D-052 · 2026-07-02 · Autoloop handoff baton = write-ahead state for crash/quota-safe resumption
+**Decision:** Make the loop robust to abrupt interruption (the killer being **usage-limit cutoffs**,
+which end a session mid-step with no chance to summarize on exit) via an explicit **agent-handoff
+protocol** in `autoloop/`: **`HANDOFF.md`** (the live baton — loop state IDLE/IN-PROGRESS/BLOCKED, active
+task + acceptance criteria, task branch, tree state, last durable commit, steps done, and the key
+**`NEXT ACTION`** field), **`backlog.md`** (pre-decomposed, session-sized tasks), and **`log.md`** (the
+finished-task history). The discipline is **write-ahead**: (1) update `HANDOFF.md` **eagerly** — after
+every meaningful step and before any long op, never only at the end; (2) **git is ground truth for work
+done, the baton is ground truth for intent** — the worker makes **durable WIP commits on a per-task
+branch** (`autoloop/task-<slug>`) as it goes, so an abrupt kill loses at most one step of intent, not
+work; (3) every session **starts by reconciling** the baton against a cheap `git status`/`git log -1`
+and then resumes `NEXT ACTION` (no wasteful re-exploration). The **completion rule** changes from "one
+tiny item, park if bigger" to **"work one backlog task to completion, finishing early only if cut off or
+genuinely blocked"**; a cut-off task is **resumed** next session (not restarted), and only *completed +
+verified* tasks land on `main`. Adds a **circuit breaker** (same task stuck ≥3 sessions with no new WIP
+commits ⇒ mark `BLOCKED`, park, stop). The charter [`10-autoloop.md`](10-autoloop.md) is rewritten to
+carry the protocol; `HANDOFF.md` is seeded `IDLE` and `backlog.md` seeded with the visual-world's first
+tasks.
+**Why:** The owner asked for the loop to be genuinely resumable and *not waste tokens*: "at each point
+it must document what's finished/unfinished and whether the tree is dirty or clean, so the next agent
+always knows what to do." This is the write-ahead-log pattern applied to agent handoffs — it turns the
+two hardest operational gaps (a shared working tree that a crashed lap could poison, and quota cutoffs
+that stall the loop) into non-events, because state is always on disk and reconcilable. It also makes
+"fully autonomous" honest: the loop now survives interruption and refills its own backlog, while the two
+true ceilings remain the owner's taste (product decisions ⇒ `BLOCKED`) and the plan's usage throughput
+(the loop can't exceed it; it progresses in bursts and resumes after resets).
+**Rejected:** end-of-lap-only summaries (a mid-step cutoff writes nothing — must be write-ahead);
+per-lap throwaway git worktrees (would discard a cut-off task's in-progress work — chose durable
+per-task branches so tasks *resume*); trusting the baton alone without a git reconcile (the baton can be
+one step stale — git is authoritative for committed work); making the driver hold state (grows its
+context — state belongs on disk, D-051). Extends D-049/D-051.

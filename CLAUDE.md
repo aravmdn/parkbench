@@ -76,12 +76,15 @@ and it can drive the browser). It **genuinely builds forward** — engine featur
 headline goal: the **Pokémon-style visual world** (D-050, `docs/11-visual-world.md`) — a separate `web/`
 front-end app (Kaplay, deps allowed) rendering the stdlib-only engine's JSON. The charter has **two
 verification tiers**: engine work must keep `pytest` green + baselines byte-identical; visual work must
-build clean **and commit screenshots** to `autoloop/shots/<ts>/` for async review. It pushes to `main`
-gate-free but only when the item is complete + its tier passes (else parks on `autoloop/wip-*`; `main`
-never left broken); an `autoloop/log.md` journal logs each lap. **No PR gate** (owner's choice). The old
-cloud cron routine is **retired/disabled**. If you are a session landing here: **read
-`docs/10-autoloop.md` + `docs/11-visual-world.md` before running a lap.** Kill switch: stop the local
-`/loop` session (and optionally delete the disabled cloud routine at claude.ai/code/routines).
+build clean **and commit screenshots** to `autoloop/shots/<ts>/` for async review. It is **crash/quota-
+safe via a write-ahead handoff baton** (D-052): `autoloop/HANDOFF.md` (live state + `NEXT ACTION`,
+updated after every step), `autoloop/backlog.md` (session-sized tasks), `autoloop/log.md` (history) —
+each session works **one task to completion** on a per-task branch with WIP commits, resumes a cut-off
+task from the baton, and only lands *completed + verified* work on `main` (gate-free). **No PR gate**
+(owner's choice). The old cloud cron routine is **retired/disabled**. If you are a session landing here:
+**read `docs/10-autoloop.md` + `docs/11-visual-world.md`, then `autoloop/HANDOFF.md`, and reconcile with
+`git status` before doing anything.** Kill switch: stop the local `/loop` session (and optionally delete
+the disabled cloud routine at claude.ai/code/routines).
 
 - **Headline:** the radar for `heuristic` spans **all four** axes — **social 0.963** (mean of
   negotiation 0.975 + commons 0.951) + **economic 0.990** (knapsack) + **coding 0.667**
