@@ -16,9 +16,9 @@ Format per task: `- [ ] <slug> — <goal>. **Done when:** <acceptance criteria> 
 - [x] `overworld-tilemap` — Render a small top-down tile overworld (GB/GBA palette) with **original**
   placeholder tiles (grass/path/water). **Done when:** the tilemap renders, builds clean, screenshot
   committed (Tier B). ✅ landed — procedural grass/path/water/tree tiles, crossroads + pond.
-- [ ] `four-lands` — Lay out the four **lands** (social / economic / coding / safety) as distinct
+- [x] `four-lands` — Lay out the four **lands** (social / economic / coding / safety) as distinct
   regions/towns on the overworld, labeled. **Done when:** all four are visibly placed + labeled,
-  screenshot committed (Tier B).
+  screenshot committed (Tier B). ✅ landed — accent-tinted quadrants + town signs (name + axis).
 - [ ] `gym-buildings` — Place a **gym building** per ride in its land (negotiation, commons, economic,
   coding, safety), each enterable-looking. **Done when:** buildings render in the right lands,
   screenshot committed (Tier B).
