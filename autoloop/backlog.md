@@ -22,9 +22,9 @@ Format per task: `- [ ] <slug> — <goal>. **Done when:** <acceptance criteria> 
 - [x] `gym-buildings` — Place a **gym building** per ride in its land (negotiation, commons, economic,
   coding, safety), each enterable-looking. **Done when:** buildings render in the right lands,
   screenshot committed (Tier B). ✅ landed — accent-roofed gym sprite per ride, nameplated.
-- [ ] `trainer-sprite` — Add one **trainer sprite** with 4-direction walk-cycle animation, controllable
+- [x] `trainer-sprite` — Add one **trainer sprite** with 4-direction walk-cycle animation, controllable
   or scripted to walk the overworld. **Done when:** the sprite animates and moves, screenshot/GIF
-  committed (Tier B).
+  committed (Tier B). ✅ landed — procedural 3×4 walk-cycle sheet, arrow-key control + auto-patrol.
 - [ ] `wire-radar-json` — Load a real `parkbench radar --json` fixture and render it as the **stats
   screen** (hex radar) reachable from the world. **Done when:** the stats screen shows real engine data
   for one agent, builds clean, screenshot committed (Tier B; may add a small fixture-gen helper — keep

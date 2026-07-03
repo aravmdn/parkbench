@@ -9,6 +9,7 @@ import { PALETTE, PARK_NAME } from "./theme.js";
 import { buildOverworld, WORLD_W, WORLD_H } from "./world.js";
 import { buildLands } from "./lands.js";
 import { buildGyms } from "./buildings.js";
+import { addTrainer } from "./trainer.js";
 
 const k = kaplay({
   width: WORLD_W,
@@ -31,6 +32,7 @@ k.scene("park", () => {
   buildOverworld(k);
   buildLands(k);
   buildGyms(k);
+  addTrainer(k);
 
   // A small title plate pinned to the top, drawn above the map.
   k.add([

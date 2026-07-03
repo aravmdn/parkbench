@@ -8,23 +8,22 @@
 ---
 
 **Updated:** 2026-07-03
-**Loop state:** IDLE
+**Loop state:** TASK IN PROGRESS
 
-**Active task:** — (none)
-**Acceptance criteria:** —
-**Task branch:** —
+**Active task:** `trainer-sprite` → then `wire-radar-json` (both remaining seed tasks, same PR branch).
+**Acceptance criteria:** trainer: 4-direction walk-cycle sprite animates + moves the overworld,
+screenshot committed (Tier B). radar: a real `parkbench radar --json` fixture rendered as a hex stats
+screen reachable from the world, builds clean, screenshot committed (Tier B; fixture-gen helper stays
+stdlib-only + tested if added, Tier A).
+**Task branch:** `claude/next-tasks-j7f20o` (cloud session — PR #13, PR-gated)
 **Tree state:** clean · on `claude/next-tasks-j7f20o`
 **Last durable commit:** (see `git log -1`)
 
 **Steps done this task:**
-- Landed the first **four** visual-world seed tasks (D-053) on branch `claude/next-tasks-j7f20o`,
-  each Tier-B verified (build clean + headless screenshot, zero console errors) with shots under
-  `autoloop/shots/`: `web-scaffold`, `overworld-tilemap`, `four-lands`, `gym-buildings`.
-- Synced docs: `02-decisions.md` (D-053), `CLAUDE.md` status, `backlog.md` (checked off), `log.md`.
+- Landed the first **four** visual-world seed tasks (D-053); PR #13 open (draft, mergeable clean).
 
-**NEXT ACTION:** Loop is IDLE. Top remaining backlog task is **`trainer-sprite`** (a 4-direction
-walk-cycle trainer that moves the overworld). Follow the start-of-session protocol in
-`docs/10-autoloop.md`, then pull it.
+**NEXT ACTION:** Build `trainer-sprite`: procedural 4-direction walk-cycle sprite sheet in pixels.js,
+a player/trainer module that animates + moves on the overworld, screenshot. Then `wire-radar-json`.
 
 > Note (this cloud session): the four seed tasks were developed on the designated branch
 > `claude/next-tasks-j7f20o` and opened as a **draft PR** (PR-gated, per the harness's git rules) rather
