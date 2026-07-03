@@ -1,8 +1,8 @@
 // main.js — boot the Parkbench visual world.
 //
-// The overworld now renders a top-down tile map (backlog: overworld-tilemap). Later laps grow this
-// into the four labeled lands, gym buildings, a walking trainer, and the stats screen wired to
-// `parkbench radar --json`. The front-end is presentation only — it never scores anything (D-012).
+// The world now has a tile overworld, four labeled lands, gym buildings, a walking trainer, and a
+// stats screen wired to real `parkbench radar --json` fixtures (press S). The front-end is
+// presentation only — it never scores anything (D-012).
 
 import kaplay from "kaplay";
 import { PALETTE, PARK_NAME } from "./theme.js";
@@ -10,6 +10,7 @@ import { buildOverworld, WORLD_W, WORLD_H } from "./world.js";
 import { buildLands } from "./lands.js";
 import { buildGyms } from "./buildings.js";
 import { addTrainer } from "./trainer.js";
+import { registerStatsScene } from "./radar.js";
 
 const k = kaplay({
   width: WORLD_W,
@@ -50,6 +51,18 @@ k.scene("park", () => {
     k.fixed(),
     k.z(101),
   ]);
+  k.add([
+    k.text("S: stats", { size: 8, font: "monospace" }),
+    k.pos(WORLD_W - 6, 6),
+    k.anchor("topright"),
+    k.color(k.Color.fromHex(PALETTE.light)),
+    k.fixed(),
+    k.z(101),
+  ]);
+
+  // The stats screen (radar profile) is reachable from the world.
+  k.onKeyPress("s", () => k.go("stats", "heuristic"));
 });
 
+registerStatsScene(k);
 k.go("park");

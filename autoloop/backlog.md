@@ -25,10 +25,13 @@ Format per task: `- [ ] <slug> — <goal>. **Done when:** <acceptance criteria> 
 - [x] `trainer-sprite` — Add one **trainer sprite** with 4-direction walk-cycle animation, controllable
   or scripted to walk the overworld. **Done when:** the sprite animates and moves, screenshot/GIF
   committed (Tier B). ✅ landed — procedural 3×4 walk-cycle sheet, arrow-key control + auto-patrol.
-- [ ] `wire-radar-json` — Load a real `parkbench radar --json` fixture and render it as the **stats
+- [x] `wire-radar-json` — Load a real `parkbench radar --json` fixture and render it as the **stats
   screen** (hex radar) reachable from the world. **Done when:** the stats screen shows real engine data
   for one agent, builds clean, screenshot committed (Tier B; may add a small fixture-gen helper — keep
-  any engine-side code stdlib-only + tested, Tier A).
+  any engine-side code stdlib-only + tested, Tier A). ✅ landed — 4-axis radar from verbatim
+  `radar --json` fixtures (heuristic/greedy/optimal/random), reachable with `S`, cycle with ← →.
 
-> Later chunks (deepen the world, Hall of Fame from `leaderboard --json`, badge/reputation visuals, a
-> "trainer enters gym → run plays → result" flow) get decomposed here once the seed tasks land.
+> **All six visual-world seed tasks are done.** Next: decompose the next chunk here — deepen the world,
+> Hall of Fame from `leaderboard --json`, badge/reputation visuals, and a "trainer enters gym → run
+> plays → result" flow (a `trainer walks to a gym → radar updates` loop) — into 3–5 concrete tasks
+> (that refill is itself a valid task).
