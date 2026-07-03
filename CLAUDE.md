@@ -44,19 +44,23 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 
 ## Current status (2026-07-03)
 
-**Visual world — seed laps landed (D-053).** The Pokémon-style front-end (`docs/11-visual-world.md`) is
-now scaffolded: a separate **`web/`** app on **Kaplay + Vite** (deps + build step allowed; the
-stdlib-only rule is engine-only) renders a Game-Boy-era overworld. The first four backlog tasks are
-done — **web-scaffold** (bootable canvas + `web/README.md`), **overworld-tilemap** (a 20×18 tile park —
+**Visual world — all six seed laps landed (D-053).** The Pokémon-style front-end
+(`docs/11-visual-world.md`) is now a living little world: a separate **`web/`** app on **Kaplay + Vite**
+(deps + build step allowed; the stdlib-only rule is engine-only). All six seed backlog tasks are done —
+**web-scaffold** (bootable canvas + `web/README.md`), **overworld-tilemap** (a 20×18 tile park —
 grass/path/water/tree), **four-lands** (the four axes as accent-tinted, labeled quadrants: Society
-Square · Market Midway · Maker's Workshop · Safety Gauntlet), and **gym-buildings** (one gym per scored
-ride in its land). All placeholder art is **procedurally generated** in `web/src/pixels.js`
-(original/CC0 by construction, deterministic), and `web/src/theme.js` mirrors the engine's park
-vocabulary — the front-end stays **presentation-only** (D-012). Verify: `cd web && npm install &&
-npm run build`, then `npm run dev` (or `npm run preview`) and open the served page. Tier-B screenshots
-for each lap are under `autoloop/shots/`. **Next backlog tasks:** `trainer-sprite` (a walking
-4-direction trainer) then `wire-radar-json` (the hex stats screen from `parkbench radar --json`). Engine
-unchanged: still **174 passing tests**.
+Square · Market Midway · Maker's Workshop · Safety Gauntlet), **gym-buildings** (one gym per scored ride
+in its land), **trainer-sprite** (a 4-direction walk-cycle trainer that arrow-key-walks + auto-patrols
+the paths), and **wire-radar-json** (a **stats screen** reachable with `S` that renders an agent's
+four-axis radar from verbatim `parkbench radar --json` fixtures — heuristic/greedy/optimal/random,
+cycled with ← →). All placeholder art is **procedurally generated** in `web/src/pixels.js` (original/CC0
+by construction, deterministic), and `web/src/theme.js` mirrors the engine's park vocabulary — the
+front-end stays **presentation-only** (D-012), and no engine code changed (Tier A untouched: still
+**174 passing tests**). Verify: `cd web && npm install && npm run build`, then `npm run dev` (or
+`npm run preview`) and open the served page (walk with arrows, `S` for the radar). Tier-B screenshots
+for each lap are under `autoloop/shots/`. **Next:** decompose the next visual chunk into the backlog —
+Hall of Fame from `leaderboard --json`, badge/reputation visuals, and a "trainer enters gym → run plays
+→ result" flow.
 
 ---
 

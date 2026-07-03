@@ -8,26 +8,28 @@
 ---
 
 **Updated:** 2026-07-03
-**Loop state:** TASK IN PROGRESS
+**Loop state:** IDLE
 
-**Active task:** `trainer-sprite` → then `wire-radar-json` (both remaining seed tasks, same PR branch).
-**Acceptance criteria:** trainer: 4-direction walk-cycle sprite animates + moves the overworld,
-screenshot committed (Tier B). radar: a real `parkbench radar --json` fixture rendered as a hex stats
-screen reachable from the world, builds clean, screenshot committed (Tier B; fixture-gen helper stays
-stdlib-only + tested if added, Tier A).
-**Task branch:** `claude/next-tasks-j7f20o` (cloud session — PR #13, PR-gated)
+**Active task:** — (none)
+**Acceptance criteria:** —
+**Task branch:** —
 **Tree state:** clean · on `claude/next-tasks-j7f20o`
 **Last durable commit:** (see `git log -1`)
 
 **Steps done this task:**
-- Landed the first **four** visual-world seed tasks (D-053); PR #13 open (draft, mergeable clean).
+- Landed **all six** visual-world seed tasks (D-053) on branch `claude/next-tasks-j7f20o`, each Tier-B
+  verified (build clean + headless screenshots, zero console errors) with shots under `autoloop/shots/`:
+  `web-scaffold`, `overworld-tilemap`, `four-lands`, `gym-buildings`, `trainer-sprite`, `wire-radar-json`.
+- Engine untouched — `pytest` **174 passed** (Tier A). Docs synced: `02-decisions.md` (D-053 extended),
+  `11-visual-world.md` status, `CLAUDE.md` status, `backlog.md` (all six checked off), `log.md`.
 
-**NEXT ACTION:** Build `trainer-sprite`: procedural 4-direction walk-cycle sprite sheet in pixels.js,
-a player/trainer module that animates + moves on the overworld, screenshot. Then `wire-radar-json`.
+**NEXT ACTION:** Loop is IDLE and the seed backlog is **empty**. Per the charter's *Choosing work*, the
+next task is to **decompose the next visual chunk into 3–5 backlog tasks** (Hall of Fame from
+`leaderboard --json`; badge/reputation visuals; the "trainer enters gym → run plays → result" flow),
+then pull the top one.
 
-> Note (this cloud session): the four seed tasks were developed on the designated branch
-> `claude/next-tasks-j7f20o` and opened as a **draft PR** (PR-gated, per the harness's git rules) rather
-> than pushed straight to `main`. The local `/loop` driver's push-to-main model resumes for laps run
-> locally.
+> Note (this cloud session): the six seed tasks were developed on the designated branch
+> `claude/next-tasks-j7f20o` and are on **draft PR #13** (PR-gated, per the harness's git rules) rather
+> than pushed straight to `main`. The local `/loop` driver's push-to-main model resumes for local laps.
 
 **Blockers / needs-owner:** none

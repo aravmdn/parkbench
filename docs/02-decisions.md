@@ -1,6 +1,6 @@
 # 02 — Decision Log
 
-**Status:** Living · **Last updated:** 2026-07-02
+**Status:** Living · **Last updated:** 2026-07-03
 
 Append-only log of decisions and their rationale (lightweight ADR style). When a decision is
 reversed or superseded, add a **new** entry referencing the old one rather than editing history.
@@ -903,15 +903,19 @@ separate `web/` front-end app and confirm the stack the vision proposed: **Kapla
 Kaboom.js fork) for the pixel/tilemap/scene runtime and **Vite** for the dev server + build. This
 resolves the "revisit the stack in the first scaffolding lap" note in `11-visual-world.md` — Kaplay is
 kept (Phaser stays the parked fallback only if heavier tilemap/physics tooling is later needed). The
-first four visual laps landed together on the initial branch: **web-scaffold** (bootable canvas +
-`web/README.md`), **overworld-tilemap** (a 20×18 GB-era tile overworld), **four-lands** (the four axes
-as accent-tinted, labeled quadrants), and **gym-buildings** (one gym per scored ride in its land). All
-placeholder art is **procedurally generated onto an offscreen canvas** (`web/src/pixels.js`) — grass /
-path / water / tree tiles and gym sprites — which makes it **original / CC0 by construction** (nothing
-ripped, per the art policy) and deterministic (a fixed PRNG seed keeps screenshots reproducible). The
-front-end mirrors the engine's park vocabulary in `web/src/theme.js` (a hand-kept copy of `theme.py`'s
-lands/rides/palette) and stays **presentation-only** (D-012): it draws names and, later, engine JSON —
-it never computes a score.
+six visual seed laps landed on the initial branch: **web-scaffold** (bootable canvas + `web/README.md`),
+**overworld-tilemap** (a 20×18 GB-era tile overworld), **four-lands** (the four axes as accent-tinted,
+labeled quadrants), **gym-buildings** (one gym per scored ride in its land), **trainer-sprite** (a
+procedural 4-direction walk-cycle trainer — arrow-key controllable + auto-patrol), and
+**wire-radar-json** (a stats screen, reachable with `S`, rendering an agent's four-axis radar from
+**verbatim `parkbench radar --json` fixtures** checked in under `web/src/fixtures/` — no engine code was
+added, so Tier A stayed untouched). All placeholder art is **procedurally generated onto an offscreen
+canvas** (`web/src/pixels.js`) — grass/path/water/tree tiles, gym sprites, and the trainer sprite sheet
+— which makes it **original / CC0 by construction** (nothing ripped, per the art policy) and
+deterministic (a fixed PRNG seed keeps screenshots reproducible). The front-end mirrors the engine's
+park vocabulary in `web/src/theme.js` (a hand-kept copy of `theme.py`'s lands/rides/palette) and stays
+**presentation-only** (D-012): it *reads* the engine's names + JSON and draws them — it never computes a
+score.
 **Why:** The visual world is the headline build goal (D-050/D-051); these are its seed laps. Kaplay is
 purpose-built for exactly this (sprites, `addLevel` tilemaps, scenes) with minimal boilerplate, so effort
 goes into the world, not a 2D engine. Generating art in code sidesteps the asset-licensing risk entirely
