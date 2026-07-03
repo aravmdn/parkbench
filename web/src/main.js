@@ -8,6 +8,7 @@ import kaplay from "kaplay";
 import { PALETTE, PARK_NAME } from "./theme.js";
 import { buildOverworld, WORLD_W, WORLD_H } from "./world.js";
 import { buildLands } from "./lands.js";
+import { buildGyms } from "./buildings.js";
 
 const k = kaplay({
   width: WORLD_W,
@@ -29,6 +30,7 @@ function hexToRgb(hex) {
 k.scene("park", () => {
   buildOverworld(k);
   buildLands(k);
+  buildGyms(k);
 
   // A small title plate pinned to the top, drawn above the map.
   k.add([

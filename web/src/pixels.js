@@ -67,6 +67,55 @@ function tree(ctx) {
   px(ctx, 5, 4, 3, 2, "#5c944a");
 }
 
+export const BUILDING_W = 28;
+export const BUILDING_H = 26;
+
+// Darken a "#rrggbb" toward black by `f` (0..1) — for roof/wall shading.
+function darken(hex, f) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.round(((n >> 16) & 255) * (1 - f));
+  const g = Math.round(((n >> 8) & 255) * (1 - f));
+  const b = Math.round((n & 255) * (1 - f));
+  return `rgb(${r},${g},${b})`;
+}
+
+// A small gym building sprite tinted with its land's accent (accent roof, pale wall, a door and two
+// windows). Original art, drawn procedurally. Returns a data URL.
+export function makeBuilding(accent) {
+  const c = document.createElement("canvas");
+  c.width = BUILDING_W;
+  c.height = BUILDING_H;
+  const ctx = c.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+
+  // Wall (pale) with a darker right/bottom edge for a hint of depth.
+  px(ctx, 6, 10, 16, 16, "#e6f0d6");
+  px(ctx, 21, 10, 1, 16, "#c3cdae");
+  px(ctx, 6, 25, 16, 1, "#c3cdae");
+
+  // Stepped roof in the land accent, widening toward the eaves; bottom row shaded.
+  const roof = [
+    [13, 3, 2],
+    [12, 4, 4],
+    [11, 5, 6],
+    [10, 6, 8],
+    [9, 7, 10],
+    [8, 8, 12],
+    [6, 9, 16],
+  ];
+  for (const [x, y, w] of roof) px(ctx, x, y, w, 1, accent);
+  px(ctx, 6, 9, 16, 1, darken(accent, 0.28)); // eave line
+
+  // Door (dark) with an accent knob.
+  px(ctx, 11, 17, 6, 9, "#0f1410");
+  px(ctx, 15, 21, 1, 1, accent);
+  // Windows.
+  px(ctx, 7, 13, 3, 3, accent);
+  px(ctx, 18, 13, 3, 3, accent);
+
+  return c.toDataURL();
+}
+
 // Build every world tile as a data URL, keyed by its map symbol.
 export function makeTiles() {
   return {

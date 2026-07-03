@@ -19,9 +19,9 @@ Format per task: `- [ ] <slug> — <goal>. **Done when:** <acceptance criteria> 
 - [x] `four-lands` — Lay out the four **lands** (social / economic / coding / safety) as distinct
   regions/towns on the overworld, labeled. **Done when:** all four are visibly placed + labeled,
   screenshot committed (Tier B). ✅ landed — accent-tinted quadrants + town signs (name + axis).
-- [ ] `gym-buildings` — Place a **gym building** per ride in its land (negotiation, commons, economic,
+- [x] `gym-buildings` — Place a **gym building** per ride in its land (negotiation, commons, economic,
   coding, safety), each enterable-looking. **Done when:** buildings render in the right lands,
-  screenshot committed (Tier B).
+  screenshot committed (Tier B). ✅ landed — accent-roofed gym sprite per ride, nameplated.
 - [ ] `trainer-sprite` — Add one **trainer sprite** with 4-direction walk-cycle animation, controllable
   or scripted to walk the overworld. **Done when:** the sprite animates and moves, screenshot/GIF
   committed (Tier B).
