@@ -8,20 +8,27 @@
 ---
 
 **Updated:** 2026-07-03
-**Loop state:** TASK IN PROGRESS
+**Loop state:** IDLE
 
-**Active task:** `web-scaffold` — create the `web/` front-end app (Kaplay + Vite), blank canvas boots
-with no console errors, short `web/README.md`.
-**Acceptance criteria:** `web/` installs and builds clean, dev server serves a blank Kaplay canvas, a
-screenshot committed to `autoloop/shots/<ts>/` (Tier B).
-**Task branch:** `claude/next-tasks-j7f20o` (cloud session — designated branch; PR-gated, not push-to-main)
-**Tree state:** dirty · scaffolding `web/`
+**Active task:** — (none)
+**Acceptance criteria:** —
+**Task branch:** —
+**Tree state:** clean · on `claude/next-tasks-j7f20o`
 **Last durable commit:** (see `git log -1`)
 
 **Steps done this task:**
-- Oriented: read charter + visual-world doc; confirmed node 22 / npm 10 / Playwright + Chromium available.
+- Landed the first **four** visual-world seed tasks (D-053) on branch `claude/next-tasks-j7f20o`,
+  each Tier-B verified (build clean + headless screenshot, zero console errors) with shots under
+  `autoloop/shots/`: `web-scaffold`, `overworld-tilemap`, `four-lands`, `gym-buildings`.
+- Synced docs: `02-decisions.md` (D-053), `CLAUDE.md` status, `backlog.md` (checked off), `log.md`.
 
-**NEXT ACTION:** Create `web/` (package.json with Vite + Kaplay, index.html, src booting a blank Kaplay
-canvas, README), `npm install`, `npm run build`, screenshot the dev server headless, commit screenshot.
+**NEXT ACTION:** Loop is IDLE. Top remaining backlog task is **`trainer-sprite`** (a 4-direction
+walk-cycle trainer that moves the overworld). Follow the start-of-session protocol in
+`docs/10-autoloop.md`, then pull it.
+
+> Note (this cloud session): the four seed tasks were developed on the designated branch
+> `claude/next-tasks-j7f20o` and opened as a **draft PR** (PR-gated, per the harness's git rules) rather
+> than pushed straight to `main`. The local `/loop` driver's push-to-main model resumes for laps run
+> locally.
 
 **Blockers / needs-owner:** none

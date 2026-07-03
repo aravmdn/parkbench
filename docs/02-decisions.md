@@ -896,3 +896,28 @@ per-lap throwaway git worktrees (would discard a cut-off task's in-progress work
 per-task branches so tasks *resume*); trusting the baton alone without a git reconcile (the baton can be
 one step stale — git is authoritative for committed work); making the driver hold state (grows its
 context — state belongs on disk, D-051). Extends D-049/D-051.
+
+### D-053 · 2026-07-03 · Visual world scaffolded — Kaplay + Vite front-end, procedural placeholder art
+**Decision:** Stand up the Pokémon-style visual world ([`11-visual-world.md`](11-visual-world.md)) as a
+separate `web/` front-end app and confirm the stack the vision proposed: **Kaplay** (the maintained
+Kaboom.js fork) for the pixel/tilemap/scene runtime and **Vite** for the dev server + build. This
+resolves the "revisit the stack in the first scaffolding lap" note in `11-visual-world.md` — Kaplay is
+kept (Phaser stays the parked fallback only if heavier tilemap/physics tooling is later needed). The
+first four visual laps landed together on the initial branch: **web-scaffold** (bootable canvas +
+`web/README.md`), **overworld-tilemap** (a 20×18 GB-era tile overworld), **four-lands** (the four axes
+as accent-tinted, labeled quadrants), and **gym-buildings** (one gym per scored ride in its land). All
+placeholder art is **procedurally generated onto an offscreen canvas** (`web/src/pixels.js`) — grass /
+path / water / tree tiles and gym sprites — which makes it **original / CC0 by construction** (nothing
+ripped, per the art policy) and deterministic (a fixed PRNG seed keeps screenshots reproducible). The
+front-end mirrors the engine's park vocabulary in `web/src/theme.js` (a hand-kept copy of `theme.py`'s
+lands/rides/palette) and stays **presentation-only** (D-012): it draws names and, later, engine JSON —
+it never computes a score.
+**Why:** The visual world is the headline build goal (D-050/D-051); these are its seed laps. Kaplay is
+purpose-built for exactly this (sprites, `addLevel` tilemaps, scenes) with minimal boilerplate, so effort
+goes into the world, not a 2D engine. Generating art in code sidesteps the asset-licensing risk entirely
+while the world is still rough, and keeps the repo dependency-light for art. Each lap was verified Tier B
+(build clean + headless screenshot with zero console errors, committed under `autoloop/shots/`).
+**Rejected:** Phaser for the seed laps (heavier than needed now — parked as the fallback); shipping
+placeholder art as image files (licensing + review burden vs. procedural generation); duplicating scoring
+or reading it live from the engine in this phase (out of scope — the world renders committed JSON later,
+and never scores, D-012). Implements the first tasks of D-051's backlog toward D-050.

@@ -42,7 +42,25 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 | `docs/05-glossary.md` | Shared vocabulary (ride, house cast, BYO agent, radar profile, …). |
 | `docs/06-v1-architecture.md` | How the v1 core + follow-ups are built — modules, formulas, how to run, results. |
 
-## Current status (2026-07-02)
+## Current status (2026-07-03)
+
+**Visual world — seed laps landed (D-053).** The Pokémon-style front-end (`docs/11-visual-world.md`) is
+now scaffolded: a separate **`web/`** app on **Kaplay + Vite** (deps + build step allowed; the
+stdlib-only rule is engine-only) renders a Game-Boy-era overworld. The first four backlog tasks are
+done — **web-scaffold** (bootable canvas + `web/README.md`), **overworld-tilemap** (a 20×18 tile park —
+grass/path/water/tree), **four-lands** (the four axes as accent-tinted, labeled quadrants: Society
+Square · Market Midway · Maker's Workshop · Safety Gauntlet), and **gym-buildings** (one gym per scored
+ride in its land). All placeholder art is **procedurally generated** in `web/src/pixels.js`
+(original/CC0 by construction, deterministic), and `web/src/theme.js` mirrors the engine's park
+vocabulary — the front-end stays **presentation-only** (D-012). Verify: `cd web && npm install &&
+npm run build`, then `npm run dev` (or `npm run preview`) and open the served page. Tier-B screenshots
+for each lap are under `autoloop/shots/`. **Next backlog tasks:** `trainer-sprite` (a walking
+4-direction trainer) then `wire-radar-json` (the hex stats screen from `parkbench radar --json`). Engine
+unchanged: still **174 passing tests**.
+
+---
+
+## Prior status (2026-07-02)
 
 **v1 + the post-v1 multi-ride phase are on `main`; the four-axis diagnostic radar is complete.** The
 negotiation ride runs end-to-end: engine, seeded scenario generator, objective-payoff scoring,
