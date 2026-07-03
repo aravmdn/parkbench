@@ -10,3 +10,4 @@ Screenshots for visual laps live under `autoloop/shots/<timestamp>/`.
 
 ---
 2026-07-03 19:47 · web-scaffold · Tier B: web/ builds clean, boots blank Kaplay canvas w/ no console errors, screenshot `autoloop/shots/2026-07-03-1947/web-scaffold-boot.png` · (branch claude/next-tasks-j7f20o)
+2026-07-03 19:50 · overworld-tilemap · Tier B: 20x18 tile overworld (procedural grass/path/water/tree), builds clean, no console errors, screenshot `autoloop/shots/2026-07-03-1949/overworld-tilemap.png` · (branch claude/next-tasks-j7f20o)

@@ -1,27 +1,21 @@
 // main.js — boot the Parkbench visual world.
 //
-// This is the scaffold lap (backlog: web-scaffold): stand up Kaplay on a clean canvas that boots with
-// no console errors. Later laps grow this into the overworld (tilemap, four lands, gym buildings, a
-// walking trainer, and the stats screen wired to `parkbench radar --json`). The front-end is
-// presentation only — it never scores anything (D-012).
+// The overworld now renders a top-down tile map (backlog: overworld-tilemap). Later laps grow this
+// into the four labeled lands, gym buildings, a walking trainer, and the stats screen wired to
+// `parkbench radar --json`. The front-end is presentation only — it never scores anything (D-012).
 
 import kaplay from "kaplay";
-import { PALETTE, PARK_NAME, PARK_TAGLINE } from "./theme.js";
-
-// Internal (pixel-art) resolution. Kaplay letterboxes/scales this to the window, and index.html sets
-// `image-rendering: pixelated` so the upscale stays crisp.
-const GAME_W = 320;
-const GAME_H = 288; // 10:9 — the Game Boy screen ratio
+import { PALETTE, PARK_NAME } from "./theme.js";
+import { buildOverworld, WORLD_W, WORLD_H } from "./world.js";
 
 const k = kaplay({
-  width: GAME_W,
-  height: GAME_H,
+  width: WORLD_W,
+  height: WORLD_H,
   letterbox: true,
   background: hexToRgb(PALETTE.shadow),
   root: document.getElementById("app"),
   pixelDensity: 1,
   crisp: true,
-  // Fail loudly during development rather than swallowing errors.
   logMax: 8,
 });
 
@@ -31,35 +25,25 @@ function hexToRgb(hex) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
-k.scene("boot", () => {
-  // A calm placeholder screen: the park is closed until the overworld lands next lap.
+k.scene("park", () => {
+  buildOverworld(k);
+
+  // A small title plate pinned to the top, drawn above the map.
   k.add([
-    k.rect(GAME_W, GAME_H),
+    k.rect(WORLD_W, 18),
     k.pos(0, 0),
-    k.color(k.Color.fromHex(PALETTE.light)),
-    k.opacity(0.06),
+    k.color(k.Color.fromHex(PALETTE.ink)),
+    k.opacity(0.55),
+    k.fixed(),
+    k.z(100),
   ]);
-
   k.add([
-    k.text(PARK_NAME, { size: 40, font: "monospace" }),
-    k.pos(GAME_W / 2, GAME_H / 2 - 24),
-    k.anchor("center"),
+    k.text(PARK_NAME, { size: 12, font: "monospace" }),
+    k.pos(6, 4),
     k.color(k.Color.fromHex(PALETTE.paper)),
-  ]);
-
-  k.add([
-    k.text(PARK_TAGLINE, { size: 12, font: "monospace" }),
-    k.pos(GAME_W / 2, GAME_H / 2 + 12),
-    k.anchor("center"),
-    k.color(k.Color.fromHex(PALETTE.light)),
-  ]);
-
-  k.add([
-    k.text("the gates open soon", { size: 8, font: "monospace" }),
-    k.pos(GAME_W / 2, GAME_H - 20),
-    k.anchor("center"),
-    k.color(k.Color.fromHex(PALETTE.mid)),
+    k.fixed(),
+    k.z(101),
   ]);
 });
 
-k.go("boot");
+k.go("park");
