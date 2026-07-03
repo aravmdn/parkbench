@@ -9,10 +9,10 @@ Format per task: `- [ ] <slug> — <goal>. **Done when:** <acceptance criteria> 
 
 ## Now (visual world — seed the front-end)
 
-- [ ] `web-scaffold` — Create the `web/` front-end app: Kaplay + a build/dev setup (e.g. Vite),
+- [x] `web-scaffold` — Create the `web/` front-end app: Kaplay + a build/dev setup (e.g. Vite),
   `package.json`, a blank canvas that boots with no console errors, and a short `web/README.md`.
   **Done when:** `web/` installs and builds clean, the dev server serves a blank Kaplay canvas, and a
-  screenshot of it is committed to `autoloop/shots/<ts>/` (Tier B).
+  screenshot of it is committed to `autoloop/shots/<ts>/` (Tier B). ✅ landed — see `autoloop/log.md`.
 - [ ] `overworld-tilemap` — Render a small top-down tile overworld (GB/GBA palette) with **original**
   placeholder tiles (grass/path/water). **Done when:** the tilemap renders, builds clean, screenshot
   committed (Tier B).

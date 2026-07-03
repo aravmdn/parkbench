@@ -7,20 +7,21 @@
 
 ---
 
-**Updated:** 2026-07-02 (seeded by setup — no lap has run yet)
-**Loop state:** IDLE
+**Updated:** 2026-07-03
+**Loop state:** TASK IN PROGRESS
 
-**Active task:** — (none)
-**Acceptance criteria:** —
-**Task branch:** —
-**Tree state:** clean · on `main`
+**Active task:** `web-scaffold` — create the `web/` front-end app (Kaplay + Vite), blank canvas boots
+with no console errors, short `web/README.md`.
+**Acceptance criteria:** `web/` installs and builds clean, dev server serves a blank Kaplay canvas, a
+screenshot committed to `autoloop/shots/<ts>/` (Tier B).
+**Task branch:** `claude/next-tasks-j7f20o` (cloud session — designated branch; PR-gated, not push-to-main)
+**Tree state:** dirty · scaffolding `web/`
 **Last durable commit:** (see `git log -1`)
 
 **Steps done this task:**
-- —
+- Oriented: read charter + visual-world doc; confirmed node 22 / npm 10 / Playwright + Chromium available.
 
-**NEXT ACTION:** Loop is IDLE. Pull the top unchecked task from `autoloop/backlog.md`, set this baton to
-`TASK IN PROGRESS`, create the `autoloop/task-<slug>` branch, and begin. Follow the start-of-session
-protocol in `docs/10-autoloop.md` first.
+**NEXT ACTION:** Create `web/` (package.json with Vite + Kaplay, index.html, src booting a blank Kaplay
+canvas, README), `npm install`, `npm run build`, screenshot the dev server headless, commit screenshot.
 
 **Blockers / needs-owner:** none
