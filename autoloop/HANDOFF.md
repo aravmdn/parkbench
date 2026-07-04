@@ -37,9 +37,15 @@ when a session is run manually against this baton.
 - Documented the hourly loop: decision **D-054**, charter cloud-cron mode, `CLAUDE.md` status,
   `autoloop/ROUTINE_PROMPT.md`.
 
-**NEXT ACTION:** Loop is IDLE. Top unchecked backlog task is **`world-signposts`** (park entrance sign,
-per-land flavor props from new procedural tiles, and a small legend for the four lands + `S`/`H`
-controls). Pull it per the start-of-session protocol. That's the **last** chunk-2 task; after it, refill
-the backlog with the next chunk (live/served profiles, multiple trainers, a BYO connector).
+- **`world-signposts`** — overworld dressing: 4 crossroads lamps, a bench per land, a "PARKBENCH"
+  entrance sign, and a bottom controls legend (`web/src/props.js` + lamp/bench sprites). Verified
+  (Tier B, shot committed). **Chunk 2 is now complete.**
+
+**PR state:** PR #13 (seed laps + chunk 2 through enter-gym-run) was **merged to `main`**. This branch
+was restarted from the merged `main`; `world-signposts` is the first lap of a **new PR**.
+
+**NEXT ACTION:** Loop is IDLE and the chunk-2 backlog is empty. Per the charter's *Choosing work*, next
+is to **decompose the next visual chunk into 3–5 backlog tasks** — live/served profiles instead of
+fixtures; multiple trainers on-screen; a BYO-agent connector to the world — then pull the top one.
 
 **Blockers / needs-owner:** none

@@ -54,10 +54,12 @@ from the top; each is one-session-sized; Tier B unless it adds engine code (then
   fixture (per-ride score already in the radar/leaderboard JSON). **Done when:** stepping into ≥1 gym
   shows its real score and returns to the world, builds clean, screenshot committed (Tier B). ✅ landed —
   overlay state machine; trainer (heuristic) into the economic gym → "NOW RIDING" → SCORE 0.990.
-- [ ] `world-signposts` — Deepen the overworld: a **park entrance sign**, per-land flavor props
+- [x] `world-signposts` — Deepen the overworld: a **park entrance sign**, per-land flavor props
   (benches/lamps/fences from new procedural tiles), and a small legend so the four lands + the `S`/`H`
   controls are discoverable. **Done when:** the additions render, build clean, screenshot committed
-  (Tier B).
+  (Tier B). ✅ landed — 4 crossroads lamps, a bench per land, "PARKBENCH" entrance sign, bottom controls
+  legend.
 
-> Later chunks (live/served profiles instead of fixtures; multiple trainers on-screen; a BYO-agent
-> connector to the world) get decomposed here once chunk 2 lands.
+> **Chunk 2 complete.** Next: decompose the next chunk here (live/served profiles instead of fixtures;
+> multiple trainers on-screen; a BYO-agent connector to the world) into 3–5 tasks — that refill is
+> itself a valid task.

@@ -68,11 +68,16 @@ verifies (Tier A `pytest` / Tier B `web/` build + headless screenshots), pushes 
 `autoloop/HANDOFF.md`. Viable in the cloud because the remote env ships **Chromium + Playwright** for
 Tier-B screenshots (revising D-051's cloud-cron retirement). **Not yet armed:** creating the durable
 trigger is blocked on an owner approval of the scheduling MCP call — arm it from claude.ai/code/routines
-(or a session where the approval clears) using `autoloop/ROUTINE_PROMPT.md`. First iteration landed the
-**Hall of Fame** (`web/src/halloffame.js`, reachable with `H`) rendering the ranked career leaderboard
-from a verbatim `leaderboard --json` fixture (optimal 1.000 > heuristic 0.567 > random 0.154 > greedy
-0.148). **Next backlog tasks:** `badge-reputation`, `enter-gym-run`, `world-signposts`. Kill switch:
-disable/delete the routine at claude.ai/code/routines.
+(or a session where the approval clears) using `autoloop/ROUTINE_PROMPT.md`. **Visual-world chunk 2 is
+complete** (PR #13 merged to `main`; follow-up chunk-2 laps on a fresh `claude/next-tasks-j7f20o` → a new
+PR): the **Hall of Fame** (`web/src/halloffame.js`, `H`) rendering the ranked career leaderboard from
+`leaderboard --json` (optimal 1.000 > heuristic 0.567 > random 0.154 > greedy 0.148); **badge-reputation**
+(the stats screen gains earned/cracked/skipped gym-badges + reputation from the leaderboard legs);
+**enter-gym-run** (the trainer carries an agent identity; stepping onto a gym plays "NOW RIDING" → reveals
+that ride's real score → returns); and **world-signposts** (crossroads lamps, per-land benches, a
+"PARKBENCH" entrance sign, a bottom controls legend). **Next:** decompose the next chunk into the backlog
+(live/served profiles instead of fixtures; multiple trainers on-screen; a BYO-agent connector). Kill
+switch: disable/delete the routine at claude.ai/code/routines.
 
 ---
 

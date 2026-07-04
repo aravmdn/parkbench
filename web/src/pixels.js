@@ -188,6 +188,41 @@ export function makeTrainer() {
   return c.toDataURL();
 }
 
+// A small offscreen-canvas sprite of arbitrary size (for props that aren't tile-sized).
+function spriteURL(w, h, draw) {
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  draw(ctx);
+  return c.toDataURL();
+}
+
+// A lamp post — dark pole with a glowing head. Transparent background (drops onto grass).
+export function makeLamp() {
+  return spriteURL(8, 18, (ctx) => {
+    px(ctx, 3, 4, 2, 12, "#52525a"); // pole
+    px(ctx, 2, 16, 4, 2, "#3a3a40"); // base
+    px(ctx, 2, 1, 4, 4, "#f6de8a"); // glowing head
+    px(ctx, 1, 2, 1, 2, "#c9b25f");
+    px(ctx, 6, 2, 1, 2, "#c9b25f");
+    px(ctx, 2, 0, 4, 1, "#42424a"); // cap
+  });
+}
+
+// A park bench — wooden seat + back on little legs.
+export function makeBench() {
+  return spriteURL(16, 9, (ctx) => {
+    px(ctx, 3, 1, 10, 2, "#8a5a34"); // back
+    px(ctx, 3, 3, 1, 1, "#6b4a2b");
+    px(ctx, 12, 3, 1, 1, "#6b4a2b");
+    px(ctx, 2, 4, 12, 2, "#9a6a40"); // seat
+    px(ctx, 3, 6, 2, 3, "#6b4a2b"); // legs
+    px(ctx, 11, 6, 2, 3, "#6b4a2b");
+  });
+}
+
 // Build every world tile as a data URL, keyed by its map symbol.
 export function makeTiles() {
   return {
