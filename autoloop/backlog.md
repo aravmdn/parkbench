@@ -49,10 +49,11 @@ from the top; each is one-session-sized; Tier B unless it adds engine code (then
   badges reflect real per-ride integrity for ≥2 contrasting agents (e.g. `optimal` vs `greedy`),
   screenshot committed (Tier B). ✅ landed — badge row + reputation on the stats screen (greedy's SAF
   cracked, optimal all-earned w/ skipped NEG).
-- [ ] `enter-gym-run` — First cut of the **"trainer enters gym → result"** flow: walking the trainer
+- [x] `enter-gym-run` — First cut of the **"trainer enters gym → result"** flow: walking the trainer
   onto a gym tile triggers a short "now riding…" beat, then reveals that agent+ride's **score** from a
   fixture (per-ride score already in the radar/leaderboard JSON). **Done when:** stepping into ≥1 gym
-  shows its real score and returns to the world, builds clean, screenshot committed (Tier B).
+  shows its real score and returns to the world, builds clean, screenshot committed (Tier B). ✅ landed —
+  overlay state machine; trainer (heuristic) into the economic gym → "NOW RIDING" → SCORE 0.990.
 - [ ] `world-signposts` — Deepen the overworld: a **park entrance sign**, per-land flavor props
   (benches/lamps/fences from new procedural tiles), and a small legend so the four lands + the `S`/`H`
   controls are discoverable. **Done when:** the additions render, build clean, screenshot committed

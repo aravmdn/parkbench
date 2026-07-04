@@ -6,10 +6,11 @@
 
 import { makeTrainer, TRAINER_COLS, TRAINER_ROWS } from "./pixels.js";
 import { WORLD_W, WORLD_H } from "./world.js";
+import { PALETTE } from "./theme.js";
 
 const SPEED = 52; // px/sec
 
-export function addTrainer(k, startX = 152, startY = 138) {
+export function addTrainer(k, agent = "heuristic", startX = 152, startY = 138) {
   k.loadSprite("trainer", makeTrainer(), {
     sliceX: TRAINER_COLS,
     sliceY: TRAINER_ROWS,
@@ -31,10 +32,20 @@ export function addTrainer(k, startX = 152, startY = 138) {
     k.anchor("center"),
     k.z(40),
     k.scale(1.5),
-    { facing: "down" },
+    { facing: "down", agent },
   ]);
   let curName = "down-idle";
   t.play(curName);
+
+  // A small name tag showing which agent this trainer is; follows the sprite.
+  const tag = k.add([
+    k.text(agent, { size: 6, font: "monospace" }),
+    k.pos(startX, startY - 16),
+    k.anchor("center"),
+    k.color(k.Color.fromHex(PALETTE.paper)),
+    k.outline(2, k.Color.fromHex(PALETTE.ink)),
+    k.z(41),
+  ]);
 
   const setAnim = (dir, moving) => {
     t.facing = dir;
@@ -68,6 +79,13 @@ export function addTrainer(k, startX = 152, startY = 138) {
   const DELTA = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
 
   t.onUpdate(() => {
+    // Frozen while a gym run's overlay is showing (gymrun.js sets t.paused).
+    if (t.paused) {
+      setAnim(t.facing, false);
+      tag.pos = k.vec2(t.pos.x, t.pos.y - 16);
+      return;
+    }
+
     // Player control takes over whenever an arrow key is held.
     const kd = heldDir();
     if (kd) {
@@ -93,6 +111,7 @@ export function addTrainer(k, startX = 152, startY = 138) {
     // Keep the trainer on-screen (leave room for the top title plate).
     t.pos.x = Math.max(10, Math.min(WORLD_W - 10, t.pos.x));
     t.pos.y = Math.max(24, Math.min(WORLD_H - 10, t.pos.y));
+    tag.pos = k.vec2(t.pos.x, t.pos.y - 16);
   });
 
   return t;

@@ -10,8 +10,12 @@ import { buildOverworld, WORLD_W, WORLD_H } from "./world.js";
 import { buildLands } from "./lands.js";
 import { buildGyms } from "./buildings.js";
 import { addTrainer } from "./trainer.js";
+import { setupGymRuns } from "./gymrun.js";
 import { registerStatsScene } from "./radar.js";
 import { registerHallOfFameScene } from "./halloffame.js";
+
+// Which agent the on-screen trainer represents (drives the gym-run scores + stats default).
+const TRAINER_AGENT = "heuristic";
 
 const k = kaplay({
   width: WORLD_W,
@@ -33,8 +37,9 @@ function hexToRgb(hex) {
 k.scene("park", () => {
   buildOverworld(k);
   buildLands(k);
-  buildGyms(k);
-  addTrainer(k);
+  const gyms = buildGyms(k);
+  const trainer = addTrainer(k, TRAINER_AGENT);
+  setupGymRuns(k, trainer, gyms);
 
   // A small title plate pinned to the top, drawn above the map.
   k.add([
@@ -62,7 +67,7 @@ k.scene("park", () => {
   ]);
 
   // The diagnostic screens are reachable from the world.
-  k.onKeyPress("s", () => k.go("stats", "heuristic"));
+  k.onKeyPress("s", () => k.go("stats", TRAINER_AGENT));
   k.onKeyPress("h", () => k.go("halloffame"));
 });
 

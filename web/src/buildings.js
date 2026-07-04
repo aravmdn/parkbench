@@ -8,9 +8,9 @@ import { ATTRACTIONS, LANDS, PALETTE } from "./theme.js";
 import { landRect } from "./lands.js";
 import { makeBuilding, BUILDING_W, BUILDING_H } from "./pixels.js";
 
+// Places the gyms and returns their rects: [{ride, marquee, axis, x, y, w, h}] — so the trainer's
+// gym-run logic (gymrun.js) can detect when the trainer steps onto one.
 export function buildGyms(k) {
-  const accentByAxis = Object.fromEntries(LANDS.map((l) => [l.axis, l.accent]));
-
   // One building sprite per land (accent-tinted); reused by every gym in that land.
   for (const l of LANDS) k.loadSprite("gym-" + l.axis, makeBuilding(l.accent));
 
@@ -18,6 +18,7 @@ export function buildGyms(k) {
   const byAxis = {};
   for (const a of ATTRACTIONS) (byAxis[a.axis] ||= []).push(a);
 
+  const gyms = [];
   for (const [axis, rides] of Object.entries(byAxis)) {
     const r = landRect(axis);
     const gap = 8;
@@ -37,6 +38,8 @@ export function buildGyms(k) {
         k.outline(2, k.Color.fromHex(PALETTE.ink)),
         k.z(31),
       ]);
+      gyms.push({ ride: a.ride, marquee: a.marquee, axis, x: bx, y: by, w: BUILDING_W, h: BUILDING_H });
     });
   }
+  return gyms;
 }

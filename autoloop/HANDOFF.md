@@ -31,11 +31,15 @@ when a session is run manually against this baton.
 - **`badge-reputation`** — the stats screen (`S`) now shows a **gym-badge row + reputation** from the
   verbatim `leaderboard --json` legs: earned (bright + check) / cracked (dim + red X) / skipped (faint
   dash); reputation colour-coded. Verified on heuristic/greedy/optimal (Tier B, shots committed).
+- **`enter-gym-run`** — the trainer now carries an **agent identity** (name tag) and walking it onto a
+  gym triggers an overlay beat: **"NOW RIDING" → SCORE** (that agent+ride's real `radar --json` score),
+  then returns to the world. `web/src/gymrun.js` + trainer `paused` state. Verified (Tier B, shots).
 - Documented the hourly loop: decision **D-054**, charter cloud-cron mode, `CLAUDE.md` status,
   `autoloop/ROUTINE_PROMPT.md`.
 
-**NEXT ACTION:** Loop is IDLE. Top unchecked backlog task is **`enter-gym-run`** (walking the trainer
-onto a gym tile triggers a short "now riding…" beat, then reveals that agent+ride's score from a
-fixture). Pull it per the start-of-session protocol.
+**NEXT ACTION:** Loop is IDLE. Top unchecked backlog task is **`world-signposts`** (park entrance sign,
+per-land flavor props from new procedural tiles, and a small legend for the four lands + `S`/`H`
+controls). Pull it per the start-of-session protocol. That's the **last** chunk-2 task; after it, refill
+the backlog with the next chunk (live/served profiles, multiple trainers, a BYO connector).
 
 **Blockers / needs-owner:** none
