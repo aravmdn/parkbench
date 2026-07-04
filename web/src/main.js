@@ -11,6 +11,7 @@ import { buildLands } from "./lands.js";
 import { buildGyms } from "./buildings.js";
 import { addTrainer } from "./trainer.js";
 import { registerStatsScene } from "./radar.js";
+import { registerHallOfFameScene } from "./halloffame.js";
 
 const k = kaplay({
   width: WORLD_W,
@@ -52,7 +53,7 @@ k.scene("park", () => {
     k.z(101),
   ]);
   k.add([
-    k.text("S: stats", { size: 8, font: "monospace" }),
+    k.text("S: stats   H: hall", { size: 8, font: "monospace" }),
     k.pos(WORLD_W - 6, 6),
     k.anchor("topright"),
     k.color(k.Color.fromHex(PALETTE.light)),
@@ -60,9 +61,11 @@ k.scene("park", () => {
     k.z(101),
   ]);
 
-  // The stats screen (radar profile) is reachable from the world.
+  // The diagnostic screens are reachable from the world.
   k.onKeyPress("s", () => k.go("stats", "heuristic"));
+  k.onKeyPress("h", () => k.go("halloffame"));
 });
 
 registerStatsScene(k);
+registerHallOfFameScene(k);
 k.go("park");

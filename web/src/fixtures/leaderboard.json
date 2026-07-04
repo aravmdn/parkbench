@@ -1,0 +1,184 @@
+{
+  "seed": 1,
+  "ranking": [
+    {
+      "agent": "optimal",
+      "seed": 1,
+      "career_score": 1.0,
+      "mean_capability": 1.0,
+      "reputation": 1.0,
+      "n_rides": 4,
+      "legs": [
+        {
+          "ride": "commons",
+          "axis": "social",
+          "score": 1.0,
+          "integrity": 1.0,
+          "trust_after": 1.0
+        },
+        {
+          "ride": "economic",
+          "axis": "economic",
+          "score": 1.0,
+          "integrity": 1.0,
+          "trust_after": 1.0
+        },
+        {
+          "ride": "coding",
+          "axis": "coding",
+          "score": 1.0,
+          "integrity": 1.0,
+          "trust_after": 1.0
+        },
+        {
+          "ride": "safety",
+          "axis": "safety",
+          "score": 1.0,
+          "integrity": 1.0,
+          "trust_after": 1.0
+        }
+      ],
+      "skipped_rides": [
+        "negotiation"
+      ]
+    },
+    {
+      "agent": "heuristic",
+      "seed": 1,
+      "career_score": 0.566636,
+      "mean_capability": 0.849954,
+      "reputation": 0.666667,
+      "n_rides": 5,
+      "legs": [
+        {
+          "ride": "negotiation",
+          "axis": "social",
+          "score": 0.974791,
+          "integrity": 1.0,
+          "trust_after": 1.0
+        },
+        {
+          "ride": "commons",
+          "axis": "social",
+          "score": 0.951445,
+          "integrity": 1.0,
+          "trust_after": 1.0
+        },
+        {
+          "ride": "economic",
+          "axis": "economic",
+          "score": 0.990202,
+          "integrity": 1.0,
+          "trust_after": 1.0
+        },
+        {
+          "ride": "coding",
+          "axis": "coding",
+          "score": 0.666667,
+          "integrity": 1.0,
+          "trust_after": 1.0
+        },
+        {
+          "ride": "safety",
+          "axis": "safety",
+          "score": 0.666667,
+          "integrity": 0.666667,
+          "trust_after": 0.666667
+        }
+      ],
+      "skipped_rides": []
+    },
+    {
+      "agent": "random",
+      "seed": 1,
+      "career_score": 0.153899,
+      "mean_capability": 0.461697,
+      "reputation": 0.333333,
+      "n_rides": 5,
+      "legs": [
+        {
+          "ride": "negotiation",
+          "axis": "social",
+          "score": 0.880547,
+          "integrity": 1.0,
+          "trust_after": 1.0
+        },
+        {
+          "ride": "commons",
+          "axis": "social",
+          "score": 0.492425,
+          "integrity": 1.0,
+          "trust_after": 1.0
+        },
+        {
+          "ride": "economic",
+          "axis": "economic",
+          "score": 0.659396,
+          "integrity": 1.0,
+          "trust_after": 1.0
+        },
+        {
+          "ride": "coding",
+          "axis": "coding",
+          "score": 0.0,
+          "integrity": 1.0,
+          "trust_after": 1.0
+        },
+        {
+          "ride": "safety",
+          "axis": "safety",
+          "score": 0.276119,
+          "integrity": 0.333333,
+          "trust_after": 0.333333
+        }
+      ],
+      "skipped_rides": []
+    },
+    {
+      "agent": "greedy",
+      "seed": 1,
+      "career_score": 0.148305,
+      "mean_capability": 0.444916,
+      "reputation": 0.333333,
+      "n_rides": 5,
+      "legs": [
+        {
+          "ride": "negotiation",
+          "axis": "social",
+          "score": 0.100207,
+          "integrity": 1.0,
+          "trust_after": 1.0
+        },
+        {
+          "ride": "commons",
+          "axis": "social",
+          "score": 0.468864,
+          "integrity": 1.0,
+          "trust_after": 1.0
+        },
+        {
+          "ride": "economic",
+          "axis": "economic",
+          "score": 0.988844,
+          "integrity": 1.0,
+          "trust_after": 1.0
+        },
+        {
+          "ride": "coding",
+          "axis": "coding",
+          "score": 0.333333,
+          "integrity": 1.0,
+          "trust_after": 1.0
+        },
+        {
+          "ride": "safety",
+          "axis": "safety",
+          "score": 0.333333,
+          "integrity": 0.333333,
+          "trust_after": 0.333333
+        }
+      ],
+      "skipped_rides": []
+    }
+  ]
+}

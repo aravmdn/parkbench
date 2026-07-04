@@ -31,7 +31,31 @@ Format per task: `- [ ] <slug> — <goal>. **Done when:** <acceptance criteria> 
   any engine-side code stdlib-only + tested, Tier A). ✅ landed — 4-axis radar from verbatim
   `radar --json` fixtures (heuristic/greedy/optimal/random), reachable with `S`, cycle with ← →.
 
-> **All six visual-world seed tasks are done.** Next: decompose the next chunk here — deepen the world,
-> Hall of Fame from `leaderboard --json`, badge/reputation visuals, and a "trainer enters gym → run
-> plays → result" flow (a `trainer walks to a gym → radar updates` loop) — into 3–5 concrete tasks
-> (that refill is itself a valid task).
+> **All six visual-world seed tasks are done.**
+
+## Now (visual world — chunk 2: spectator payoffs)
+
+Decomposed 2026-07-03 from `docs/11-visual-world.md` "Next" + `docs/03-roadmap.md` #4. Same rules: pull
+from the top; each is one-session-sized; Tier B unless it adds engine code (then Tier A too).
+
+- [x] `hall-of-fame` — A **Hall of Fame** scene rendering the ranked leaderboard from a verbatim
+  `parkbench leaderboard --json` fixture (career score + capability × reputation bars per agent),
+  reachable from the world (e.g. press `H`). **Done when:** the scene shows the real ranking for ≥4
+  agents, builds clean, no console errors, screenshot committed (Tier B; fixture is verbatim CLI JSON —
+  no engine code). ✅ landed — ranked career bars (optimal>heuristic>random>greedy), reachable with `H`.
+- [ ] `badge-reputation` — On the **stats screen**, show each agent's **career/reputation** as earned
+  vs. revoked **gym badges** (a badge per ride; dimmed/cracked when that ride's `integrity` is 0 or the
+  agent's reputation collapsed), from the `career --json` (or leaderboard `legs`) fixture. **Done when:**
+  badges reflect real per-ride integrity for ≥2 contrasting agents (e.g. `optimal` vs `greedy`),
+  screenshot committed (Tier B).
+- [ ] `enter-gym-run` — First cut of the **"trainer enters gym → result"** flow: walking the trainer
+  onto a gym tile triggers a short "now riding…" beat, then reveals that agent+ride's **score** from a
+  fixture (per-ride score already in the radar/leaderboard JSON). **Done when:** stepping into ≥1 gym
+  shows its real score and returns to the world, builds clean, screenshot committed (Tier B).
+- [ ] `world-signposts` — Deepen the overworld: a **park entrance sign**, per-land flavor props
+  (benches/lamps/fences from new procedural tiles), and a small legend so the four lands + the `S`/`H`
+  controls are discoverable. **Done when:** the additions render, build clean, screenshot committed
+  (Tier B).
+
+> Later chunks (live/served profiles instead of fixtures; multiple trainers on-screen; a BYO-agent
+> connector to the world) get decomposed here once chunk 2 lands.
