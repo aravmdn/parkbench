@@ -1,6 +1,6 @@
 # 11 — The Visual World (Pokémon-style spectator park)
 
-**Status:** Draft · **Last updated:** 2026-07-02
+**Status:** Draft · **Last updated:** 2026-07-03
 
 This is the **front-of-house** vision (D-050). The **behind-the-scenes** is the benchmark engine you
 already have — rides are scored capability tests, with a deterministic radar/career/leaderboard. The
@@ -65,7 +65,14 @@ bar; visual laps add the build-succeeds + screenshots-committed bar.
 
 ## Status & first steps (for the loop)
 
-Not built yet. The autoloop (D-051) is expected to, in early laps: scaffold `web/` (Kaplay + a build
-step), render the overworld with the four lands and gym buildings, add a walking trainer sprite, and
-wire one ride's JSON into the stats screen — **screenshotting each step**. This doc is the target it
-builds toward; keep it updated as the world takes shape.
+**Seed laps built (D-053, 2026-07-03).** `web/` is scaffolded (Kaplay + Vite) and the six seed tasks
+have landed: the overworld tilemap, the four labeled lands, a gym per ride, a walking 4-direction
+trainer (arrow-key + auto-patrol), and the stats screen — an agent's four-axis radar rendered from
+verbatim `parkbench radar --json` fixtures, reachable with `S` and cycled with ← →. All art is
+procedurally generated (`web/src/pixels.js`, original/CC0), and the front-end stays presentation-only
+(D-012) — no engine code changed. Screenshots for each lap are under `autoloop/shots/`.
+
+**Next** (to be decomposed into the backlog): deepen the world, a **Hall of Fame** from
+`leaderboard --json`, **badge / reputation** visuals (revoked for a reward-hacker whose reputation
+collapsed), and the headline **"trainer enters gym → run plays → result"** flow — a trainer walking into
+a gym triggering a run and the radar updating. Keep this doc updated as the world takes shape.

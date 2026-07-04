@@ -42,7 +42,41 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 | `docs/05-glossary.md` | Shared vocabulary (ride, house cast, BYO agent, radar profile, …). |
 | `docs/06-v1-architecture.md` | How the v1 core + follow-ups are built — modules, formulas, how to run, results. |
 
-## Current status (2026-07-02)
+## Current status (2026-07-03)
+
+**Visual world — all six seed laps landed (D-053).** The Pokémon-style front-end
+(`docs/11-visual-world.md`) is now a living little world: a separate **`web/`** app on **Kaplay + Vite**
+(deps + build step allowed; the stdlib-only rule is engine-only). All six seed backlog tasks are done —
+**web-scaffold** (bootable canvas + `web/README.md`), **overworld-tilemap** (a 20×18 tile park —
+grass/path/water/tree), **four-lands** (the four axes as accent-tinted, labeled quadrants: Society
+Square · Market Midway · Maker's Workshop · Safety Gauntlet), **gym-buildings** (one gym per scored ride
+in its land), **trainer-sprite** (a 4-direction walk-cycle trainer that arrow-key-walks + auto-patrols
+the paths), and **wire-radar-json** (a **stats screen** reachable with `S` that renders an agent's
+four-axis radar from verbatim `parkbench radar --json` fixtures — heuristic/greedy/optimal/random,
+cycled with ← →). All placeholder art is **procedurally generated** in `web/src/pixels.js` (original/CC0
+by construction, deterministic), and `web/src/theme.js` mirrors the engine's park vocabulary — the
+front-end stays **presentation-only** (D-012), and no engine code changed (Tier A untouched: still
+**174 passing tests**). Verify: `cd web && npm install && npm run build`, then `npm run dev` (or
+`npm run preview`) and open the served page (walk with arrows, `S` for the radar, `H` for the Hall of
+Fame). Tier-B screenshots for each lap are under `autoloop/shots/`.
+
+**Chunk 2 started + the hourly autoloop is designed (D-054).** The **hourly cloud-cron build loop** is
+**documented + ready to arm** (`docs/10-autoloop.md` cloud-cron mode; standing prompt in
+`autoloop/ROUTINE_PROMPT.md`) — a fresh worker fires each hour, works one `autoloop/backlog.md` task,
+verifies (Tier A `pytest` / Tier B `web/` build + headless screenshots), pushes to branch
+`claude/next-tasks-j7f20o` + keeps **PR #13** updated (never to `main`), and hands off via
+`autoloop/HANDOFF.md`. Viable in the cloud because the remote env ships **Chromium + Playwright** for
+Tier-B screenshots (revising D-051's cloud-cron retirement). **Not yet armed:** creating the durable
+trigger is blocked on an owner approval of the scheduling MCP call — arm it from claude.ai/code/routines
+(or a session where the approval clears) using `autoloop/ROUTINE_PROMPT.md`. First iteration landed the
+**Hall of Fame** (`web/src/halloffame.js`, reachable with `H`) rendering the ranked career leaderboard
+from a verbatim `leaderboard --json` fixture (optimal 1.000 > heuristic 0.567 > random 0.154 > greedy
+0.148). **Next backlog tasks:** `badge-reputation`, `enter-gym-run`, `world-signposts`. Kill switch:
+disable/delete the routine at claude.ai/code/routines.
+
+---
+
+## Prior status (2026-07-02)
 
 **v1 + the post-v1 multi-ride phase are on `main`; the four-axis diagnostic radar is complete.** The
 negotiation ride runs end-to-end: engine, seeded scenario generator, objective-payoff scoring,

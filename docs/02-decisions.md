@@ -1,6 +1,6 @@
 # 02 — Decision Log
 
-**Status:** Living · **Last updated:** 2026-07-02
+**Status:** Living · **Last updated:** 2026-07-03
 
 Append-only log of decisions and their rationale (lightweight ADR style). When a decision is
 reversed or superseded, add a **new** entry referencing the old one rather than editing history.
@@ -896,3 +896,61 @@ per-lap throwaway git worktrees (would discard a cut-off task's in-progress work
 per-task branches so tasks *resume*); trusting the baton alone without a git reconcile (the baton can be
 one step stale — git is authoritative for committed work); making the driver hold state (grows its
 context — state belongs on disk, D-051). Extends D-049/D-051.
+
+### D-053 · 2026-07-03 · Visual world scaffolded — Kaplay + Vite front-end, procedural placeholder art
+**Decision:** Stand up the Pokémon-style visual world ([`11-visual-world.md`](11-visual-world.md)) as a
+separate `web/` front-end app and confirm the stack the vision proposed: **Kaplay** (the maintained
+Kaboom.js fork) for the pixel/tilemap/scene runtime and **Vite** for the dev server + build. This
+resolves the "revisit the stack in the first scaffolding lap" note in `11-visual-world.md` — Kaplay is
+kept (Phaser stays the parked fallback only if heavier tilemap/physics tooling is later needed). The
+six visual seed laps landed on the initial branch: **web-scaffold** (bootable canvas + `web/README.md`),
+**overworld-tilemap** (a 20×18 GB-era tile overworld), **four-lands** (the four axes as accent-tinted,
+labeled quadrants), **gym-buildings** (one gym per scored ride in its land), **trainer-sprite** (a
+procedural 4-direction walk-cycle trainer — arrow-key controllable + auto-patrol), and
+**wire-radar-json** (a stats screen, reachable with `S`, rendering an agent's four-axis radar from
+**verbatim `parkbench radar --json` fixtures** checked in under `web/src/fixtures/` — no engine code was
+added, so Tier A stayed untouched). All placeholder art is **procedurally generated onto an offscreen
+canvas** (`web/src/pixels.js`) — grass/path/water/tree tiles, gym sprites, and the trainer sprite sheet
+— which makes it **original / CC0 by construction** (nothing ripped, per the art policy) and
+deterministic (a fixed PRNG seed keeps screenshots reproducible). The front-end mirrors the engine's
+park vocabulary in `web/src/theme.js` (a hand-kept copy of `theme.py`'s lands/rides/palette) and stays
+**presentation-only** (D-012): it *reads* the engine's names + JSON and draws them — it never computes a
+score.
+**Why:** The visual world is the headline build goal (D-050/D-051); these are its seed laps. Kaplay is
+purpose-built for exactly this (sprites, `addLevel` tilemaps, scenes) with minimal boilerplate, so effort
+goes into the world, not a 2D engine. Generating art in code sidesteps the asset-licensing risk entirely
+while the world is still rough, and keeps the repo dependency-light for art. Each lap was verified Tier B
+(build clean + headless screenshot with zero console errors, committed under `autoloop/shots/`).
+**Rejected:** Phaser for the seed laps (heavier than needed now — parked as the fallback); shipping
+placeholder art as image files (licensing + review burden vs. procedural generation); duplicating scoring
+or reading it live from the engine in this phase (out of scope — the world renders committed JSON later,
+and never scores, D-012). Implements the first tasks of D-051's backlog toward D-050.
+
+### D-054 · 2026-07-03 · Start an hourly autonomous **cloud-cron** build loop (revises D-051)
+**Decision:** Turn the autoloop on as a **scheduled cloud routine** that fires **once per hour**, each
+firing spawning a **fresh worker session** in the remote execution environment (create-new-session-on-
+fire). The standing trigger prompt makes every worker follow the existing charter
+([`10-autoloop.md`](10-autoloop.md)): read `CLAUDE.md` + `docs/README.md` + the charter +
+`docs/11-visual-world.md`, then **`autoloop/HANDOFF.md`**; reconcile with `git status`; work **one**
+backlog task to completion (or refill the backlog if empty — that refill is itself a valid task);
+verify per tier (Tier A `pytest` green + baselines byte-identical; Tier B `web/` builds clean +
+screenshots committed to `autoloop/shots/<ts>/`); **commit with the project trailer, push, and keep the
+open PR updated**; and **hand off** by updating `HANDOFF.md` (loop state + `NEXT ACTION`), `backlog.md`,
+and `log.md` so the next hour's worker knows exactly what to do. This **partially revises D-051**, which
+had *retired the cloud cron* on the grounds that "a cloud session can't see the owner's browser and the
+loop needs to drive Chrome for screenshots."
+**Why:** That objection **no longer holds in this remote environment** — it ships **Chromium +
+Playwright pre-installed** (`/opt/pw-browsers`), so a cloud worker performs Tier-B verification by
+driving a **headless** browser and committing screenshots (exactly how the six seed laps + the Hall of
+Fame lap were verified this session). Hourly firing matches the cron minimum interval and the plan's
+burst-y usage budget; fresh-session-per-fire keeps each worker's context bounded (the repo — docs +
+baton + log + screenshots — is the only cross-lap memory, per D-052), which is the same discipline the
+local `/loop` driver uses. The **write-ahead handoff** (D-052) is what makes an unattended hourly loop
+safe: state is always on disk, so a crashed or quota-cut firing costs at most one step of intent.
+**Rejected:** binding the routine to one long-lived session (its context would grow unbounded over many
+laps — the exact failure D-051 named); a sub-hourly cadence (below the cron minimum, and wasteful given
+usage limits); a human PR gate per lap (owner wants it autonomous — review is async via the PR diff +
+`autoloop/shots/`, revert via `git revert`); pushing straight to `main` from unattended cloud workers in
+*this* setup (kept on the feature branch + PR so the owner still sees every lap before it merges — the
+local-driver push-to-main model of D-051 still applies to local laps). The retired local-loop routine
+`trig_01XrJ4EqxMyqSfieC7zJnqwR` remains separate. Extends D-049/D-051/D-052.
