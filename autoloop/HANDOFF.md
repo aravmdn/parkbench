@@ -24,16 +24,18 @@ scheduling MCP call** and must be done from the app (claude.ai/code/routines) or
 approval clears. Record the routine's `trig_…` id here once armed. Until then, the loop advances only
 when a session is run manually against this baton.
 
-**Steps done this (iteration 1) task:**
+**Steps done (chunk-2 iterations landed on the branch):**
 - Refilled the backlog with **visual-world chunk 2** (`hall-of-fame`, `badge-reputation`,
   `enter-gym-run`, `world-signposts`).
-- Built + landed **`hall-of-fame`** (Tier B: build clean, headless screenshot, zero console errors,
-  `autoloop/shots/…/hall-of-fame.png`) — a leaderboard scene reachable with `H`.
-- Documented the hourly loop: decision **D-054**, charter `docs/10-autoloop.md` (cloud-cron mode + git
-  model + kill switch), `CLAUDE.md` status.
+- **`hall-of-fame`** — leaderboard scene reachable with `H` (Tier B, shots committed).
+- **`badge-reputation`** — the stats screen (`S`) now shows a **gym-badge row + reputation** from the
+  verbatim `leaderboard --json` legs: earned (bright + check) / cracked (dim + red X) / skipped (faint
+  dash); reputation colour-coded. Verified on heuristic/greedy/optimal (Tier B, shots committed).
+- Documented the hourly loop: decision **D-054**, charter cloud-cron mode, `CLAUDE.md` status,
+  `autoloop/ROUTINE_PROMPT.md`.
 
-**NEXT ACTION:** Loop is IDLE. Top unchecked backlog task is **`badge-reputation`** (show each agent's
-career/reputation as earned vs. revoked gym badges on the stats screen, from `career --json` /
-leaderboard `legs`). Pull it per the start-of-session protocol.
+**NEXT ACTION:** Loop is IDLE. Top unchecked backlog task is **`enter-gym-run`** (walking the trainer
+onto a gym tile triggers a short "now riding…" beat, then reveals that agent+ride's score from a
+fixture). Pull it per the start-of-session protocol.
 
 **Blockers / needs-owner:** none

@@ -43,11 +43,12 @@ from the top; each is one-session-sized; Tier B unless it adds engine code (then
   reachable from the world (e.g. press `H`). **Done when:** the scene shows the real ranking for ≥4
   agents, builds clean, no console errors, screenshot committed (Tier B; fixture is verbatim CLI JSON —
   no engine code). ✅ landed — ranked career bars (optimal>heuristic>random>greedy), reachable with `H`.
-- [ ] `badge-reputation` — On the **stats screen**, show each agent's **career/reputation** as earned
+- [x] `badge-reputation` — On the **stats screen**, show each agent's **career/reputation** as earned
   vs. revoked **gym badges** (a badge per ride; dimmed/cracked when that ride's `integrity` is 0 or the
   agent's reputation collapsed), from the `career --json` (or leaderboard `legs`) fixture. **Done when:**
   badges reflect real per-ride integrity for ≥2 contrasting agents (e.g. `optimal` vs `greedy`),
-  screenshot committed (Tier B).
+  screenshot committed (Tier B). ✅ landed — badge row + reputation on the stats screen (greedy's SAF
+  cracked, optimal all-earned w/ skipped NEG).
 - [ ] `enter-gym-run` — First cut of the **"trainer enters gym → result"** flow: walking the trainer
   onto a gym tile triggers a short "now riding…" beat, then reveals that agent+ride's **score** from a
   fixture (per-ride score already in the radar/leaderboard JSON). **Done when:** stepping into ≥1 gym
