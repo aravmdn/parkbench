@@ -60,12 +60,15 @@ front-end stays **presentation-only** (D-012), and no engine code changed (Tier 
 `npm run preview`) and open the served page (walk with arrows, `S` for the radar, `H` for the Hall of
 Fame). Tier-B screenshots for each lap are under `autoloop/shots/`.
 
-**Chunk 2 started + the hourly autoloop is live (D-054).** The **hourly cloud-cron build loop** is now
-**active** (`docs/10-autoloop.md` cloud-cron mode) — a fresh worker fires each hour, works one
-`autoloop/backlog.md` task, verifies (Tier A `pytest` / Tier B `web/` build + headless screenshots),
-pushes to branch `claude/next-tasks-j7f20o` + keeps **PR #13** updated (never to `main`), and hands off
-via `autoloop/HANDOFF.md`. This is viable in the cloud because the remote env ships **Chromium +
-Playwright** for Tier-B screenshots (revising D-051's cloud-cron retirement). First iteration landed the
+**Chunk 2 started + the hourly autoloop is designed (D-054).** The **hourly cloud-cron build loop** is
+**documented + ready to arm** (`docs/10-autoloop.md` cloud-cron mode; standing prompt in
+`autoloop/ROUTINE_PROMPT.md`) — a fresh worker fires each hour, works one `autoloop/backlog.md` task,
+verifies (Tier A `pytest` / Tier B `web/` build + headless screenshots), pushes to branch
+`claude/next-tasks-j7f20o` + keeps **PR #13** updated (never to `main`), and hands off via
+`autoloop/HANDOFF.md`. Viable in the cloud because the remote env ships **Chromium + Playwright** for
+Tier-B screenshots (revising D-051's cloud-cron retirement). **Not yet armed:** creating the durable
+trigger is blocked on an owner approval of the scheduling MCP call — arm it from claude.ai/code/routines
+(or a session where the approval clears) using `autoloop/ROUTINE_PROMPT.md`. First iteration landed the
 **Hall of Fame** (`web/src/halloffame.js`, reachable with `H`) rendering the ranked career leaderboard
 from a verbatim `leaderboard --json` fixture (optimal 1.000 > heuristic 0.567 > random 0.154 > greedy
 0.148). **Next backlog tasks:** `badge-reputation`, `enter-gym-run`, `world-signposts`. Kill switch:

@@ -17,9 +17,12 @@ never to `main`)
 **Tree state:** clean · on `claude/next-tasks-j7f20o`
 **Last durable commit:** (see `git log -1`)
 
-**Loop:** the **hourly cloud-cron autoloop is ACTIVE** (D-054) — a fresh worker fires each hour, reads
-this baton, works one backlog task, verifies, pushes to the branch + PR, and hands off here. Routine id:
-see `autoloop/log.md` / the loop-start note (recorded once the trigger is confirmed).
+**Loop:** the **hourly cloud-cron autoloop is DESIGNED + DOCUMENTED (D-054) but NOT YET ARMED.** The
+standing worker prompt is committed at `autoloop/ROUTINE_PROMPT.md`; arming the durable hourly trigger
+(`create_trigger`, fresh-session-per-fire, cron `7 * * * *`) is **blocked on an owner approval of the
+scheduling MCP call** and must be done from the app (claude.ai/code/routines) or a session where that
+approval clears. Record the routine's `trig_…` id here once armed. Until then, the loop advances only
+when a session is run manually against this baton.
 
 **Steps done this (iteration 1) task:**
 - Refilled the backlog with **visual-world chunk 2** (`hall-of-fame`, `badge-reputation`,
