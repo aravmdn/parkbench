@@ -925,3 +925,32 @@ while the world is still rough, and keeps the repo dependency-light for art. Eac
 placeholder art as image files (licensing + review burden vs. procedural generation); duplicating scoring
 or reading it live from the engine in this phase (out of scope — the world renders committed JSON later,
 and never scores, D-012). Implements the first tasks of D-051's backlog toward D-050.
+
+### D-054 · 2026-07-03 · Start an hourly autonomous **cloud-cron** build loop (revises D-051)
+**Decision:** Turn the autoloop on as a **scheduled cloud routine** that fires **once per hour**, each
+firing spawning a **fresh worker session** in the remote execution environment (create-new-session-on-
+fire). The standing trigger prompt makes every worker follow the existing charter
+([`10-autoloop.md`](10-autoloop.md)): read `CLAUDE.md` + `docs/README.md` + the charter +
+`docs/11-visual-world.md`, then **`autoloop/HANDOFF.md`**; reconcile with `git status`; work **one**
+backlog task to completion (or refill the backlog if empty — that refill is itself a valid task);
+verify per tier (Tier A `pytest` green + baselines byte-identical; Tier B `web/` builds clean +
+screenshots committed to `autoloop/shots/<ts>/`); **commit with the project trailer, push, and keep the
+open PR updated**; and **hand off** by updating `HANDOFF.md` (loop state + `NEXT ACTION`), `backlog.md`,
+and `log.md` so the next hour's worker knows exactly what to do. This **partially revises D-051**, which
+had *retired the cloud cron* on the grounds that "a cloud session can't see the owner's browser and the
+loop needs to drive Chrome for screenshots."
+**Why:** That objection **no longer holds in this remote environment** — it ships **Chromium +
+Playwright pre-installed** (`/opt/pw-browsers`), so a cloud worker performs Tier-B verification by
+driving a **headless** browser and committing screenshots (exactly how the six seed laps + the Hall of
+Fame lap were verified this session). Hourly firing matches the cron minimum interval and the plan's
+burst-y usage budget; fresh-session-per-fire keeps each worker's context bounded (the repo — docs +
+baton + log + screenshots — is the only cross-lap memory, per D-052), which is the same discipline the
+local `/loop` driver uses. The **write-ahead handoff** (D-052) is what makes an unattended hourly loop
+safe: state is always on disk, so a crashed or quota-cut firing costs at most one step of intent.
+**Rejected:** binding the routine to one long-lived session (its context would grow unbounded over many
+laps — the exact failure D-051 named); a sub-hourly cadence (below the cron minimum, and wasteful given
+usage limits); a human PR gate per lap (owner wants it autonomous — review is async via the PR diff +
+`autoloop/shots/`, revert via `git revert`); pushing straight to `main` from unattended cloud workers in
+*this* setup (kept on the feature branch + PR so the owner still sees every lap before it merges — the
+local-driver push-to-main model of D-051 still applies to local laps). The retired local-loop routine
+`trig_01XrJ4EqxMyqSfieC7zJnqwR` remains separate. Extends D-049/D-051/D-052.

@@ -57,10 +57,19 @@ cycled with ← →). All placeholder art is **procedurally generated** in `web/
 by construction, deterministic), and `web/src/theme.js` mirrors the engine's park vocabulary — the
 front-end stays **presentation-only** (D-012), and no engine code changed (Tier A untouched: still
 **174 passing tests**). Verify: `cd web && npm install && npm run build`, then `npm run dev` (or
-`npm run preview`) and open the served page (walk with arrows, `S` for the radar). Tier-B screenshots
-for each lap are under `autoloop/shots/`. **Next:** decompose the next visual chunk into the backlog —
-Hall of Fame from `leaderboard --json`, badge/reputation visuals, and a "trainer enters gym → run plays
-→ result" flow.
+`npm run preview`) and open the served page (walk with arrows, `S` for the radar, `H` for the Hall of
+Fame). Tier-B screenshots for each lap are under `autoloop/shots/`.
+
+**Chunk 2 started + the hourly autoloop is live (D-054).** The **hourly cloud-cron build loop** is now
+**active** (`docs/10-autoloop.md` cloud-cron mode) — a fresh worker fires each hour, works one
+`autoloop/backlog.md` task, verifies (Tier A `pytest` / Tier B `web/` build + headless screenshots),
+pushes to branch `claude/next-tasks-j7f20o` + keeps **PR #13** updated (never to `main`), and hands off
+via `autoloop/HANDOFF.md`. This is viable in the cloud because the remote env ships **Chromium +
+Playwright** for Tier-B screenshots (revising D-051's cloud-cron retirement). First iteration landed the
+**Hall of Fame** (`web/src/halloffame.js`, reachable with `H`) rendering the ranked career leaderboard
+from a verbatim `leaderboard --json` fixture (optimal 1.000 > heuristic 0.567 > random 0.154 > greedy
+0.148). **Next backlog tasks:** `badge-reputation`, `enter-gym-run`, `world-signposts`. Kill switch:
+disable/delete the routine at claude.ai/code/routines.
 
 ---
 
