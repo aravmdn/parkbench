@@ -28,6 +28,7 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
 | 09 | [`09-byo-protocol.md`](09-byo-protocol.md) | The BYO agent HTTP/JSON wire protocol (roadmap #5) — endpoints, message shapes, determinism. | Living |
 | 10 | [`10-autoloop.md`](10-autoloop.md) | Charter for the autonomous **build** loop (D-049/D-051) — local fresh-worker-per-lap, work queue, the two verification tiers, guardrails, push-to-main rules, kill switch. | Living |
 | 11 | [`11-visual-world.md`](11-visual-world.md) | The Pokémon-style visual spectator world (D-050) — the metaphor↔engine mapping, the engine↔front-end JSON split, the Kaplay stack, the art policy. | Draft |
+| 12 | [`12-validity.md`](12-validity.md) | The validity harness (D-055) — proving each ride *measures capability* via a known-ability ladder + resists gaming; metrics, thresholds, results, and the honest remaining gaps. | Living |
 
 ### Reference
 
@@ -105,6 +106,15 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
   byte-identical, sync docs + decision log + status, and **push to `main` only if the suite is green
   and the item is complete** (else park on an `autoloop/wip-*` branch; `main` never left red).
   Docs-only. Updated `02`, `03`, root `CLAUDE.md`.
+- **2026-07-05** — **Validity harness** (D-055): the project's central trust claim — that a ride's
+  score *measures the named capability* (**construct validity**) — is turned from an assertion into a
+  measurement. A stdlib **known-ability ε-optimal ladder** (`src/parkbench/validity.py`, `parkbench
+  validity`) proves each ride's score tracks ability we *set* by construction (Spearman ρ, monotonicity,
+  discrimination, resolvable rungs, split-half reliability), with sanity guards and a formal
+  **gaming-resistance** check (the reward-hacker is caught, even below random). Evidence runs on a
+  **held-out eval seed range** (contamination down-payment). All three fast rides are **VALID**;
+  `greedy`'s Goodhart gap is 0.836. New doc [`12-validity.md`](12-validity.md). **186 passing tests**
+  (+12); baselines byte-identical (purely additive). Updated `02`, `03`, `04`, root `CLAUDE.md`.
 - **2026-07-02** — **Loop re-scoped to a local build loop + the visual-world vision** (D-050, D-051):
   the loop becomes a *genuinely build-forward* loop run **locally, fresh worker per lap** (dodges the
   single-session context limit; can drive the browser). New doc [`11-visual-world.md`](11-visual-world.md)

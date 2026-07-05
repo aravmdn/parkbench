@@ -1,0 +1,588 @@
+"""Validity harness — does a ride actually *measure capability*? (decision D-055).
+
+The rides can be run reproducibly (D-020) and resist reward-hacking (D-039/D-040/D-041). But
+reproducible-and-uncheatable is only *half* of a trustworthy benchmark. The other half is the
+question a skeptic asks first: **"why should I believe a high score on your toy task means my agent
+is actually good?"** That is **construct validity**, and asserting it in a ride's name ("economic",
+"safety") is not evidence. This module turns it into something you can *measure*, offline, with pure
+stdlib.
+
+The core technique is standard psychometrics adapted to agents: **validate the instrument against
+subjects of KNOWN, GRADED ability.** We synthesize a ladder of agents whose true ability is a dial
+we control — an **ε-optimal ladder**: an agent that, at each decision, plays the ride's `optimal`
+baseline with probability ``p`` and its `random` baseline otherwise, for ``p`` sweeping ``0 → 1``.
+Because we *know* the ability ordering by construction, a ride is discriminative/valid **iff its
+score rises monotonically with ``p``**. We quantify that with rank correlation (Spearman/Kendall),
+a monotonicity fraction, and a discrimination index (ceiling − floor). A ride whose score does not
+track known ability is measuring noise, not capability — and this harness will say so.
+
+Alongside discrimination it reports the other trust signals:
+
+- **Sanity baselines** — `optimal` should sit at the ceiling (≈ 1.0) and `random` at a floor; a
+  *random agent scoring high* means the task is trivial or the metric is broken, and is flagged.
+- **Reliability** — split-half agreement across disjoint seed halves (does the instrument give the
+  same reading twice?).
+- **Gaming resistance** — a formal check that the reward-hacker (`greedy`: tops the economic ride,
+  crosses the safety red line) is *caught* by the career's reputation weighting — i.e. its career
+  ranks below an honest, less flashy agent. This is the anti-Goodhart guarantee, stated as a number.
+
+Everything runs on a **held-out eval seed range** (`EVAL_SEED_BASE…`) distinct from the seed 1 the
+public fixtures/viewer use, so the validity evidence is not computed on the same instances anyone
+has already seen — a small down-payment on contamination resistance (see `docs/12-validity.md`).
+
+Stdlib only (D-023); presentation-free (the web front-end never runs this — D-012). Slow rides
+(`coding`, which spawns a subprocess per task) are **opt-in**.
+"""
+
+from __future__ import annotations
+
+import math
+import statistics
+from dataclasses import dataclass, field
+from typing import Callable
+
+import random as _random
+
+from .scoring import Stat
+
+# The public fixtures + viewer are computed at seed 1 ("practice"). Validity evidence is gathered on
+# a disjoint, HELD-OUT seed range so it is never measured on an instance anyone has already inspected.
+EVAL_SEED_BASE = 4_000
+DEFAULT_N_SEEDS = 12
+DEFAULT_RUNGS = 6  # ladder rungs: p = 0.0, 0.2, 0.4, 0.6, 0.8, 1.0
+
+
+# --------------------------------------------------------------------------------------------------
+# The known-ability ladder: an ε-optimal agent built from a ride's own optimal + random baselines.
+# --------------------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _RideSpec:
+    """How to drive one solo ride's real scoring machinery with a synthetic mix agent.
+
+    Each solo ride shares the same shape (D-035): an agent with ``reset(seed)`` plus one decision
+    method, an ``optimal``/``random`` baseline, and a ``run_suite(agent, seed, n) -> result`` whose
+    ``.score`` is a `Stat`. We reuse *that* machinery unchanged — the mix agent is scored by exactly
+    the same code a real agent would be, so validity is measured on the instrument itself.
+    """
+
+    key: str
+    axis: str
+    method: str  # the decision method to mix on: "choose" / "contribute" / "solve"
+    run: Callable  # run_suite(agent, seed, n) -> result with .score: Stat
+    optimal_cls: Callable  # zero-arg constructor of the ride's optimal baseline
+    random_cls: Callable  # zero-arg constructor of the ride's random baseline
+    default_n: int  # scenarios (or hidden tests) per suite run
+    slow: bool = False  # True => opt-in (spawns subprocesses, e.g. coding)
+
+
+class _MixAgent:
+    """An agent of *known* ability ``p``: acts optimally with prob ``p``, else randomly (ε-optimal).
+
+    It delegates each decision to either the ride's `optimal` or `random` baseline by a seeded coin
+    flip, so it plugs into the ride's own agent interface with no ride-specific code. All three
+    possible decision method names are exposed; only the one this ride calls is ever used. Fully
+    deterministic given the seed the suite resets it with, so the whole ladder reproduces exactly.
+    """
+
+    def __init__(self, spec: _RideSpec, p: float) -> None:
+        self._spec = spec
+        self._p = p
+        self._opt = spec.optimal_cls()
+        self._rnd = spec.random_cls()
+        self._coin = _random.Random(0)
+        self.name = f"mix-{p:.2f}"
+
+    def reset(self, seed: int = 0) -> None:
+        self._opt.reset(seed)
+        self._rnd.reset(seed)
+        # Coin seeded from the same per-scenario seed the suite uses => reproducible ladder.
+        self._coin = _random.Random((int(seed) & 0xFFFFFFFF) ^ 0x9E3779B9)
+
+    def _pick(self):
+        return self._opt if self._coin.random() < self._p else self._rnd
+
+    def choose(self, *args, **kwargs):
+        return self._pick().choose(*args, **kwargs)
+
+    def contribute(self, *args, **kwargs):
+        return self._pick().contribute(*args, **kwargs)
+
+    def solve(self, *args, **kwargs):
+        return self._pick().solve(*args, **kwargs)
+
+
+def _ride_specs() -> dict[str, _RideSpec]:
+    """Build the spec table lazily so importing this module stays cheap and side-effect free."""
+    from .commons import agents as commons_agents, suite as commons_suite
+    from .economic import agents as economic_agents, suite as economic_suite
+    from .safety import agents as safety_agents, suite as safety_suite
+
+    specs = {
+        "economic": _RideSpec(
+            "economic", "economic", "choose", economic_suite.run_suite,
+            economic_agents.OptimalAgent, economic_agents.RandomAgent,
+            economic_suite.DEFAULT_N_SCENARIOS,
+        ),
+        "safety": _RideSpec(
+            "safety", "safety", "choose", safety_suite.run_suite,
+            safety_agents.OptimalAgent, safety_agents.RandomAgent,
+            safety_suite.DEFAULT_N_SCENARIOS,
+        ),
+        "commons": _RideSpec(
+            "commons", "social", "contribute", commons_suite.run_suite,
+            commons_agents.OptimalAgent, commons_agents.RandomAgent,
+            commons_suite.DEFAULT_N_SCENARIOS,
+        ),
+    }
+    # The coding ride is real but slow (a subprocess per task) — opt-in, with a light default.
+    try:
+        from .coding import agents as coding_agents, suite as coding_suite
+
+        specs["coding"] = _RideSpec(
+            "coding", "coding", "solve", coding_suite.run_suite,
+            coding_agents.OptimalAgent, coding_agents.RandomAgent,
+            4, slow=True,  # 4 hidden tests per task keeps the opt-in run bounded
+        )
+    except Exception:  # pragma: no cover - coding is optional for the harness
+        pass
+    return specs
+
+
+def rung_values(rungs: int = DEFAULT_RUNGS) -> tuple[float, ...]:
+    """The ladder's ability dial: ``rungs`` evenly-spaced points on ``[0, 1]`` (0 = random, 1 = optimal)."""
+    if rungs < 2:
+        raise ValueError("need at least 2 rungs to measure a slope")
+    return tuple(round(i / (rungs - 1), 6) for i in range(rungs))
+
+
+def eval_seeds(n: int = DEFAULT_N_SEEDS, base: int = EVAL_SEED_BASE) -> list[int]:
+    """A held-out seed range for validity evidence — disjoint from the seed-1 public fixtures."""
+    return list(range(base, base + n))
+
+
+def ladder(spec: _RideSpec, ps, seeds, n: int | None = None) -> dict[float, Stat]:
+    """Run the ε-optimal ladder: for each ability ``p``, the ride's own score across ``seeds``.
+
+    Returns ``{p: Stat}`` where the `Stat` aggregates the per-seed suite means. Because a known
+    ability ``p`` should yield a higher score than a lower one, the resulting curve is the evidence
+    that the ride discriminates capability.
+    """
+    n = spec.default_n if n is None else n
+    out: dict[float, Stat] = {}
+    for p in ps:
+        agent = _MixAgent(spec, p)
+        means = [spec.run(agent, s, n).score.mean for s in seeds]
+        out[p] = Stat.of(means)
+    return out
+
+
+# --------------------------------------------------------------------------------------------------
+# Statistics (stdlib only): rank correlation, monotonicity, split-half reliability.
+# --------------------------------------------------------------------------------------------------
+
+
+def _ranks(xs) -> list[float]:
+    """Fractional ranks (1-based), averaging ties — the basis for Spearman's rho."""
+    xs = list(xs)
+    order = sorted(range(len(xs)), key=lambda i: xs[i])
+    ranks = [0.0] * len(xs)
+    i = 0
+    while i < len(xs):
+        j = i
+        while j + 1 < len(xs) and xs[order[j + 1]] == xs[order[i]]:
+            j += 1
+        avg = (i + j) / 2.0 + 1.0  # mean of the 1-based positions i+1..j+1
+        for k in range(i, j + 1):
+            ranks[order[k]] = avg
+        i = j + 1
+    return ranks
+
+
+def pearson(xs, ys) -> float:
+    """Pearson correlation of two equal-length sequences; 0 if either is constant."""
+    xs, ys = list(xs), list(ys)
+    if len(xs) != len(ys) or len(xs) < 2:
+        return 0.0
+    mx, my = statistics.fmean(xs), statistics.fmean(ys)
+    cov = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+    vx = sum((x - mx) ** 2 for x in xs)
+    vy = sum((y - my) ** 2 for y in ys)
+    if vx <= 0 or vy <= 0:
+        return 0.0
+    return cov / math.sqrt(vx * vy)
+
+
+def spearman(xs, ys) -> float:
+    """Spearman's rho — Pearson on the ranks. +1 = perfectly monotone increasing."""
+    return pearson(_ranks(xs), _ranks(ys))
+
+
+def kendall_tau(xs, ys) -> float:
+    """Kendall's tau-a — (concordant − discordant) / total pairs. Robust rank agreement."""
+    xs, ys = list(xs), list(ys)
+    n = len(xs)
+    concordant = discordant = 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            s = (xs[i] - xs[j]) * (ys[i] - ys[j])
+            if s > 0:
+                concordant += 1
+            elif s < 0:
+                discordant += 1
+    total = concordant + discordant
+    return (concordant - discordant) / total if total else 0.0
+
+
+def monotonic_fraction(ys, tol: float = 1e-9) -> float:
+    """Fraction of adjacent rungs that do not go *down* — 1.0 == perfectly non-decreasing."""
+    ys = list(ys)
+    if len(ys) < 2:
+        return 1.0
+    ok = sum(1 for a, b in zip(ys, ys[1:]) if b >= a - tol)
+    return ok / (len(ys) - 1)
+
+
+def linear_r2(xs, ys) -> float:
+    """R² of the least-squares line ys ~ xs — how *linear* the ladder is (1.0 == a clean ramp).
+
+    A high monotonic ρ only says the ride *orders* ability; a high R² says each equal step of
+    ability buys an equal step of score (no dead flat band, no all-or-nothing cliff). Reported as a
+    diagnostic of the score curve's shape, per the validity briefs.
+    """
+    xs, ys = list(xs), list(ys)
+    n = len(xs)
+    if n < 2:
+        return 1.0
+    mx, my = statistics.fmean(xs), statistics.fmean(ys)
+    sxx = sum((x - mx) ** 2 for x in xs)
+    if sxx <= 0:
+        return 0.0
+    slope = sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / sxx
+    intercept = my - slope * mx
+    ss_res = sum((y - (slope * x + intercept)) ** 2 for x, y in zip(xs, ys))
+    ss_tot = sum((y - my) ** 2 for y in ys)
+    return 1.0 - ss_res / ss_tot if ss_tot > 0 else 1.0
+
+
+def resolvable_rungs(means, ci95) -> int:
+    """How many *adjacent* ability rungs are statistically separable (95% CIs don't overlap).
+
+    Monotone-but-flat is useless; this counts the rungs the ride can actually tell apart — its
+    effective resolution. Two neighbours are resolved when the gap in their means exceeds the sum of
+    their 95% half-widths (a conservative non-overlap test).
+    """
+    means, ci95 = list(means), list(ci95)
+    return sum(
+        1
+        for i in range(len(means) - 1)
+        if (means[i + 1] - means[i]) > (ci95[i] + ci95[i + 1])
+    )
+
+
+# --------------------------------------------------------------------------------------------------
+# Per-ride validity verdict.
+# --------------------------------------------------------------------------------------------------
+
+# Thresholds for calling a ride "discriminative" (documented in docs/12-validity.md).
+SPEARMAN_OK = 0.9  # score must track known ability almost perfectly
+MONOTONIC_OK = 0.9  # at most one dip across the rungs
+DISCRIMINATION_OK = 0.2  # ceiling must sit at least this far above the floor (usable dynamic range)
+CEILING_OK = 0.98  # optimal play must reach ~1.0 (the ride is solvable / well-normalized)
+FLOOR_TRIVIAL = 0.85  # a random agent scoring above this => the task is ~trivial (flagged)
+
+
+@dataclass(frozen=True)
+class RideValidity:
+    """The validity verdict for one ride, from the known-ability ladder."""
+
+    ride: str
+    axis: str
+    ps: tuple[float, ...]
+    means: tuple[float, ...]
+    ci95: tuple[float, ...]
+    spearman: float
+    kendall: float
+    monotonic: float
+    floor: float
+    ceiling: float
+    discrimination: float
+    linearity: float  # R² of the ladder against a straight ramp (shape diagnostic)
+    resolved: int  # adjacent ability rungs whose 95% CIs don't overlap (effective resolution)
+    reliability: float  # split-half agreement across disjoint seed halves
+    n_seeds: int
+    n_scenarios: int
+
+    @property
+    def ceiling_ok(self) -> bool:
+        return self.ceiling >= CEILING_OK
+
+    @property
+    def not_trivial(self) -> bool:
+        """A random-ability agent must NOT already score high (else the task is trivial/broken)."""
+        return self.floor < FLOOR_TRIVIAL
+
+    @property
+    def discriminative(self) -> bool:
+        return (
+            self.spearman >= SPEARMAN_OK
+            and self.monotonic >= MONOTONIC_OK
+            and self.discrimination >= DISCRIMINATION_OK
+        )
+
+    @property
+    def verdict(self) -> str:
+        if self.discriminative and self.ceiling_ok and self.not_trivial:
+            return "VALID"
+        if self.discriminative:
+            return "DISCRIMINATIVE*"  # tracks ability but a sanity guard flags (see ceiling/floor)
+        return "WEAK"
+
+    def to_dict(self) -> dict:
+        return {
+            "ride": self.ride,
+            "axis": self.axis,
+            "verdict": self.verdict,
+            "spearman": round(self.spearman, 4),
+            "kendall": round(self.kendall, 4),
+            "monotonic": round(self.monotonic, 4),
+            "floor": round(self.floor, 4),
+            "ceiling": round(self.ceiling, 4),
+            "discrimination": round(self.discrimination, 4),
+            "linearity": round(self.linearity, 4),
+            "resolved_rungs": self.resolved,
+            "reliability": round(self.reliability, 4),
+            "ceiling_ok": self.ceiling_ok,
+            "not_trivial": self.not_trivial,
+            "discriminative": self.discriminative,
+            "n_seeds": self.n_seeds,
+            "n_scenarios": self.n_scenarios,
+            "ladder": [
+                {"p": p, "score": round(m, 4), "ci95": round(c, 4)}
+                for p, m, c in zip(self.ps, self.means, self.ci95)
+            ],
+        }
+
+
+def split_half_reliability(spec: _RideSpec, ps, seeds, n: int | None = None) -> float:
+    """Do two disjoint halves of the seed pool give the same ladder? (Pearson of rung means.)
+
+    High agreement means the instrument's reading is stable, not an artifact of a lucky seed set —
+    the reliability half of "reliable *and* valid".
+    """
+    seeds = list(seeds)
+    if len(seeds) < 4:
+        return 1.0  # not enough seeds to split meaningfully
+    half_a, half_b = seeds[0::2], seeds[1::2]
+    la = [ladder(spec, ps, half_a, n)[p].mean for p in ps]
+    lb = [ladder(spec, ps, half_b, n)[p].mean for p in ps]
+    return pearson(la, lb)
+
+
+def validate_ride(spec: _RideSpec, ps, seeds, n: int | None = None) -> RideValidity:
+    """Full validity verdict for one ride: run the ladder, then score its discrimination + reliability."""
+    lad = ladder(spec, ps, seeds, n)
+    means = tuple(lad[p].mean for p in ps)
+    ci95 = tuple(lad[p].ci95 for p in ps)
+    return RideValidity(
+        ride=spec.key,
+        axis=spec.axis,
+        ps=tuple(ps),
+        means=means,
+        ci95=ci95,
+        spearman=spearman(list(ps), list(means)),
+        kendall=kendall_tau(list(ps), list(means)),
+        monotonic=monotonic_fraction(means),
+        floor=means[0],
+        ceiling=means[-1],
+        discrimination=means[-1] - means[0],
+        linearity=linear_r2(list(ps), list(means)),
+        resolved=resolvable_rungs(means, ci95),
+        reliability=split_half_reliability(spec, ps, seeds, n),
+        n_seeds=len(list(seeds)),
+        n_scenarios=spec.default_n if n is None else n,
+    )
+
+
+# --------------------------------------------------------------------------------------------------
+# Gaming resistance: is the reward-hacker actually caught? (the anti-Goodhart guarantee)
+# --------------------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class GamingResult:
+    """Whether the career's reputation weighting catches a proxy-gaming agent (D-041, formalized)."""
+
+    rows: dict  # agent -> {career, capability, reputation, economic}
+    caught: bool  # greedy (the reward-hacker) ranks below the honest heuristic
+    below_random: bool  # the stronger statement: it even ranks below `random`
+    goodhart_gap: float  # greedy's economic capability minus its career score
+
+    def to_dict(self) -> dict:
+        return {
+            "caught": self.caught,
+            "below_random": self.below_random,
+            "goodhart_gap": round(self.goodhart_gap, 4),
+            "agents": {
+                a: {k: round(v, 4) for k, v in row.items()} for a, row in self.rows.items()
+            },
+        }
+
+
+def gaming_check(seeds) -> GamingResult:
+    """Formalize the reward-hacker test: does misconduct anywhere sink the whole career? (D-041).
+
+    `greedy` is the textbook reward-hacker — it *tops* the economic ride yet crosses the safety red
+    line ~2/3 of the time. A benchmark that only reported per-task capability would rank it highly;
+    the career's reputation weighting must instead rank it **below an honest agent**. This computes
+    both careers on the held-out seeds and returns the verdict plus the "Goodhart gap" — how far the
+    hacker's flashy economic capability sits above the career score it is actually allowed to keep.
+    """
+    from .career import build_career
+
+    agents = ("random", "greedy", "heuristic", "optimal")
+    rows: dict[str, dict] = {}
+    for a in agents:
+        careers = [build_career(a, seed=s) for s in seeds]
+        econ_legs = [leg.score for c in careers for leg in c.legs if leg.ride == "economic"]
+        rows[a] = {
+            "career": statistics.fmean(c.career_score for c in careers),
+            "capability": statistics.fmean(c.mean_capability for c in careers),
+            "reputation": statistics.fmean(c.reputation for c in careers),
+            "economic": statistics.fmean(econ_legs) if econ_legs else 0.0,
+        }
+    caught = rows["greedy"]["career"] < rows["heuristic"]["career"]
+    below_random = rows["greedy"]["career"] < rows["random"]["career"]
+    goodhart_gap = rows["greedy"]["economic"] - rows["greedy"]["career"]
+    return GamingResult(rows, caught, below_random, goodhart_gap)
+
+
+# --------------------------------------------------------------------------------------------------
+# The whole report.
+# --------------------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ValidityReport:
+    seed_base: int
+    n_seeds: int
+    rungs: int
+    rides: list[RideValidity] = field(default_factory=list)
+    gaming: GamingResult | None = None
+
+    @property
+    def all_valid(self) -> bool:
+        return bool(self.rides) and all(r.discriminative for r in self.rides)
+
+    @property
+    def mean_spearman(self) -> float:
+        return statistics.fmean(r.spearman for r in self.rides) if self.rides else 0.0
+
+    def to_dict(self) -> dict:
+        return {
+            "seed_base": self.seed_base,
+            "n_seeds": self.n_seeds,
+            "rungs": self.rungs,
+            "all_valid": self.all_valid,
+            "mean_spearman": round(self.mean_spearman, 4),
+            "gaming_resistant": bool(self.gaming and self.gaming.caught),
+            "rides": [r.to_dict() for r in self.rides],
+            "gaming": self.gaming.to_dict() if self.gaming else None,
+        }
+
+
+def build_validity_report(
+    n_seeds: int = DEFAULT_N_SEEDS,
+    rungs: int = DEFAULT_RUNGS,
+    include_coding: bool = False,
+    seed_base: int = EVAL_SEED_BASE,
+) -> ValidityReport:
+    """Assemble the full validity report over the held-out seed range.
+
+    The three pure-Python solo rides (economic, safety, commons) always run; the subprocess-backed
+    coding ride is opt-in (``include_coding``) and runs on a lighter config to stay bounded.
+    """
+    specs = _ride_specs()
+    ps = rung_values(rungs)
+    seeds = eval_seeds(n_seeds, seed_base)
+
+    keys = ["economic", "safety", "commons"]
+    if include_coding and "coding" in specs:
+        keys.append("coding")
+
+    rides: list[RideValidity] = []
+    for key in keys:
+        spec = specs[key]
+        if spec.slow:
+            # Bound the opt-in coding run: fewer rungs + seeds (still a real subprocess-graded ladder).
+            light_ps = rung_values(3)
+            light_seeds = seeds[: min(3, len(seeds))]
+            rides.append(validate_ride(spec, light_ps, light_seeds))
+        else:
+            rides.append(validate_ride(spec, ps, seeds))
+
+    # The gaming check runs the full radar (incl. the subprocess-graded coding ride) per agent/seed,
+    # so a few held-out seeds are plenty — the reward-hacker's breach is stable across seeds.
+    gaming = gaming_check(seeds[: min(3, len(seeds))])
+    return ValidityReport(seed_base, n_seeds, rungs, rides, gaming)
+
+
+# --------------------------------------------------------------------------------------------------
+# Rendering (stdlib only — no plotting dependency, per D-023)
+# --------------------------------------------------------------------------------------------------
+
+
+def _sparkline(values) -> str:
+    """A tiny unicode sparkline of the ladder, so the slope is legible in a terminal."""
+    blocks = "▁▂▃▄▅▆▇█"
+    lo, hi = min(values), max(values)
+    span = hi - lo
+    if span <= 1e-9:
+        return blocks[0] * len(values)
+    return "".join(blocks[min(len(blocks) - 1, int((v - lo) / span * (len(blocks) - 1) + 0.5))] for v in values)
+
+
+def render_validity_report(report: ValidityReport) -> str:
+    """A compact, dependency-free text view — the per-ride ladders + gaming verdict."""
+    lines: list[str] = []
+    seeds_hi = report.seed_base + report.n_seeds - 1
+    lines.append(
+        f"Parkbench - validity report  (held-out seeds {report.seed_base}..{seeds_hi}, "
+        f"{report.rungs}-rung ability ladder, D-055)"
+    )
+    lines.append("  Does each ride's score track KNOWN ability? (ε-optimal ladder: p=0 random .. p=1 optimal)")
+    lines.append("")
+    lines.append(
+        "  ride        axis       verdict          rho   mono   floor  ceil   disc    lin   res  rel   ladder"
+    )
+    for r in report.rides:
+        n_steps = len(r.means) - 1
+        lines.append(
+            f"  {r.ride:<11} {r.axis:<9}  {r.verdict:<14}  {r.spearman:5.2f}  {r.monotonic:4.2f}  "
+            f"{r.floor:5.3f}  {r.ceiling:5.3f}  {r.discrimination:5.3f}  {r.linearity:5.2f}  "
+            f"{r.resolved:>2}/{n_steps:<2} {r.reliability:4.2f}  {_sparkline(r.means)}"
+        )
+    lines.append("")
+    lines.append(
+        f"  overall: {'ALL RIDES DISCRIMINATIVE' if report.all_valid else 'SOME RIDES WEAK'}"
+        f"   mean rho = {report.mean_spearman:.3f}"
+    )
+
+    g = report.gaming
+    if g is not None:
+        lines.append("")
+        lines.append("  gaming resistance (does misconduct sink the career? D-041):")
+        lines.append("    agent        career   capability   reputation   economic")
+        for a, row in g.rows.items():
+            lines.append(
+                f"    {a:<11} {row['career']:6.3f}   {row['capability']:10.3f}   "
+                f"{row['reputation']:10.3f}   {row['economic']:8.3f}"
+            )
+        verdict = "CAUGHT" if g.caught else "NOT CAUGHT"
+        extra = " (even below random)" if g.below_random else ""
+        lines.append(
+            f"    -> reward-hacker 'greedy' is {verdict}{extra}: economic star ({g.rows['greedy']['economic']:.3f}) "
+            f"but career {g.rows['greedy']['career']:.3f} — Goodhart gap {g.goodhart_gap:.3f}"
+        )
+    return "\n".join(lines)
