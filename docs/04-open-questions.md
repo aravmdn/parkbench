@@ -10,6 +10,30 @@ below (D-027–D-030)._
 
 ## Open — cross-cutting (post-v1)
 
+- **Construct validity — do the rides measure the capabilities they are named for? (the central
+  risk).** This is the deepest open question in the project and the one that most determines whether
+  Parkbench is *trusted* (the vision's whole point) or merely *reproducible*. A ride called `economic`
+  or `safety` asserts, by its name, that its `[0,1]` score is a measure of that capability — but the
+  tasks are small, synthetic, hand-authored problems (a 12-item knapsack, 9 curated coding functions,
+  scripted negotiation opponents), and naming is not evidence. Three things are now **down-paid**
+  (D-055, [`12-validity.md`](12-validity.md)): *(a)* **discriminative validity** — each ride's score
+  provably rises monotonically with **known, graded ability** (an ε-optimal ladder built from the
+  ride's own optimal/random baselines; Spearman ρ = 1.0 on the three fast rides), so a ride that
+  scored *noise* would be caught; *(b)* **gaming resistance** — a formal check that the reward-hacker
+  is caught by the career's reputation weighting (`greedy` ranks below `random`; Goodhart gap 0.836);
+  *(c)* a **held-out eval seed range** distinct from the public seed-1 fixtures (contamination
+  down-payment). What stays **open** — the harder, honest gaps (prioritized in
+  [`12-validity.md`](12-validity.md)): the tasks are not yet shown to *resemble real-world capability*
+  (no convergent/criterion validity against an external, trusted measure); the **four axes are not yet
+  shown to be four distinct constructs** (no MTMM/HTMT discriminant matrix — the radar could be
+  measuring one thing four times); **input-ablation / shortcut** baselines are not yet run (the best
+  detector of a metric rewarding a shortcut rather than the task); the ladder is only the *random-mix*
+  kind, not a **structural** capability-limit (bounded lookahead / injected noise) cross-check; and
+  there is no **item-hygiene** pass (Cronbach's α, per-seed discrimination pruning), no **bootstrap**
+  CIs, and no **benchmark/generator versioning** stamped into results. Until at least convergent
+  validity and the discriminant matrix exist, "a high Parkbench score means real capability" remains
+  **argued, not proven** — the down-payment shows the instrument isn't measuring *noise* and can't be
+  *gamed*, which is necessary but not sufficient.
 - **Anti-gaming / reward-hacking safeguards** as more ride types are added. _Concrete down-payments
   have landed: the coding ride (D-039) uses **seed-randomized hidden tests** that defeat
   answer-memorization; the safety ride (D-040) is an explicit reward-hacking probe (crossing a red
@@ -29,6 +53,15 @@ below (D-027–D-030)._
 
 ## Resolved
 
+- **2026-07-05** — **Discriminative validity + gaming resistance made measurable** resolved (partial —
+  the discrimination/gaming *down-payment* on the open construct-validity question above) as **D-055**:
+  a stdlib **validity harness** (`src/parkbench/validity.py`, `parkbench validity`) validates each ride
+  against a **known-ability ε-optimal ladder** (Spearman/Kendall, monotonicity, discrimination,
+  resolvable rungs, split-half reliability) with sanity guards, plus a formal **gamer-caught** check,
+  all on a **held-out eval seed range**. All three fast rides VALID; `greedy` caught below random.
+  +12 tests (**186**); baselines byte-identical. The deeper construct-validity gaps (convergent/
+  criterion validity, the discriminant matrix, ablation, structural ladder, item hygiene) stay open —
+  see the bullet above and [`12-validity.md`](12-validity.md).
 - **2026-06-04** — **Environment + working-directory confinement of untrusted code** resolved as
   **D-048**: the coding harness spawns the candidate subprocess with a minimal allowlisted environment
   (no inherited secrets in `os.environ`) and a throwaway working directory (relative file writes can't

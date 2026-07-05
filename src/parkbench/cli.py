@@ -207,6 +207,21 @@ def cmd_leaderboard(args: argparse.Namespace) -> None:
     print()
 
 
+def cmd_validity(args: argparse.Namespace) -> None:
+    # Imported lazily so the core CLI carries no dependency on the validity harness unless used (D-055).
+    from .validity import build_validity_report, render_validity_report
+
+    report = build_validity_report(
+        n_seeds=args.seeds, rungs=args.rungs, include_coding=args.coding
+    )
+    if args.json:
+        print(json.dumps(report.to_dict(), indent=2))
+        return
+    print()
+    print(render_validity_report(report))
+    print()
+
+
 def cmd_economic(args: argparse.Namespace) -> None:
     # Imported lazily so the core CLI has no dependency on the economic ride unless used (D-036).
     from .economic import AGENT_REGISTRY as ECON_AGENTS
@@ -440,6 +455,19 @@ def build_parser() -> argparse.ArgumentParser:
     cm.add_argument("--seed", type=int, default=1, help="Suite seed (selects the game set).")
     cm.add_argument("--scenarios", type=int, default=12)
     cm.set_defaults(func=cmd_commons)
+
+    # Validity harness (D-055): does each ride actually measure capability, and is it gaming-proof?
+    v = sub.add_parser(
+        "validity",
+        help="Validate that each ride discriminates known ability + resists gaming (D-055).",
+    )
+    v.add_argument("--seeds", type=int, default=8, help="Held-out eval seeds per ladder rung.")
+    v.add_argument("--rungs", type=int, default=6, help="Ability-ladder rungs (p=0..1).")
+    v.add_argument(
+        "--coding", action="store_true", help="Also validate the (slow, subprocess-graded) coding ride."
+    )
+    v.add_argument("--json", action="store_true", help="Emit the report as JSON instead of a table.")
+    v.set_defaults(func=cmd_validity)
     return p
 
 

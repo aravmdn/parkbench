@@ -954,3 +954,50 @@ usage limits); a human PR gate per lap (owner wants it autonomous — review is 
 *this* setup (kept on the feature branch + PR so the owner still sees every lap before it merges — the
 local-driver push-to-main model of D-051 still applies to local laps). The retired local-loop routine
 `trig_01XrJ4EqxMyqSfieC7zJnqwR` remains separate. Extends D-049/D-051/D-052.
+
+### D-055 · 2026-07-05 · Validity harness — prove each ride *measures capability* + resists gaming
+**Decision:** Add a stdlib-only **validity harness** (`src/parkbench/validity.py`, `parkbench
+validity`, `tests/test_validity.py`) that turns the project's central trust claim — "a high score on
+this ride means the agent is actually good" (**construct validity**) — from an *assertion* into a
+*measurement*. The core technique (standard psychometrics, adapted to agents): validate the
+instrument against subjects of **known, graded ability**. We synthesize an **ε-optimal ladder** — an
+agent that, at each decision, plays the ride's own `optimal` baseline with probability `p` and its
+`random` baseline otherwise, for `p` sweeping `0 → 1` — so *true ability is a dial we set*. A ride is
+**discriminative/valid** iff its score rises monotonically with `p`. The harness reports, per ride:
+**Spearman ρ** and **Kendall τ** of score-vs-known-ability, a **monotonic fraction**, a
+**discrimination index** (ceiling − floor), a **linearity R²** (clean ramp vs. flat/cliff), the count
+of **resolvable rungs** (adjacent ability levels whose 95% CIs don't overlap), and **split-half
+reliability** across disjoint seed halves. It also runs **sanity guards** (optimal must reach the
+ceiling ≈ 1.0; a `random` agent scoring high flags a trivial task) and a formal **gaming-resistance
+check**: the reward-hacker `greedy` (economic star, safety red-line crosser) must be *caught* by the
+career's reputation weighting — its career must rank below an honest agent (the strong form: below
+`random`), reported as a **Goodhart gap**. All evidence is gathered on a **held-out eval seed range**
+(`EVAL_SEED_BASE = 4000…`), disjoint from the seed-1 public fixtures/viewer, as a first
+contamination-resistance step (public "practice" seed vs. hidden "eval" seed convention). New doc
+[`12-validity.md`](12-validity.md).
+**Results (held-out seeds 4000–4011, 6-rung ladder):** all three pure-Python rides are **VALID** —
+economic ρ 1.00 (floor 0.71 → discrimination 0.29, honestly *narrow* range), safety ρ 1.00
+(discrimination 0.70), commons ρ 1.00 (discrimination 0.52); each resolves 3–4 of 5 rungs; reliability
+0.99. Gaming: `greedy` is **CAUGHT, even below random** — economic capability 0.985 but career 0.148,
+a Goodhart gap of 0.836. **186 passing tests** (+12); baselines byte-identical (purely additive — no
+ride/scoring/agent code touched, so the D-020 reproducibility and existing scores are unchanged).
+**Why:** Reproducible-and-uncheatable (D-020/D-039/D-040/D-041) is only *half* of a trustworthy
+benchmark; the half a skeptic asks about first is whether the toy task measures the named capability.
+Naming a ride "economic" is not evidence. The synthetic, offline, seed-based design is *uniquely*
+able to supply the missing evidence: in real psychometrics true ability is unobservable, but here we
+*build* agents of known ability, so criterion/construct/discriminative validity become directly
+measurable, thresholded, and enforceable in CI. Three independent research passes (psychometric
+validity; LLM-benchmark trust/contamination; anti-gaming/Goodhart) converged on exactly this playbook
+(ε-optimal ladder + rank correlation + discrimination + held-out seeds + the gamer-caught test).
+**Rejected / deferred (documented in `12-validity.md` as the honest remaining gaps):** an
+**input-ablation / shortcut baseline** (run the best agent on a blanked observation — "the single
+best shortcut detector"; needs per-ride degraded-observation support, so deferred); a **structural
+capability-limited ladder** (bounded lookahead / injected noise) as a cross-check that the ride
+rewards capability and not "amount of randomness"; **Cronbach's α + per-item (per-seed) discrimination
+pruning** (IRT-flavored item hygiene); a **convergent/discriminant (MTMM/HTMT) matrix** across the two
+social rides and the four axes; **bootstrap** CIs (currently normal-approx via `Stat`); and
+**benchmark/generator versioning stamped into results**. Also rejected: making the ε-ladder a
+per-ride roster entry (would touch every ride's `agents.py` — instead the harness drives each ride's
+object-taking `run_suite` directly, so no ride code changed); folding validity into the web front-end
+(D-012 — the front-end never runs the engine). Extends/strengthens D-020, D-039, D-040, D-041; the
+still-open **full-OS-sandbox** anti-gaming item (D-043/D-048, roadmap #5) is unchanged.

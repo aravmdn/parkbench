@@ -42,7 +42,33 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 | `docs/05-glossary.md` | Shared vocabulary (ride, house cast, BYO agent, radar profile, …). |
 | `docs/06-v1-architecture.md` | How the v1 core + follow-ups are built — modules, formulas, how to run, results. |
 
-## Current status (2026-07-03)
+## Current status (2026-07-05)
+
+**Trust track — the validity harness landed (D-055).** The project's central claim — that a ride's
+score *measures the capability it is named for* (**construct validity**) — is now a **measurement**,
+not an assertion. New stdlib module `src/parkbench/validity.py` + `parkbench validity` +
+`tests/test_validity.py` validate each ride against a **known-ability ε-optimal ladder** (an agent
+that plays the ride's own `optimal` baseline with probability `p`, else `random`, for `p` = 0→1, so
+true ability is a dial we set): a ride is valid iff its score rises monotonically with `p`. Reports
+Spearman ρ / Kendall τ, monotonic fraction, discrimination index, linearity R², resolvable rungs, and
+split-half reliability, plus sanity guards (optimal reaches ~1.0; a high random floor is flagged) and
+a formal **gaming-resistance** check (the reward-hacker `greedy` must be *caught* by the career's
+reputation weighting — it lands **below random**; Goodhart gap 0.836). Evidence runs on a **held-out
+eval seed range** (`EVAL_SEED_BASE = 4000…`, disjoint from the seed-1 public fixtures — a contamination
+down-payment). Results (held-out seeds 4000–4011, 6-rung ladder): **all three fast rides VALID** —
+economic ρ 1.00 (honest finding: floor 0.71 → *narrow* discrimination 0.29), safety ρ 1.00 (disc
+0.70), commons ρ 1.00 (disc 0.52). New doc `docs/12-validity.md` documents the method, thresholds,
+results, and the **honest remaining gaps** (convergent/criterion validity, a discriminant MTMM matrix
+across the four axes, input-ablation shortcut baselines, a structural capability-limited ladder, item
+hygiene, bootstrap CIs, benchmark versioning). **186 passing tests** (+12 from 174); **baselines
+byte-identical** (purely additive — no ride/scoring/agent code touched). Three research passes
+(psychometric validity · LLM-benchmark trust/contamination · anti-gaming/Goodhart) converged on this
+exact playbook. Verify: `parkbench validity` (~1–2 min), `parkbench validity --json`, `parkbench
+validity --coding` (adds the slow subprocess-graded coding ride), `pytest tests/test_validity.py`.
+This is roadmap **#6 (the trust track)** — the highest-leverage work for credibility, above more rides
+or art. Construct validity remains the project's **central open risk**
+(`docs/04-open-questions.md`): the down-payment shows the instrument isn't measuring *noise* and can't
+be *gamed* — necessary, not yet sufficient.
 
 **Visual world — all six seed laps landed (D-053).** The Pokémon-style front-end
 (`docs/11-visual-world.md`) is now a living little world: a separate **`web/`** app on **Kaplay + Vite**

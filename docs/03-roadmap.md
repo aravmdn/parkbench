@@ -36,7 +36,18 @@ Directional only — sequence and detail will firm up as v1 is built and learned
    is safer to point at untrusted BYO code. Next: harden the protocol for public hosting (auth/TLS/rate
    limiting + a published JSON Schema), BYO connectors for the **solo** rides, and a **full OS sandbox**
    (filesystem/network jails, CPU/memory caps) for untrusted code — the one anti-gaming item still open.
-6. **Revisit commercial models** (D-013) only after meaningful adoption: eval-as-a-service, public
+6. **Earn *validity*, not just reproducibility (the trust track).** The whole vision is *trusted*
+   measurement, and trust hinges on **construct validity** — that a ride's score measures the
+   capability it is named for. First down-payment landed (D-055, [`12-validity.md`](12-validity.md)):
+   a **known-ability ε-optimal ladder** proves each ride's score tracks ability we set by construction
+   (Spearman ρ = 1.0 on the three fast rides), plus a formal **gaming-resistance** check (the
+   reward-hacker is caught below random) and a **held-out eval seed range**. Next, in priority order:
+   convergent/criterion validity against an external measure; a **discriminant (MTMM/HTMT) matrix** to
+   show the four axes are four constructs; **input-ablation** shortcut baselines; a **structural**
+   capability-limited ladder; item hygiene (Cronbach's α, per-seed discrimination); bootstrap CIs; and
+   **benchmark/generator versioning** stamped into results. This is the highest-leverage work for the
+   project's credibility — above more rides or more art.
+7. **Revisit commercial models** (D-013) only after meaningful adoption: eval-as-a-service, public
    leaderboard + sponsorship, or a spectator/media product.
 
 ## Candidate ride backlog
