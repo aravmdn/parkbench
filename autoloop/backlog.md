@@ -63,3 +63,30 @@ from the top; each is one-session-sized; Tier B unless it adds engine code (then
 > **Chunk 2 complete.** Next: decompose the next chunk here (live/served profiles instead of fixtures;
 > multiple trainers on-screen; a BYO-agent connector to the world) into 3–5 tasks — that refill is
 > itself a valid task.
+
+## Now (trust track — validity, roadmap #6)
+
+The validity harness landed (D-055, `parkbench validity`, [`../docs/12-validity.md`](../docs/12-validity.md)):
+each ride is proven to discriminate **known** ability + resist the **known** reward-hacker. What's left
+is the deeper construct-validity evidence. Pull from the top; each is one-session-sized; engine work is
+Tier A (stdlib-only, keep `pytest` green + baselines byte-identical).
+
+- [ ] `convergent-validity` — **(highest leverage — do first)** Show the ride scores correlate with a
+  measure already trusted. Offline-friendly first cut: correlate the two **social** rides
+  (negotiation, commons) across a shared agent set, and build the **discriminant** cross-check
+  (same-axis correlation must exceed cross-axis) — an MTMM/HTMT-style matrix over the four axes, so the
+  radar is shown to measure four *distinct* constructs, not one measured four times. **Done when:**
+  `parkbench validity` (or a new sub-report) emits the convergent correlation + a discriminant matrix
+  with same-axis > cross-axis, covered by tests (Tier A).
+- [ ] `ablation-baseline` — Re-run the best agent on a **blanked/degraded observation** and require its
+  score to collapse (the single best shortcut detector). Needs a per-ride "degraded scenario" hook.
+  **Done when:** each ride reports an ablation gap and a test asserts `score_ablated << score_full` (Tier A).
+- [ ] `structural-ladder` — A capability-limited ability ladder (bounded lookahead / injected
+  observation noise) as a cross-check that the ride rewards capability, not "amount of randomness".
+  **Done when:** the structural ladder reproduces ρ ≥ 0.9 on the fast rides (Tier A).
+- [ ] `item-hygiene` — Cronbach's α + per-seed **item discrimination** (point-biserial), flagging/pruning
+  scenarios that don't separate ability. **Done when:** the harness reports α + per-item discrimination
+  and a test asserts no negative-discrimination item is retained (Tier A).
+- [ ] `bootstrap-and-versioning` — Replace the normal-approx CI with a stdlib **bootstrap** CI, and stamp
+  a **benchmark/generator version** into every `--json` result. **Done when:** results carry a version
+  string + bootstrap CIs, covered by tests (Tier A).

@@ -168,8 +168,18 @@ discrimination fails CI.
 
 This harness is a real down-payment, not the finish line. It proves each ride discriminates *known*
 ability and resists the *known* reward-hacker; it does **not** yet prove the tasks resemble
-real-world capability, nor that the four axes are four distinct constructs. In priority order, the
-techniques the research surfaced but which are **not yet implemented** (deferred in D-055):
+real-world capability, nor that the four axes are four distinct constructs.
+
+> **★ Recommended next step — convergent / criterion validity.** The single highest-leverage piece is
+> showing the ride scores **correlate with a measure already trusted** (an established benchmark, or a
+> real task outcome). That is what moves the claim from *"the instrument isn't measuring noise and
+> can't be gamed"* (what D-055 proves) to *"a high Parkbench score means real capability"* (what the
+> vision needs). It is item 4 below on effort-ordered grounds, but it is **first on
+> leverage-ordered grounds** — pick it up before the others. Queued in
+> [`../autoloop/backlog.md`](../autoloop/backlog.md).
+
+In (effort) priority order, the techniques the research surfaced but which are **not yet implemented**
+(deferred in D-055):
 
 1. **Input-ablation / shortcut baseline** — re-run the best agent on a *blanked* observation and
    require its score to collapse. The single best detector of a metric that rewards a shortcut rather
