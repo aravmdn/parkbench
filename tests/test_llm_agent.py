@@ -188,6 +188,45 @@ def test_no_api_key_falls_back_without_network(monkeypatch):
     assert act.type == _heuristic_move(obs).type
 
 
+def test_live_call_counts_and_used_live_llm():
+    """A successful provider response counts as a live call; no keyless warning is emitted."""
+    obs = _obs_for(seed=2)
+    reply = json.dumps({"type": "message", "message": "hi"})
+    agent = LLMAgent(provider=FakeProvider(reply=reply))  # injected provider => intentional
+    agent.reset(0, 8)
+    agent.act(obs)
+    assert agent.live_calls == 1
+    assert agent.fallback_calls == 0
+    assert agent.used_live_llm is True
+
+
+def test_injected_provider_failure_does_not_warn(capsys):
+    """An injected provider that fails still falls back, but is NOT treated as a keyless run."""
+    obs = _obs_for(seed=1)
+    agent = LLMAgent(provider=FakeProvider(raises=True))
+    agent.reset(0, 8)
+    agent.act(obs)
+    assert agent.fallback_calls == 1
+    assert agent.used_live_llm is False
+    assert capsys.readouterr().err == ""  # no keyless warning for an intentional provider
+
+
+def test_no_key_warns_once_to_stderr(monkeypatch, capsys):
+    """A keyless `llm` run warns exactly once to stderr and reports it never used a live LLM."""
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    obs = _obs_for(seed=1)
+    agent = make_agent("llm")  # builds its own keyless OpenRouterProvider
+    agent.reset(0, 8)
+    agent.act(obs)
+    agent.act(obs)  # a second move must NOT warn again
+    err = capsys.readouterr().err
+    assert err.count("OPENROUTER_API_KEY is not set") == 1
+    assert agent.used_live_llm is False
+    assert agent.fallback_calls == 2
+    # The fallback stays byte-identical to the heuristic move (stdout/scores unaffected).
+    assert capsys.readouterr().out == ""
+
+
 def test_openrouter_provider_reads_env(monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     monkeypatch.setenv("OPENROUTER_MODEL", "some/model:free")

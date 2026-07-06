@@ -12,9 +12,12 @@ Design points:
     acting agent's OWN utilities (preferences are private, decision D-016) — and asks
     the model to reply with a single strict JSON action.
   - It MUST degrade gracefully. On any missing key / network / parse / validation
-    failure it silently falls back to the deterministic heuristic move (it reuses
+    failure it falls back to the deterministic heuristic move (it reuses
     ``HeuristicNegotiator``'s logic) so a run never crashes or hangs, and it never
-    prints to stdout.
+    prints to **stdout** (scores + run log stay byte-identical). For *transparency* it
+    tracks ``live_calls`` / ``fallback_calls`` (and ``used_live_llm``) and, when run with
+    no key, prints a one-time notice to **stderr** so a fallback run is never silently
+    mistaken for a real LLM.
 
 Environment variables:
   - ``OPENROUTER_API_KEY``   (required for live calls; absent ⇒ heuristic fallback)
@@ -26,6 +29,7 @@ from __future__ import annotations
 import abc
 import json
 import os
+import sys
 import urllib.error
 import urllib.request
 from typing import Optional
@@ -115,6 +119,21 @@ class LLMAgent(Agent):
         # 'llm' agent is always runnable even without credentials.
         self.provider = provider if provider is not None else OpenRouterProvider()
         self._fallback = HeuristicNegotiator()
+
+        # Fallback transparency: a run must never be silently mislabeled as a live LLM when it is
+        # actually the deterministic heuristic (no key / network / parse failure). We count live vs.
+        # fallen-back moves and, when we ourselves built a keyless provider, warn ONCE to stderr (never
+        # stdout — the run log/scores stay byte-identical). An injected provider is assumed intentional.
+        self.live_calls = 0
+        self.fallback_calls = 0
+        self._built_own_provider = provider is None
+        self._no_key = self._built_own_provider and not getattr(self.provider, "api_key", "")
+        self._warned_no_key = False
+
+    @property
+    def used_live_llm(self) -> bool:
+        """True iff at least one move came from a real provider response (not the fallback)."""
+        return self.live_calls > 0
 
     def reset(self, seed: int = 0, total_rounds: int = 8) -> None:
         super().reset(seed, total_rounds)
@@ -226,11 +245,31 @@ class LLMAgent(Agent):
     def act(self, obs: Observation) -> Action:
         try:
             text = self.provider.complete(self.build_messages(obs), max_tokens=256)
-            return self.parse_action(text, obs)
+            action = self.parse_action(text, obs)
+            self.live_calls += 1
+            return action
         except Exception:
             # Any failure (no key, network, timeout, bad/parse, validation) -> a safe,
-            # deterministic move. Never print, never raise: a run must not crash/hang.
+            # deterministic move. Never raise: a run must not crash/hang.
+            self.fallback_calls += 1
+            self._warn_keyless_once()
             return self._fallback.act(obs)
+
+    def _warn_keyless_once(self) -> None:
+        """Emit a single stderr notice when the 'llm' agent is running with no API key.
+
+        Without this, a keyless ``parkbench run --agent llm`` prints heuristic numbers under the
+        ``llm`` label with no signal that it never called a model — a trust footgun. We warn once per
+        agent instance, only to **stderr** (stdout and the run log stay byte-identical), and only when
+        *we* built the keyless provider (an injected provider is assumed intentional, e.g. tests).
+        """
+        if self._no_key and not self._warned_no_key:
+            self._warned_no_key = True
+            print(
+                "[parkbench] llm agent: OPENROUTER_API_KEY is not set — falling back to the "
+                "deterministic heuristic. This run is NOT a live LLM; set the key for a real run.",
+                file=sys.stderr,
+            )
 
 
 def _extract_json_object(text: str) -> dict:
