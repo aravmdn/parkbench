@@ -148,10 +148,31 @@ shape, which varies under D-032). Off-record runs also get a `__off_record` dire
   object: `{"type":"offer"|"accept"|"message","levels":[...],"message":"..."}`. That JSON
   is parsed and validated into a `protocol.Action` (offers must have one in-range integer
   level per issue).
-- **Graceful degradation:** on *any* missing key / network / timeout / parse / validation
-  error it logs nothing to stdout and falls back to the deterministic `HeuristicNegotiator`
-  move, so a run never crashes or hangs. With no API key the `llm` agent is still runnable
-  (it simply behaves like the heuristic).
+- **Graceful degradation, transparently (D-030, hardened):** on *any* missing key / network /
+  timeout / parse / validation error it falls back to the deterministic `HeuristicNegotiator`
+  move, so a run never crashes or hangs, and it logs **nothing to stdout** (scores + run log stay
+  byte-identical). Because a silent fallback would let a keyless run print heuristic numbers under
+  the `llm` label — a trust footgun — the agent also tracks `live_calls` / `fallback_calls`
+  (and `used_live_llm`) and, when it built its own **keyless** provider, prints a **one-time
+  stderr notice** that the run is a fallback, not a live LLM. An *injected* provider (e.g. in tests)
+  is assumed intentional and never triggers the notice.
+
+### Running it live
+
+A live run needs **both** an API key **and** outbound network egress to the provider:
+
+```sh
+export OPENROUTER_API_KEY=sk-...
+parkbench run --agent llm --seed 1        # stderr stays quiet ⇒ it really called the model
+```
+
+If `OPENROUTER_API_KEY` is unset you'll see the one-time stderr fallback notice above. Note that a
+**sandboxed environment may block egress** to `openrouter.ai` at the network-policy layer (e.g. the
+cloud build environment denies it with a proxy `403`); there the `llm` agent falls back regardless of
+the key. Run live agents where the provider host is reachable, or point `OPENROUTER_MODEL` /
+`OpenRouterProvider(url=...)` at an allowed endpoint. The key is a secret: keep it in a **gitignored
+`.env`** (auto-loaded, D-033) or the environment — never commit it, and it is deliberately excluded
+from the agent's identity hash (D-038).
 
 ### Environment variables
 
