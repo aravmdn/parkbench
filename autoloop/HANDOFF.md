@@ -8,13 +8,22 @@
 ---
 
 **Updated:** 2026-07-08
-**Loop state:** IDLE
+**Loop state:** TASK IN PROGRESS
 
-**Active task:** — (none)
-**Acceptance criteria:** —
-**Task branch:** — (none active; local-driver laps use `autoloop/task-<slug>` → land on `main`, D-051)
-**Tree state:** clean · on `main`
+**Active task:** `convergent-validity` — MTMM/HTMT convergent+discriminant matrix over the four axes.
+**Acceptance criteria:** `parkbench validity` emits the convergent correlation (social pair
+negotiation×commons) + a discriminant matrix where the social same-axis correlation exceeds its
+cross-axis (Campbell-Fiske row/column) correlations; new asserting tests; pytest green; baselines
+byte-identical (purely additive measurement — no scoring/agent/ride edits).
+**Task branch:** `autoloop/task-convergent-validity`
+**Tree state:** clean · branch created off `main`
 **Last durable commit:** (see `git log -1`)
+
+**Findings (probe on eval seeds 4000-4007, roster random/greedy/heuristic — shared across ALL rides
+incl. negotiation, which has no `optimal`):** social pair negotiation×commons ρ=+1.000; each
+social-vs-(economic|safety) ρ=+0.500 ⇒ Campbell-Fiske discriminant PASSES. Structural limitation to
+document: economic×safety (both single-ride axes) also ρ=+1.000 over this tiny roster — cannot yet be
+shown distinct; the only true within-axis pair today is social.
 
 **Loop / active driver (D-056):** the owner activated the **local `/loop` driver** (D-051 model) as the
 active driver on 2026-07-08. Setup + the standing driver/worker prompt: `autoloop/LOCAL_DRIVER_PROMPT.md`.
