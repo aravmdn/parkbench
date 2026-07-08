@@ -71,13 +71,14 @@ each ride is proven to discriminate **known** ability + resist the **known** rew
 is the deeper construct-validity evidence. Pull from the top; each is one-session-sized; engine work is
 Tier A (stdlib-only, keep `pytest` green + baselines byte-identical).
 
-- [ ] `convergent-validity` — **(highest leverage — do first)** Show the ride scores correlate with a
-  measure already trusted. Offline-friendly first cut: correlate the two **social** rides
-  (negotiation, commons) across a shared agent set, and build the **discriminant** cross-check
-  (same-axis correlation must exceed cross-axis) — an MTMM/HTMT-style matrix over the four axes, so the
-  radar is shown to measure four *distinct* constructs, not one measured four times. **Done when:**
-  `parkbench validity` (or a new sub-report) emits the convergent correlation + a discriminant matrix
-  with same-axis > cross-axis, covered by tests (Tier A).
+- [x] `convergent-validity` — Show the ride scores correlate with a measure already trusted. Offline
+  first cut: correlate the two **social** rides (negotiation, commons) across a shared agent set + a
+  **discriminant** cross-check (same-axis correlation must exceed cross-axis) — an MTMM matrix over the
+  four axes. ✅ landed (D-057) — `parkbench validity` (+`--json`) emits the ride×ride Spearman matrix
+  over roster `{random,greedy,heuristic}`: social pair ρ=+1.00 > every social cross-axis ρ=+0.50 ⇒
+  discriminant PASS (Campbell-Fiske, scoped to the social row/column). +6 tests, 195 green, baselines
+  byte-identical. Honest limits (N=3, only social has a within-axis pair, ≥8 seeds to stabilize) in
+  `docs/12-validity.md`.
 - [ ] `ablation-baseline` — Re-run the best agent on a **blanked/degraded observation** and require its
   score to collapse (the single best shortcut detector). Needs a per-ride "degraded scenario" hook.
   **Done when:** each ride reports an ablation gap and a test asserts `score_ablated << score_full` (Tier A).

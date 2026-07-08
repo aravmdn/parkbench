@@ -459,6 +459,207 @@ def gaming_check(seeds) -> GamingResult:
 
 
 # --------------------------------------------------------------------------------------------------
+# Convergent / discriminant validity: is the radar four constructs, or one measured four times? (D-057)
+# --------------------------------------------------------------------------------------------------
+#
+# The known-ability ladder (above) proves each ride *discriminates known ability* and resists the
+# known reward-hacker. It says nothing about whether the four radar axes measure four *distinct*
+# things. That is the multitrait-multimethod (MTMM) question, and Campbell & Fiske's two criteria are:
+#
+#   • CONVERGENT — two measures of the *same* construct should correlate (here: the two social rides,
+#     negotiation & commons, should rank a shared agent roster the same way).
+#   • DISCRIMINANT — that same-construct ("monotrait") correlation should exceed the correlations of
+#     either measure with *different* constructs ("heterotrait") in its own row/column of the matrix.
+#
+# We assemble a ride×ride Spearman matrix over a roster scorable on *every* ride. The catch: the
+# negotiation ride's roster has no `optimal` (it is a bilateral ride; see agents.make_agent), so the
+# roster shared across ALL rides — the only one that keeps the matrix square incl. negotiation — is
+# {random, greedy, heuristic}, N = 3. This is a genuine down-payment, not proof: with three of four
+# axes carrying only one ride each, the *only* true within-axis pair we can test today is social, and
+# N is tiny. The harness is deliberately honest about that (see docs/12-validity.md).
+
+# Scorable on every ride incl. negotiation (which has no `optimal`); the shared MTMM roster.
+CONVERGENT_ROSTER = ("random", "greedy", "heuristic")
+# The two rides that share the social axis — the one within-axis (monotrait) pair available today.
+SOCIAL_PAIR = ("negotiation", "commons")
+# Fast rides in the matrix (coding is opt-in: it spawns a subprocess per task).
+CONVERGENT_RIDES = ("negotiation", "commons", "economic", "safety")
+
+
+def _pair_key(a: str, b: str) -> str:
+    """Order-independent key for a ride pair, so ``corr(a, b) == corr(b, a)``."""
+    return "|".join(sorted((a, b)))
+
+
+def _ride_agent_means(ride, agents, seeds) -> dict[str, float]:
+    """Mean headline score of each agent on one ride across ``seeds`` (rides it can't score are skipped).
+
+    Uses the ride's *real* ``evaluate(agent, seed)`` — the exact machinery a live agent is scored by —
+    so the matrix measures the instrument, not a mock. A ride that has no roster entry for an agent
+    (raises ``KeyError``/``ValueError``, e.g. negotiation for ``optimal``) simply omits that agent.
+    """
+    row: dict[str, float] = {}
+    for a in agents:
+        vals: list[float] = []
+        for s in seeds:
+            try:
+                vals.append(ride.evaluate(a, s).score)
+            except (KeyError, ValueError):  # ride's roster doesn't include this agent (D-035)
+                pass
+        if vals:
+            row[a] = statistics.fmean(vals)
+    return row
+
+
+@dataclass(frozen=True)
+class ConvergentValidity:
+    """The MTMM/HTMT verdict: convergent social correlation + discriminant ride×ride matrix (D-057)."""
+
+    agents: tuple[str, ...]
+    rides: tuple[str, ...]
+    axes: dict[str, str]  # ride -> axis
+    scores: dict[str, dict[str, float]]  # ride -> {agent -> mean score over eval seeds}
+    correlations: dict[str, float]  # _pair_key(a, b) -> Spearman rho over the shared roster
+    n_seeds: int
+    seed_base: int
+
+    def _pairs(self):
+        for i in range(len(self.rides)):
+            for j in range(i + 1, len(self.rides)):
+                yield self.rides[i], self.rides[j]
+
+    def corr(self, a: str, b: str) -> float:
+        return self.correlations[_pair_key(a, b)]
+
+    @property
+    def monotrait(self) -> list[tuple[str, str, float]]:
+        """Same-axis ride pairs and their correlation (should be high — convergent)."""
+        return [(a, b, self.corr(a, b)) for a, b in self._pairs() if self.axes[a] == self.axes[b]]
+
+    @property
+    def heterotrait(self) -> list[tuple[str, str, float]]:
+        """Different-axis ride pairs and their correlation (should be lower — discriminant)."""
+        return [(a, b, self.corr(a, b)) for a, b in self._pairs() if self.axes[a] != self.axes[b]]
+
+    @property
+    def has_social_pair(self) -> bool:
+        a, b = SOCIAL_PAIR
+        return a in self.rides and b in self.rides
+
+    @property
+    def social_convergent(self) -> float:
+        """The convergent value: Spearman between the two social rides (0.0 if the pair is absent)."""
+        if not self.has_social_pair:
+            return 0.0
+        return self.corr(*SOCIAL_PAIR)
+
+    @property
+    def social_heterotrait(self) -> list[tuple[str, str, float]]:
+        """Cross-axis correlations sharing a ride with the social pair (Campbell-Fiske row/column).
+
+        These are the values the social convergent correlation must beat to claim discriminant
+        validity — the heterotrait entries in negotiation's and commons's own row and column. (A
+        high heterotrait pair *elsewhere* in the matrix, e.g. economic×safety, is not part of this
+        comparison; it is the visible signature of the single-ride-axis limitation, not a refutation.)
+        """
+        soc = set(SOCIAL_PAIR)
+        return [
+            (a, b, self.corr(a, b))
+            for a, b in self._pairs()
+            if self.axes[a] != self.axes[b] and (a in soc or b in soc)
+        ]
+
+    @property
+    def max_social_heterotrait(self) -> float:
+        vals = [c for *_, c in self.social_heterotrait]
+        return max(vals) if vals else 0.0
+
+    @property
+    def discriminant_ok(self) -> bool:
+        """Campbell-Fiske: the social monotrait correlation exceeds every heterotrait value in its
+        own row/column. True ⇒ negotiation & commons agree with each other *more* than either agrees
+        with a different-axis ride, i.e. the social axis is a distinct construct over this roster."""
+        return self.has_social_pair and bool(self.social_heterotrait) and (
+            self.social_convergent > self.max_social_heterotrait
+        )
+
+    def to_dict(self) -> dict:
+        return {
+            "agents": list(self.agents),
+            "n_seeds": self.n_seeds,
+            "seed_base": self.seed_base,
+            "social_convergent": round(self.social_convergent, 4),
+            "max_social_heterotrait": round(self.max_social_heterotrait, 4),
+            "discriminant_ok": self.discriminant_ok,
+            "rides": [{"ride": r, "axis": self.axes[r]} for r in self.rides],
+            "scores": {
+                r: {a: round(self.scores[r][a], 4) for a in self.scores[r]} for r in self.rides
+            },
+            "matrix": [
+                {
+                    "a": a,
+                    "b": b,
+                    "rho": round(self.corr(a, b), 4),
+                    "same_axis": self.axes[a] == self.axes[b],
+                }
+                for a, b in self._pairs()
+            ],
+        }
+
+
+def build_convergent_validity(
+    n_seeds: int = DEFAULT_N_SEEDS,
+    seed_base: int = EVAL_SEED_BASE,
+    include_coding: bool = False,
+) -> ConvergentValidity:
+    """Assemble the ride×ride correlation matrix over the shared roster on the held-out eval seeds.
+
+    Scores each agent in :data:`CONVERGENT_ROSTER` on each ride's *real* ``evaluate`` (mean over the
+    held-out seeds), then computes a Spearman correlation for every ride pair. Fast rides only by
+    default; the subprocess-graded coding ride is opt-in and, when included, uses a bounded seed slice.
+    """
+    from .rides import RIDE_REGISTRY
+
+    seeds = eval_seeds(n_seeds, seed_base)
+    agents = CONVERGENT_ROSTER
+    ride_keys = list(CONVERGENT_RIDES)
+
+    scores: dict[str, dict[str, float]] = {}
+    axes: dict[str, str] = {}
+    for rk in ride_keys:
+        ride = RIDE_REGISTRY[rk]
+        axes[rk] = ride.axis
+        scores[rk] = _ride_agent_means(ride, agents, seeds)
+
+    if include_coding and "coding" in RIDE_REGISTRY:
+        ride_keys.append("coding")
+        coding = RIDE_REGISTRY["coding"]
+        axes["coding"] = coding.axis
+        # Bound the opt-in subprocess ride to a few seeds — the correlation is *within* the ride over
+        # agents, so a lighter seed set for coding is fine (rides need not share identical seed sets).
+        scores["coding"] = _ride_agent_means(coding, agents, seeds[: min(3, len(seeds))])
+
+    correlations: dict[str, float] = {}
+    for i in range(len(ride_keys)):
+        for j in range(i + 1, len(ride_keys)):
+            a, b = ride_keys[i], ride_keys[j]
+            shared = [ag for ag in agents if ag in scores[a] and ag in scores[b]]
+            xs = [scores[a][ag] for ag in shared]
+            ys = [scores[b][ag] for ag in shared]
+            correlations[_pair_key(a, b)] = spearman(xs, ys)
+
+    return ConvergentValidity(
+        agents=tuple(agents),
+        rides=tuple(ride_keys),
+        axes=axes,
+        scores=scores,
+        correlations=correlations,
+        n_seeds=n_seeds,
+        seed_base=seed_base,
+    )
+
+
+# --------------------------------------------------------------------------------------------------
 # The whole report.
 # --------------------------------------------------------------------------------------------------
 
@@ -470,6 +671,7 @@ class ValidityReport:
     rungs: int
     rides: list[RideValidity] = field(default_factory=list)
     gaming: GamingResult | None = None
+    convergent: ConvergentValidity | None = None
 
     @property
     def all_valid(self) -> bool:
@@ -487,8 +689,10 @@ class ValidityReport:
             "all_valid": self.all_valid,
             "mean_spearman": round(self.mean_spearman, 4),
             "gaming_resistant": bool(self.gaming and self.gaming.caught),
+            "discriminant_ok": bool(self.convergent and self.convergent.discriminant_ok),
             "rides": [r.to_dict() for r in self.rides],
             "gaming": self.gaming.to_dict() if self.gaming else None,
+            "convergent": self.convergent.to_dict() if self.convergent else None,
         }
 
 
@@ -525,7 +729,12 @@ def build_validity_report(
     # The gaming check runs the full radar (incl. the subprocess-graded coding ride) per agent/seed,
     # so a few held-out seeds are plenty — the reward-hacker's breach is stable across seeds.
     gaming = gaming_check(seeds[: min(3, len(seeds))])
-    return ValidityReport(seed_base, n_seeds, rungs, rides, gaming)
+
+    # Convergent/discriminant MTMM matrix (D-057): are the four axes distinct constructs, or one
+    # measured four times? Fast rides only unless coding is opted in; runs on the same held-out seeds.
+    convergent = build_convergent_validity(n_seeds, seed_base, include_coding)
+
+    return ValidityReport(seed_base, n_seeds, rungs, rides, gaming, convergent)
 
 
 # --------------------------------------------------------------------------------------------------
@@ -584,5 +793,34 @@ def render_validity_report(report: ValidityReport) -> str:
         lines.append(
             f"    -> reward-hacker 'greedy' is {verdict}{extra}: economic star ({g.rows['greedy']['economic']:.3f}) "
             f"but career {g.rows['greedy']['career']:.3f} — Goodhart gap {g.goodhart_gap:.3f}"
+        )
+
+    c = report.convergent
+    if c is not None:
+        lines.append("")
+        lines.append(
+            "  convergent / discriminant validity (are the 4 axes distinct constructs? MTMM, D-057):"
+        )
+        lines.append(f"    roster (scorable on every ride): {', '.join(c.agents)}  (N={len(c.agents)})")
+        # Score matrix: one row per ride, one column per agent.
+        header = "    ride         axis      " + "".join(f"{a:>10}" for a in c.agents)
+        lines.append(header)
+        for r in c.rides:
+            cells = "".join(f"{c.scores[r].get(a, float('nan')):>10.3f}" for a in c.agents)
+            lines.append(f"    {r:<12} {c.axes[r]:<8}{cells}")
+        lines.append("")
+        lines.append("    ride pair correlations (Spearman rho over the roster):")
+        for a, b, rho in c.monotrait:
+            lines.append(f"      {a:<12} x {b:<12} rho={rho:+.3f}   SAME-AXIS (convergent)")
+        for a, b, rho in c.heterotrait:
+            lines.append(f"      {a:<12} x {b:<12} rho={rho:+.3f}   cross-axis")
+        dv = "PASS" if c.discriminant_ok else "FAIL"
+        lines.append(
+            f"    -> social convergent rho={c.social_convergent:+.3f} vs. max social cross-axis "
+            f"rho={c.max_social_heterotrait:+.3f}  => discriminant {dv}"
+        )
+        lines.append(
+            "       (N is small + 3 of 4 axes have one ride each, so the only within-axis pair is "
+            "social — a down-payment, not proof; see docs/12-validity.md)"
         )
     return "\n".join(lines)

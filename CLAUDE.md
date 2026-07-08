@@ -42,7 +42,19 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 | `docs/05-glossary.md` | Shared vocabulary (ride, house cast, BYO agent, radar profile, …). |
 | `docs/06-v1-architecture.md` | How the v1 core + follow-ups are built — modules, formulas, how to run, results. |
 
-## Current status (2026-07-05)
+## Current status (2026-07-08)
+
+**Trust track — convergent/discriminant validity landed (D-057).** The validity harness now also
+answers the MTMM question *"are the four radar axes four distinct constructs, or one measured four
+times?"* `parkbench validity` emits a **ride × ride Spearman matrix** over the shared roster
+`{random, greedy, heuristic}` (N=3 — the set scorable on *every* ride, since negotiation has no
+`optimal`): the two **social** rides (negotiation, commons) **converge** (ρ = +1.00 — both punish the
+free-rider `greedy`) and that same-axis correlation **strictly exceeds** every social-vs-other-axis
+correlation (+0.50) ⇒ **discriminant PASS** (Campbell-Fiske, scoped to the social pair's row/column).
+Purely additive measurement — **195 passing tests** (+6); baselines byte-identical. Honest limits kept
+in `docs/12-validity.md`: N is tiny, only the social axis has a within-axis pair today (economic×safety
+also ties at +1.00 — the visible signature of single-ride axes), and the matrix stabilizes only at ≥8
+seeds. A real down-payment on convergent/criterion validity, not proof.
 
 **Trust track — the validity harness landed (D-055).** The project's central claim — that a ride's
 score *measures the capability it is named for* (**construct validity**) — is now a **measurement**,
@@ -109,9 +121,9 @@ switch: disable/delete the routine at claude.ai/code/routines.
 **Active driver = the local `/loop` loop (D-056, 2026-07-08).** The owner activated the **local driver
 (D-051 model)** as the running autoloop; its standing driver/worker prompt is `autoloop/LOCAL_DRIVER_PROMPT.md`
 (a thin `/loop` driver spawns one fresh worker subagent per lap; laps work `autoloop/task-<slug>` and land
-on `main` gate-free). The **cloud-cron routine (D-054) stays documented but unarmed**. The baton's next task
-is the **trust track** top item **`convergent-validity`** (roadmap #6, Tier A). Kill switch: stop the
-`/loop` session.
+on `main` gate-free). The **cloud-cron routine (D-054) stays documented but unarmed**. `convergent-validity`
+has since landed (D-057); the baton's next trust-track task is **`ablation-baseline`** (roadmap #6, Tier A).
+Kill switch: stop the `/loop` session.
 
 ---
 
@@ -139,7 +151,7 @@ zero-dependency page `viewer/park.html` (the themed entrance). Most recently, on
 track (roadmap #5)**: the HTTP/JSON wire protocol is now **documented as a language-agnostic spec**
 (D-047, `docs/09-byo-protocol.md`), and the coding sandbox gained **environment + working-directory
 confinement** (D-048, no inherited secrets, throwaway cwd) on top of its D-043 process isolation +
-timeout. Reproducible: **189 passing tests**. Design + formulas: `docs/06-v1-architecture.md`,
+timeout. Reproducible: **195 passing tests**. Design + formulas: `docs/06-v1-architecture.md`,
 `docs/07-multi-ride.md`, `docs/08-theming.md`, and `docs/09-byo-protocol.md`.
 
 > **⚠️ Superseded by D-054 — see the 2026-07-05 block above.** The autoloop is now an **hourly
@@ -185,8 +197,8 @@ the disabled cloud routine at claude.ai/code/routines).
   D-048); next is protocol *hardening* for public hosting (auth/TLS/rate limiting + a JSON Schema), BYO
   connectors for the solo rides, and a **full OS sandbox** (network/abs-path/resource confinement) for
   untrusted code — the one anti-gaming item still open. LLM house personas remain a fast-follow (D-024).
-- **Verify:** `uv venv && uv pip install -e ".[dev]"`, then `pytest` (189 pass; the coding + validity
-  tests spawn subprocesses, so the suite now takes ~1.5 min),
+- **Verify:** `uv venv && uv pip install -e ".[dev]"`, then `pytest` (195 pass; the coding + validity
+  tests spawn subprocesses, so the suite takes ~3–4 min),
   `parkbench map` (the themed park map), `parkbench run --agent heuristic --seed 1`,
   `parkbench economic --agent greedy`, `parkbench coding --agent heuristic`,
   `parkbench safety --agent heuristic`, `parkbench commons --agent optimal` (the multi-agent

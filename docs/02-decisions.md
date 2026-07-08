@@ -1020,3 +1020,47 @@ cloud trigger, keeps every session's context small (fresh worker per lap), and l
 **Status:** the **cloud-cron routine (D-054) remains documented but UNARMED** (`ROUTINE_PROMPT.md`); switch
 back to it by arming that trigger if desired. Kill switch: stop the `/loop` session. Extends D-049 / D-051
 / D-052 / D-054.
+
+### D-057 · 2026-07-08 · Convergent / discriminant validity — is the radar four constructs, or one measured four times?
+**Decision:** Extend the validity harness (`src/parkbench/validity.py`, `parkbench validity`) with a
+**convergent / discriminant (MTMM / Campbell-Fiske) analysis** — the highest-leverage of D-055's
+deferred gaps. It assembles a **ride × ride Spearman correlation matrix** over a **shared agent
+roster**, on the same held-out eval seeds (`EVAL_SEED_BASE = 4000…`). **Convergent:** the two rides on
+the *social* axis (negotiation, commons) should rank the roster the same way (measure the same
+construct). **Discriminant (Campbell-Fiske):** that same-axis ("monotrait") correlation must exceed the
+correlations of either social ride with *different-axis* rides in its own **row/column** of the matrix
+("heterotrait"). Wired into both the text report and `--json` (new `convergent` block + a top-level
+`discriminant_ok`), covered by **6 new asserting tests** (`tests/test_validity.py`).
+**The shared roster is `{random, greedy, heuristic}` (N = 3)** — deliberately, because the **negotiation
+ride's roster has no `optimal`** (it is a bilateral ride scored via `agents.make_agent`, unlike the solo
+rides). That intersection is the only roster that keeps the matrix square *including* negotiation, and
+the harness drops `optimal` from negotiation gracefully (the same `KeyError`/`ValueError` skip the radar
+uses).
+**Results (held-out seeds 4000–4007, N = 3):** the social pair converges at **ρ = +1.00** (both rides
+rank heuristic > random > greedy — both punish the free-rider `greedy`), while every social-vs-other-axis
+correlation sits at **ρ = +0.50** ⇒ **discriminant PASS** (social convergence strictly exceeds its
+row/column heterotrait). **195 passing tests** (+6); baselines byte-identical (purely additive
+measurement — no ride/scoring/agent code touched).
+**Honest limitations (documented in [`12-validity.md`](12-validity.md), not hidden):** (a) N = 3 is
+tiny; (b) three of four axes carry only **one ride**, so the *only* true within-axis pair testable today
+is **social** — the discriminant claim is scoped to the social pair's row/column, not the whole matrix;
+(c) the non-social pair **economic × safety** also lands at ρ = +1.00 — a *heterotrait* pair that is high
+precisely *because* those single-ride axes cannot yet be shown distinct over three agents (it is the
+visible signature of the limitation, not a refutation, and is excluded from the Campbell-Fiske
+comparison); (d) the matrix is **seed-sensitive below ~8 seeds** — `greedy` and `random` are near-tied on
+commons (~0.46 vs ~0.50) and safety, so at 4–6 seeds their ranks flip and both criteria wobble; it
+stabilizes at **≥ 8 held-out seeds** (the CLI default and `DEFAULT_N_SEEDS = 12`). This is a genuine
+down-payment on convergent/criterion validity, **not proof** — the vision-completing version needs a
+second ride per non-social axis and/or correlation against an *external* trusted benchmark.
+**Why:** D-055 proved each ride discriminates *known* ability and resists the *known* reward-hacker, but
+said nothing about whether the four radar axes are four *distinct* things. Showing the social rides agree
+with each other more than with other axes is the first evidence the radar measures four constructs, not
+one measured four times — the move from "the instrument isn't noise and can't be gamed" toward "a high
+Parkbench score means real capability."
+**Rejected / deferred:** using a larger roster incl. `optimal` (impossible without a negotiation
+`optimal` — would require new ride/agent code, out of scope for additive measurement); running the
+`ε`-optimal mix ladder as extra subjects (the ladder has no negotiation spec, so it can't enlarge the
+social pair's N); folding the coding ride into the default matrix (kept opt-in, subprocess-graded).
+Remaining D-055 gaps unchanged (`ablation-baseline`, `structural-ladder`, `item-hygiene`,
+`bootstrap-and-versioning`). Extends D-055; builds on D-037 (radar) / D-041 (career) / D-045 (2nd social
+ride).

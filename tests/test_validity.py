@@ -107,16 +107,117 @@ def test_reward_hacker_is_caught():
     assert g.goodhart_gap > 0.5  # a wide gap between flashy capability and kept career
 
 
+# --- convergent / discriminant validity (MTMM/HTMT, D-057) ---------------------------------------
+
+
+def _synthetic_convergent(corr_overrides=None):
+    """A hand-built matrix so the Campbell-Fiske row/column logic can be tested without ride runs."""
+    rides = ("negotiation", "commons", "economic", "safety")
+    axes = {
+        "negotiation": "social",
+        "commons": "social",
+        "economic": "economic",
+        "safety": "safety",
+    }
+    scores = {r: {"random": 0.1, "greedy": 0.2, "heuristic": 0.9} for r in rides}
+    corr = {
+        V._pair_key("negotiation", "commons"): 1.0,  # social monotrait (convergent)
+        V._pair_key("negotiation", "economic"): 0.5,
+        V._pair_key("negotiation", "safety"): 0.5,
+        V._pair_key("commons", "economic"): 0.5,
+        V._pair_key("commons", "safety"): 0.5,
+        V._pair_key("economic", "safety"): 1.0,  # a HIGH heterotrait pair OUTSIDE the social row/col
+    }
+    if corr_overrides:
+        corr.update({V._pair_key(*k): v for k, v in corr_overrides.items()})
+    return V.ConvergentValidity(
+        agents=("random", "greedy", "heuristic"),
+        rides=rides,
+        axes=axes,
+        scores=scores,
+        correlations=corr,
+        n_seeds=8,
+        seed_base=V.EVAL_SEED_BASE,
+    )
+
+
+def test_pair_key_is_order_independent():
+    assert V._pair_key("a", "b") == V._pair_key("b", "a")
+
+
+def test_discriminant_uses_only_the_social_row_and_column():
+    """Campbell-Fiske: a high heterotrait pair *elsewhere* (economic×safety=1.0) must NOT sink the
+    social discriminant — only correlations sharing a ride with the social pair count."""
+    cv = _synthetic_convergent()
+    assert cv.social_convergent == 1.0
+    assert cv.monotrait == [("negotiation", "commons", 1.0)]
+    assert ("economic", "safety", 1.0) in cv.heterotrait  # present in the full matrix…
+    # …but not in the social row/column, so it does not raise the bar the social pair must clear.
+    assert cv.max_social_heterotrait == 0.5
+    assert cv.discriminant_ok is True
+
+
+def test_discriminant_fails_when_a_social_cross_axis_pair_ties_the_monotrait():
+    """If a social ride correlates with a different-axis ride as strongly as with its own axis,
+    the social axis is NOT shown distinct — discriminant must report failure."""
+    cv = _synthetic_convergent(corr_overrides={("commons", "safety"): 1.0})
+    assert cv.max_social_heterotrait == 1.0
+    assert cv.discriminant_ok is False  # 1.0 > 1.0 is false — no strict separation
+
+
+def test_negotiation_has_no_optimal_so_shared_roster_is_three():
+    """The reason N=3: negotiation's roster has no `optimal`, so it is dropped from the shared set —
+    while commons (also social) *does* score optimal. Documents the structural limitation."""
+    from parkbench.rides import RIDE_REGISTRY
+
+    seeds = V.eval_seeds(2)
+    roster = ("random", "greedy", "heuristic", "optimal")
+    neg = V._ride_agent_means(RIDE_REGISTRY["negotiation"], roster, seeds)
+    com = V._ride_agent_means(RIDE_REGISTRY["commons"], roster, seeds)
+    assert "optimal" not in neg  # negotiation cannot score `optimal`
+    assert "optimal" in com  # commons can
+    assert set(V.CONVERGENT_ROSTER) == {"random", "greedy", "heuristic"}
+
+
+def test_convergent_and_discriminant_on_held_out_seeds():
+    """The real matrix on held-out eval seeds: the two social rides converge, and that convergence
+    exceeds every social-vs-other-axis correlation (discriminant). Stable at >= 8 seeds."""
+    cv = V.build_convergent_validity(n_seeds=8)
+    assert cv.agents == ("random", "greedy", "heuristic")
+    assert cv.social_convergent >= 0.9  # negotiation & commons rank the roster near-identically
+    # Every heterotrait value in the social row/column is strictly below the social convergent value.
+    for a, b, rho in cv.social_heterotrait:
+        assert cv.social_convergent > rho, (a, b, rho)
+    assert cv.discriminant_ok is True
+
+
+def test_convergent_is_deterministic():
+    a = V.build_convergent_validity(n_seeds=4)
+    b = V.build_convergent_validity(n_seeds=4)
+    assert a.scores == b.scores
+    assert a.correlations == b.correlations
+
+
 # --- the assembled report ------------------------------------------------------------------------
 
 
 def test_report_builds_and_serializes():
-    report = V.build_validity_report(n_seeds=4, rungs=4, include_coding=False)
+    report = V.build_validity_report(n_seeds=8, rungs=4, include_coding=False)
     assert report.all_valid
     assert report.gaming is not None and report.gaming.caught
     d = report.to_dict()
     assert d["all_valid"] is True
     assert d["gaming_resistant"] is True
     assert {r["ride"] for r in d["rides"]} == {"economic", "safety", "commons"}
-    # Rendering is pure text and never raises.
-    assert "validity report" in V.render_validity_report(report)
+    # The convergent/discriminant block is present and passes on the default (>= 8) seed count.
+    assert report.convergent is not None
+    assert d["discriminant_ok"] is True
+    cd = d["convergent"]
+    assert cd["social_convergent"] >= 0.9
+    assert cd["discriminant_ok"] is True
+    assert {r["ride"] for r in cd["rides"]} == {"negotiation", "commons", "economic", "safety"}
+    assert len(cd["matrix"]) == 6  # 4 rides -> C(4,2) = 6 pairs
+    # Rendering is pure text and never raises, and surfaces the discriminant verdict.
+    text = V.render_validity_report(report)
+    assert "validity report" in text
+    assert "discriminant" in text
