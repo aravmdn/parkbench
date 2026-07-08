@@ -1,6 +1,6 @@
 # 12 — Validity: does a ride actually *measure capability*?
 
-**Status:** Living · **Last updated:** 2026-07-05 · **Decision:** [D-055](02-decisions.md)
+**Status:** Living · **Last updated:** 2026-07-08 · **Decisions:** [D-055](02-decisions.md), [D-057](02-decisions.md)
 
 The vision ([`00-vision.md`](00-vision.md)) stakes everything on one word: **trust**. "Success = it
 becomes a *credible* place to measure agents." Up to D-054 the project earned the *reproducible* half
@@ -129,6 +129,78 @@ static suites like HumanEval — there is no fixed artifact to leak.)
 
 ---
 
+## Convergent / discriminant validity — four constructs, or one measured four times? (D-057)
+
+The known-ability ladder proves each ride discriminates *known* ability and catches the *known*
+reward-hacker. It says nothing about whether the radar's **four axes are four distinct things**. That
+is the **multitrait-multimethod (MTMM)** question, and Campbell & Fiske's two criteria answer it:
+
+- **Convergent** — two measures of the *same* construct should correlate. The social axis carries
+  **two** rides (negotiation, commons, since D-045), so they should rank a shared agent roster the
+  same way.
+- **Discriminant** — that same-construct ("monotrait") correlation should **exceed** the correlations
+  of either measure with *different-construct* rides in its own **row and column** of the matrix
+  ("heterotrait"). If negotiation agrees with commons more than with the economic or safety rides, the
+  social axis is a distinct construct, not a relabeling of general competence.
+
+The harness (`build_convergent_validity`) assembles a **ride × ride Spearman matrix** by scoring a
+shared roster on each ride's *real* `evaluate(agent, seed)` (mean over the held-out eval seeds) and
+correlating every ride pair. `parkbench validity` prints it (score matrix + pairwise ρ + the
+discriminant verdict) and `--json` carries it under a `convergent` block plus a top-level
+`discriminant_ok`.
+
+**The shared roster is `{random, greedy, heuristic}` — N = 3, and deliberately so.** The **negotiation
+ride has no `optimal`** in its roster (it is a bilateral ride scored through `agents.make_agent`,
+unlike the solo rides, which each ship an `optimal`). The only roster that keeps the matrix square
+*while including negotiation* is the intersection of every ride's roster — those three agents. The
+harness drops `optimal` from negotiation gracefully (the same `KeyError`/`ValueError` skip the radar
+uses).
+
+**Result (held-out seeds 4000–4007):**
+
+```
+ride         axis          random    greedy heuristic
+negotiation  social         0.881     0.105     0.983
+commons      social         0.504     0.458     0.951
+economic     economic       0.713     0.986     0.994
+safety       safety         0.324     0.333     0.667
+
+negotiation x commons    rho=+1.000   SAME-AXIS (convergent)
+negotiation x economic   rho=+0.500   cross-axis
+negotiation x safety     rho=+0.500   cross-axis
+commons     x economic   rho=+0.500   cross-axis
+commons     x safety     rho=+0.500   cross-axis
+economic    x safety     rho=+1.000   cross-axis
+-> social convergent rho=+1.000 vs. max social cross-axis rho=+0.500  => discriminant PASS
+```
+
+The two social rides **converge** (ρ = +1.00 — both rank heuristic > random > greedy; both punish the
+free-rider `greedy`), and that convergence **strictly exceeds** every social-vs-other-axis correlation
+(all +0.50) ⇒ **discriminant PASS**. This is the first evidence the radar's social axis measures
+something the economic/safety axes do not: `greedy` is the economic *star* yet the *worst* social
+agent, so social rank ≠ general rank.
+
+### Honest limitations of this cut (why it's a down-payment, not proof)
+
+- **N = 3 is tiny.** Three points make a rank correlation coarse (it can only take the values 0, ±0.5,
+  ±1). Treat the numbers as directional.
+- **Only one true within-axis pair exists today.** Three of four axes carry a single ride, so the only
+  *monotrait* pair testable is **social**. The discriminant claim is therefore scoped to the social
+  pair's row/column (the standard Campbell-Fiske reading), **not** the whole matrix.
+- **`economic × safety` also lands at ρ = +1.00** — a *heterotrait* pair that is high precisely
+  *because* those two single-ride axes cannot yet be shown distinct over three agents (both rank
+  heuristic > greedy > random). It is the **visible signature of the single-ride-axis limitation**, not
+  a refutation, and is correctly excluded from the social pair's Campbell-Fiske comparison. Giving
+  economic and safety a second ride each is what would let us test *their* distinctness.
+- **Seed-sensitive below ~8 seeds.** `greedy` and `random` are near-tied on commons (~0.46 vs ~0.50)
+  and safety, so at 4–6 seeds their ranks flip and both criteria wobble. The matrix **stabilizes at ≥ 8
+  held-out seeds** (the CLI default; `DEFAULT_N_SEEDS = 12`). The fragility is itself honest evidence
+  of how thin N = 3 is.
+
+The vision-completing version needs either a **second ride per non-social axis** (so every axis has a
+real monotrait pair) or correlation against an **external** trusted benchmark / real task outcome
+(criterion validity). Both are larger efforts than this offline first cut.
+
 ## Results (held-out seeds 4000–4011, 6-rung ladder)
 
 ```
@@ -152,10 +224,10 @@ harder tier. The `coding` ride is real but subprocess-graded (slow), so it is **
 ## How to run
 
 ```bash
-parkbench validity                 # the three fast rides + gaming check (held-out seeds)
-parkbench validity --seeds 16      # more seeds ⇒ tighter CIs ⇒ more resolvable rungs
-parkbench validity --coding        # also validate the (slow) coding ride
-parkbench validity --json          # machine-readable report
+parkbench validity                 # 3 fast rides + gaming check + convergent/discriminant matrix
+parkbench validity --seeds 16      # more seeds ⇒ tighter CIs ⇒ more resolvable rungs (≥8 stabilizes MTMM)
+parkbench validity --coding        # also validate the (slow) coding ride + add it to the matrix
+parkbench validity --json          # machine-readable report (incl. the `convergent` block)
 ```
 
 `tests/test_validity.py` asserts the harness's statistics are correct and that the fast rides are
@@ -167,32 +239,34 @@ discrimination fails CI.
 ## Honest remaining gaps (the validity roadmap)
 
 This harness is a real down-payment, not the finish line. It proves each ride discriminates *known*
-ability and resists the *known* reward-hacker; it does **not** yet prove the tasks resemble
-real-world capability, nor that the four axes are four distinct constructs.
+ability and resists the *known* reward-hacker, and (since D-057) that the social axis is a construct
+distinct from the economic/safety axes over a small roster; it does **not** yet prove the tasks
+resemble real-world capability, nor that *every* axis is distinct (three of four carry a single ride).
 
-> **★ Recommended next step — convergent / criterion validity.** The single highest-leverage piece is
-> showing the ride scores **correlate with a measure already trusted** (an established benchmark, or a
-> real task outcome). That is what moves the claim from *"the instrument isn't measuring noise and
-> can't be gamed"* (what D-055 proves) to *"a high Parkbench score means real capability"* (what the
-> vision needs). It is item 4 below on effort-ordered grounds, but it is **first on
-> leverage-ordered grounds** — pick it up before the others. Queued in
-> [`../autoloop/backlog.md`](../autoloop/backlog.md).
+> **★ Convergent / discriminant — first offline cut landed (D-057).** The MTMM discriminant half is
+> now implemented (section above): the two social rides converge (ρ = +1.00) and that exceeds their
+> cross-axis correlations. What remains for full **criterion validity** is the harder, external half —
+> showing the ride scores **correlate with a measure already trusted** (an established benchmark or a
+> real task outcome) and giving every non-social axis a **second ride** so it, too, has a within-axis
+> pair. That is what would move the claim all the way from *"the axes look distinct over three
+> agents"* to *"a high Parkbench score means real capability"*.
 
-In (effort) priority order, the techniques the research surfaced but which are **not yet implemented**
-(deferred in D-055):
+In (effort) priority order, the techniques the research surfaced but which are **not yet implemented**:
 
 1. **Input-ablation / shortcut baseline** — re-run the best agent on a *blanked* observation and
    require its score to collapse. The single best detector of a metric that rewards a shortcut rather
    than the task (the NLI "hypothesis-only" failure class). Needs per-ride degraded-observation
-   support.
+   support. *(Now the highest-leverage open item; queued next in
+   [`../autoloop/backlog.md`](../autoloop/backlog.md).)*
 2. **Structural capability-limited ladder** — grade ability by *bounded lookahead* or *injected
    observation noise*, not a random mixture, as a cross-check that the ride rewards genuine capability
    and not "amount of randomness."
 3. **Item hygiene** — Cronbach's α + per-seed **item discrimination** (point-biserial), pruning
    scenarios that don't separate ability (an offline, stdlib IRT-flavored check).
-4. **Convergent / discriminant validity** — an MTMM/HTMT matrix: the two social rides (negotiation,
-   commons) should correlate *more* with each other than with the coding/safety axes. Evidence the
-   radar's four axes are four things, not one measured four times.
+4. **Convergent / discriminant validity — ✅ first cut landed (D-057).** MTMM matrix over the four
+   axes; social pair converges and clears its cross-axis correlations. *Remaining:* a larger roster
+   (needs a negotiation `optimal`), a second ride per non-social axis, and an **external** criterion
+   correlation.
 5. **Bootstrap CIs + benchmark/generator versioning stamped into every result** — replace the current
    normal-approx CI, and make a score unambiguous about which benchmark version produced it.
 6. **Harder difficulty tiers + a saturation monitor** — a difficulty knob so a ride can be re-hardened
