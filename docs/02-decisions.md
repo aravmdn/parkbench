@@ -1001,3 +1001,22 @@ per-ride roster entry (would touch every ride's `agents.py` — instead the harn
 object-taking `run_suite` directly, so no ride code changed); folding validity into the web front-end
 (D-012 — the front-end never runs the engine). Extends/strengthens D-020, D-039, D-040, D-041; the
 still-open **full-OS-sandbox** anti-gaming item (D-043/D-048, roadmap #5) is unchanged.
+
+### D-056 · 2026-07-08 · Activate the local `/loop` driver as the running autoloop
+**Decision:** Make the **local `/loop` driver (D-051 model)** the **active** way the autoloop runs, and
+add its standing prompt at `autoloop/LOCAL_DRIVER_PROMPT.md` (the local twin of the cloud
+`autoloop/ROUTINE_PROMPT.md`). Shape: a thin driver session runs `/loop` (self-paced) and does no project
+work itself; each iteration it spawns **one fresh worker subagent** (clean context) that completes exactly
+one backlog task and exits, then the driver ends the turn so the loop fires the next fresh worker. Local
+laps work a `autoloop/task-<slug>` branch and **land on `main` gate-free** (the D-051 push-to-main model).
+Also reconciled the baton: `autoloop/HANDOFF.md`'s `NEXT ACTION` was stale (it pointed at decomposing a
+visual chunk) — a later session had already queued the **trust track (roadmap #6)** in `backlog.md`, so
+the real top task is **`convergent-validity`**; the baton now says so.
+**Why:** the loop was fully built + proven (it hand-ran ~10 laps to build the whole `web/` visual world)
+but **parked** — the cloud-cron routine (D-054) is unarmed (blocked on owner approval of the scheduling
+MCP call), so nothing advanced it automatically. The owner chose the local model: it needs no durable
+cloud trigger, keeps every session's context small (fresh worker per lap), and lands reviewable,
+`git revert`-able task commits on `main`. **Nothing about scoring/engine changed — this is process/ops.**
+**Status:** the **cloud-cron routine (D-054) remains documented but UNARMED** (`ROUTINE_PROMPT.md`); switch
+back to it by arming that trigger if desired. Kill switch: stop the `/loop` session. Extends D-049 / D-051
+/ D-052 / D-054.

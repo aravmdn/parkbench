@@ -7,22 +7,23 @@
 
 ---
 
-**Updated:** 2026-07-03
+**Updated:** 2026-07-08
 **Loop state:** IDLE
 
 **Active task:** — (none)
 **Acceptance criteria:** —
-**Task branch:** `claude/next-tasks-j7f20o` (cloud-cron model, D-054 — push here + keep PR #13 updated,
-never to `main`)
-**Tree state:** clean · on `claude/next-tasks-j7f20o`
+**Task branch:** — (none active; local-driver laps use `autoloop/task-<slug>` → land on `main`, D-051)
+**Tree state:** clean · on `main`
 **Last durable commit:** (see `git log -1`)
 
-**Loop:** the **hourly cloud-cron autoloop is DESIGNED + DOCUMENTED (D-054) but NOT YET ARMED.** The
-standing worker prompt is committed at `autoloop/ROUTINE_PROMPT.md`; arming the durable hourly trigger
-(`create_trigger`, fresh-session-per-fire, cron `7 * * * *`) is **blocked on an owner approval of the
-scheduling MCP call** and must be done from the app (claude.ai/code/routines) or a session where that
-approval clears. Record the routine's `trig_…` id here once armed. Until then, the loop advances only
-when a session is run manually against this baton.
+**Loop / active driver (D-056):** the owner activated the **local `/loop` driver** (D-051 model) as the
+active driver on 2026-07-08. Setup + the standing driver/worker prompt: `autoloop/LOCAL_DRIVER_PROMPT.md`.
+Local laps work a `autoloop/task-<slug>` branch and **land on `main` gate-free**. The **hourly cloud-cron
+routine (D-054) remains DESIGNED + DOCUMENTED but UNARMED** (its prompt is `autoloop/ROUTINE_PROMPT.md`;
+arming is still blocked on owner approval of the scheduling MCP call) — use it only if switching back to
+the cloud model. Note: the last recorded laps (through `world-signposts`, 2026-07-04) ran on the cloud
+branch `claude/next-tasks-j7f20o`; the validity harness (D-055) + LLM-fallback landed as manual sessions,
+not autoloop laps.
 
 **Steps done (chunk-2 iterations landed on the branch):**
 - Refilled the backlog with **visual-world chunk 2** (`hall-of-fame`, `badge-reputation`,
@@ -44,8 +45,11 @@ when a session is run manually against this baton.
 **PR state:** PR #13 (seed laps + chunk 2 through enter-gym-run) was **merged to `main`**. This branch
 was restarted from the merged `main`; `world-signposts` is the first lap of a **new PR**.
 
-**NEXT ACTION:** Loop is IDLE and the chunk-2 backlog is empty. Per the charter's *Choosing work*, next
-is to **decompose the next visual chunk into 3–5 backlog tasks** — live/served profiles instead of
-fixtures; multiple trainers on-screen; a BYO-agent connector to the world — then pull the top one.
+**NEXT ACTION:** Loop is IDLE. The backlog is **not empty** — a later session queued the **trust track
+(roadmap #6)** below the completed visual chunks. Pull the TOP unchecked backlog task, which is
+**`convergent-validity`** (Tier A: an MTMM/HTMT convergent+discriminant matrix over the four axes — same-
+axis correlation must exceed cross-axis; keep `pytest` green + baselines byte-identical). Create branch
+`autoloop/task-convergent-validity` and begin. (A later refill can still decompose the next *visual*
+chunk — live/served profiles, multiple trainers, a BYO-agent connector — once the trust track is drained.)
 
 **Blockers / needs-owner:** none
