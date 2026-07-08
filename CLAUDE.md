@@ -60,7 +60,8 @@ economic ρ 1.00 (honest finding: floor 0.71 → *narrow* discrimination 0.29), 
 0.70), commons ρ 1.00 (disc 0.52). New doc `docs/12-validity.md` documents the method, thresholds,
 results, and the **honest remaining gaps** (convergent/criterion validity, a discriminant MTMM matrix
 across the four axes, input-ablation shortcut baselines, a structural capability-limited ladder, item
-hygiene, bootstrap CIs, benchmark versioning). **186 passing tests** (+12 from 174); **baselines
+hygiene, bootstrap CIs, benchmark versioning). **189 passing tests** (the validity harness added +12
+from 174 → 186; the later LLM no-key-fallback tests → 189); **baselines
 byte-identical** (purely additive — no ride/scoring/agent code touched). Three research passes
 (psychometric validity · LLM-benchmark trust/contamination · anti-gaming/Goodhart) converged on this
 exact playbook. Verify: `parkbench validity` (~1–2 min), `parkbench validity --json`, `parkbench
@@ -131,8 +132,14 @@ zero-dependency page `viewer/park.html` (the themed entrance). Most recently, on
 track (roadmap #5)**: the HTTP/JSON wire protocol is now **documented as a language-agnostic spec**
 (D-047, `docs/09-byo-protocol.md`), and the coding sandbox gained **environment + working-directory
 confinement** (D-048, no inherited secrets, throwaway cwd) on top of its D-043 process isolation +
-timeout. Reproducible: **174 passing tests**. Design + formulas: `docs/06-v1-architecture.md`,
+timeout. Reproducible: **189 passing tests**. Design + formulas: `docs/06-v1-architecture.md`,
 `docs/07-multi-ride.md`, `docs/08-theming.md`, and `docs/09-byo-protocol.md`.
+
+> **⚠️ Superseded by D-054 — see the 2026-07-05 block above.** The autoloop is now an **hourly
+> cloud-cron** worker that pushes to branch `claude/next-tasks-j7f20o` + an open PR — **never to
+> `main`** — and the cloud cron is **no longer retired**. The paragraph below is kept as the
+> D-049/D-051/D-052 historical record; the local `/loop`→`main` model it describes is *not* the current
+> mechanism.
 
 **As of 2026-07-02** the project is set up to run an **autonomous build loop** (D-049, re-scoped by
 D-051) — governed by the charter `docs/10-autoloop.md`. It runs **locally, one fresh worker sub-session
@@ -171,8 +178,8 @@ the disabled cloud routine at claude.ai/code/routines).
   D-048); next is protocol *hardening* for public hosting (auth/TLS/rate limiting + a JSON Schema), BYO
   connectors for the solo rides, and a **full OS sandbox** (network/abs-path/resource confinement) for
   untrusted code — the one anti-gaming item still open. LLM house personas remain a fast-follow (D-024).
-- **Verify:** `uv venv && uv pip install -e ".[dev]"`, then `pytest` (174 pass; the coding tests
-  spawn subprocesses, so the suite now takes ~40s),
+- **Verify:** `uv venv && uv pip install -e ".[dev]"`, then `pytest` (189 pass; the coding + validity
+  tests spawn subprocesses, so the suite now takes ~1.5 min),
   `parkbench map` (the themed park map), `parkbench run --agent heuristic --seed 1`,
   `parkbench economic --agent greedy`, `parkbench coding --agent heuristic`,
   `parkbench safety --agent heuristic`, `parkbench commons --agent optimal` (the multi-agent
