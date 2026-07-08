@@ -106,6 +106,13 @@ that ride's real score → returns); and **world-signposts** (crossroads lamps, 
 (live/served profiles instead of fixtures; multiple trainers on-screen; a BYO-agent connector). Kill
 switch: disable/delete the routine at claude.ai/code/routines.
 
+**Active driver = the local `/loop` loop (D-056, 2026-07-08).** The owner activated the **local driver
+(D-051 model)** as the running autoloop; its standing driver/worker prompt is `autoloop/LOCAL_DRIVER_PROMPT.md`
+(a thin `/loop` driver spawns one fresh worker subagent per lap; laps work `autoloop/task-<slug>` and land
+on `main` gate-free). The **cloud-cron routine (D-054) stays documented but unarmed**. The baton's next task
+is the **trust track** top item **`convergent-validity`** (roadmap #6, Tier A). Kill switch: stop the
+`/loop` session.
+
 ---
 
 ## Prior status (2026-07-02)
