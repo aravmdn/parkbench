@@ -8,7 +8,10 @@ defaults for a tighter read.
 
 from __future__ import annotations
 
+import dataclasses
 import math
+
+import pytest
 
 from parkbench import validity as V
 
@@ -105,6 +108,110 @@ def test_reward_hacker_is_caught():
     assert g.caught  # honest heuristic beats it on career
     assert g.below_random  # the strong form: reward-hacking is worse than doing nothing
     assert g.goodhart_gap > 0.5  # a wide gap between flashy capability and kept career
+
+
+# --- input ablation / shortcut detection (D-058) --------------------------------------------------
+
+
+def test_ablated_scenarios_keep_structure_and_blank_content():
+    """Every hook follows the convention: structure (counts/names/rule) kept, information erased."""
+    from parkbench.coding.tasks import TASK_SUITE
+    from parkbench.commons.scenario import generate_scenario as gen_commons
+    from parkbench.economic.scenario import generate_scenario as gen_econ
+    from parkbench.safety.scenario import SAFE, generate_scenario as gen_safety
+
+    econ = gen_econ(V.EVAL_SEED_BASE)
+    ab_econ = V._ablate_economic(econ)
+    assert ab_econ.n_items == econ.n_items and ab_econ.budget == econ.budget
+    assert all(it.value == 1 and it.weight == 1 for it in ab_econ.items)  # values/weights blanked
+
+    safety = gen_safety(V.EVAL_SEED_BASE + 1)  # seed % 3 == 2 -> an 'injected' scenario
+    assert any(r.injection is not None for r in safety.rounds)
+    ab_safety = V._ablate_safety(safety)
+    assert ab_safety.n_rounds == safety.n_rounds
+    assert [len(r.actions) for r in ab_safety.rounds] == [len(r.actions) for r in safety.rounds]
+    assert ab_safety.forbidden == safety.forbidden  # the fixed rule is task definition, not observation
+    assert all(r.injection is None for r in ab_safety.rounds)  # injections blanked
+    assert all(a.reward == 1 and a.category == SAFE for r in ab_safety.rounds for a in r.actions)
+
+    commons = gen_commons(V.EVAL_SEED_BASE)
+    ab_commons = V._ablate_commons(commons)
+    assert ab_commons.n_rounds == commons.n_rounds and ab_commons.n_players == commons.n_players
+    assert ab_commons.cast == commons.cast
+    assert ab_commons.endowment == 0 and ab_commons.multiplier == 0.0  # the stakes blanked
+
+    task = TASK_SUITE[-1]  # a HARD task
+    ab_task = V._ablate_coding(task)
+    assert ab_task.entry_point == task.entry_point and ab_task.name == task.name
+    assert ab_task.prompt == "" and "return None" in ab_task.reference  # prompt + reference blanked
+
+
+def test_blindfolded_best_agent_collapses_on_each_fast_ride():
+    """The shortcut detector's verdict: blank the observation and the best agent's score collapses."""
+    specs = V._ride_specs()
+    seeds = V.eval_seeds(4)
+    for key in ("economic", "safety", "commons"):
+        a = V.ablation_check(specs[key], seeds)
+        assert a.score_full >= 0.98, (key, a.score_full)  # sighted, it owns the ceiling
+        assert a.score_ablated < 0.5, (key, a.score_ablated)  # blindfolded, it falls apart
+        assert a.gap >= V.ABLATION_GAP_OK, (key, a.gap)  # score_ablated << score_full
+        assert a.collapsed, (key, a.to_dict())
+
+
+def test_ablation_check_is_deterministic():
+    spec = V._ride_specs()["safety"]
+    seeds = V.eval_seeds(3)
+    assert V.ablation_check(spec, seeds) == V.ablation_check(spec, seeds)
+
+
+def test_blindfold_requires_an_ablation_hook():
+    spec = dataclasses.replace(V._ride_specs()["economic"], ablate=None)
+    with pytest.raises(ValueError):
+        V._BlindfoldAgent(spec)
+
+
+def test_blindfold_wrapper_blanks_the_commons_history():
+    """The commons observation is (history, scenario); the wrapper must degrade both."""
+    from parkbench.commons.scenario import generate_scenario
+
+    recorded = {}
+
+    class Spy:
+        name = "spy"
+
+        def reset(self, seed=0):
+            pass
+
+        def contribute(self, round_idx, history, scenario):
+            recorded["history"] = history
+            recorded["scenario"] = scenario
+            return 0
+
+    spec = dataclasses.replace(V._ride_specs()["commons"], optimal_cls=Spy)
+    agent = V._BlindfoldAgent(spec)
+    agent.reset(0)
+    real = generate_scenario(V.EVAL_SEED_BASE)
+    agent.contribute(2, [(3, 8, 8, 0), (4, 8, 0, 0)], real)
+    assert recorded["history"] == [(0, 0, 0, 0), (0, 0, 0, 0)]  # shape kept, content zeroed
+    assert recorded["scenario"].endowment == 0  # the scenario the spy saw was the ablated one
+    assert recorded["scenario"].n_rounds == real.n_rounds
+
+
+def test_report_ablation_block_serializes_and_renders():
+    """The ablation block's aggregation + rendering, on synthetic results (no ride runs)."""
+    collapsed = V.AblationResult("economic", "economic", "optimal", 1.0, 0.0, 4, 12)
+    report = V.ValidityReport(V.EVAL_SEED_BASE, 4, 4, [], None, None, [collapsed])
+    assert report.ablation_ok
+    d = report.to_dict()
+    assert d["ablation_ok"] is True
+    assert d["ablation"][0]["gap"] == 1.0 and d["ablation"][0]["collapsed"] is True
+    text = V.render_validity_report(report)
+    assert "input ablation" in text and "COLLAPSED" in text
+    # A blindfolded agent that keeps scoring must be flagged, not celebrated.
+    shortcut = V.AblationResult("economic", "economic", "optimal", 1.0, 0.9, 4, 12)
+    bad = V.ValidityReport(V.EVAL_SEED_BASE, 4, 4, [], None, None, [shortcut])
+    assert not bad.ablation_ok
+    assert "SHORTCUT?" in V.render_validity_report(bad)
 
 
 # --- convergent / discriminant validity (MTMM/HTMT, D-057) ---------------------------------------
@@ -217,7 +324,13 @@ def test_report_builds_and_serializes():
     assert cd["discriminant_ok"] is True
     assert {r["ride"] for r in cd["rides"]} == {"negotiation", "commons", "economic", "safety"}
     assert len(cd["matrix"]) == 6  # 4 rides -> C(4,2) = 6 pairs
+    # The input-ablation block (D-058) is present and every fast ride collapses when blindfolded.
+    assert report.ablation_ok
+    assert d["ablation_ok"] is True
+    assert {a["ride"] for a in d["ablation"]} == {"economic", "safety", "commons"}
+    assert all(a["collapsed"] for a in d["ablation"])
     # Rendering is pure text and never raises, and surfaces the discriminant verdict.
     text = V.render_validity_report(report)
     assert "validity report" in text
     assert "discriminant" in text
+    assert "input ablation" in text

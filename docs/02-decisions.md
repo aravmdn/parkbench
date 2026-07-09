@@ -1064,3 +1064,47 @@ social pair's N); folding the coding ride into the default matrix (kept opt-in, 
 Remaining D-055 gaps unchanged (`ablation-baseline`, `structural-ladder`, `item-hygiene`,
 `bootstrap-and-versioning`). Extends D-055; builds on D-037 (radar) / D-041 (career) / D-045 (2nd social
 ride).
+
+### D-058 · 2026-07-09 · Input ablation — the shortcut detector (blindfold the best agent, require collapse)
+**Decision:** Extend the validity harness (`src/parkbench/validity.py`, `parkbench validity`) with the
+**input-ablation / shortcut baseline** — item 1 of D-055's deferred gaps and the classic
+"hypothesis-only" probe from NLI: re-run each ride's **best agent on a blanked observation** and
+require its score to **collapse**. If a blindfolded agent could keep scoring, the ride's metric would
+reward an observation-independent shortcut, not the named capability. Mechanism: each `_RideSpec`
+gains a per-ride **`ablate` hook** (`_ablate_economic` / `_ablate_safety` / `_ablate_commons` /
+`_ablate_coding`) following one convention — **keep the structure, blank the content** (item/round
+counts, the entry-point name, and the fixed safety rule survive; values, weights, rewards, observed
+categories, injections, endowment/multiplier, history, prompts, and references are erased) — and a
+`_BlindfoldAgent` wrapper feeds the ride's **own `optimal` baseline** the ablated observation while
+the suite scores its play against the **real** instance (same agent, same scoring machinery, only the
+input degraded). The **ablation gap** = `score_full − score_ablated`; a ride passes at gap ≥
+`ABLATION_GAP_OK` (0.4). Wired into the text report and `--json` (new `ablation` list + top-level
+`ablation_ok`), on the same held-out eval seeds (`EVAL_SEED_BASE = 4000…`).
+**Results (held-out seeds 4000–4007, CLI default):** every ride **COLLAPSES** — economic 1.000 →
+**0.000** (gap 1.000: a blinded agent cannot even respect the budget — feasibility requires seeing
+the instance), safety 1.000 → **0.266** (gap 0.734: it crosses red lines blind; the residual ≈ the
+benign third of the suite), commons 1.000 → **0.458** (gap 0.542: a zero-stakes observation
+degenerates it to free-riding, scoring like `greedy`); the opt-in coding ride also collapses to
+0.000. Verdicts seed-stable at 12 seeds (0.000 / 0.291 / 0.446). **201 passing tests** (+6 in
+`tests/test_validity.py`, incl. `score_ablated << score_full` per fast ride, so a regression that
+opens a shortcut fails CI); baselines byte-identical (purely additive measurement — no
+ride/scoring/agent code touched; the hooks and wrapper live entirely in `validity.py`).
+**Honest limitations (documented in [`12-validity.md`](12-validity.md)):** (a) certifies *no blind
+shortcut for the reference best agent* — a canonical probe, not a proof over all input-independent
+strategies (though on these rides any blind play is provably low: feasibility, red lines, and
+reciprocity all depend on the instance); (b) the ablated scenario keeps `seed` as an opaque cache key
+— no reference agent reads it, but a pathological agent could regenerate the instance from it (a
+BYO-facing harness would strip it); (c) blanking is total — *graded* degradation folds into the
+`structural-ladder` backlog item; (d) for the coding baselines the informative field is the
+`reference` they emit rather than the `prompt` a real agent reads — the hook blanks both.
+**Why:** D-055/D-057 proved scores *rise* with known ability and the axes look distinct; the ablation
+check proves scores *fall without information* — together the instrument now has both directions of
+the construct-validity argument that can be run offline. It was the top remaining item on the
+validity roadmap ("the single best shortcut detector").
+**Rejected / deferred:** putting the ablate hooks inside each ride package (kept in `validity.py` so
+no ride module changes at all — least invasive, one place to review); blanking the economic budget or
+the safety `forbidden` rule (both are task *definition*/structure the agent needs to emit a
+well-formed play, not instance information); a partial economic blank (values only, weights kept)
+— rejected as a half-blindfold that under-detects; making the blindfolded agent a CLI-selectable
+roster entry (measurement stays out of the ride rosters, as with the ε-ladder). Extends D-055/D-057;
+builds on the per-ride suites (D-036/D-040/D-045) and the coding stub convention (D-039).

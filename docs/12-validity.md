@@ -1,6 +1,6 @@
 # 12 — Validity: does a ride actually *measure capability*?
 
-**Status:** Living · **Last updated:** 2026-07-08 · **Decisions:** [D-055](02-decisions.md), [D-057](02-decisions.md)
+**Status:** Living · **Last updated:** 2026-07-09 · **Decisions:** [D-055](02-decisions.md), [D-057](02-decisions.md), [D-058](02-decisions.md)
 
 The vision ([`00-vision.md`](00-vision.md)) stakes everything on one word: **trust**. "Success = it
 becomes a *credible* place to measure agents." Up to D-054 the project earned the *reproducible* half
@@ -201,6 +201,69 @@ The vision-completing version needs either a **second ride per non-social axis**
 real monotrait pair) or correlation against an **external** trusted benchmark / real task outcome
 (criterion validity). Both are larger efforts than this offline first cut.
 
+## Input ablation — the shortcut detector (D-058)
+
+The ladder proves each ride's score **rises with known ability**. The complementary question — the
+single best detector of a metric that rewards a *shortcut* rather than the task — is whether the
+score **falls without information**:
+
+> *Re-run the ride's best agent on a **blanked observation** and require its score to collapse.*
+
+This is the classic **hypothesis-only baseline** from NLI: models that scored well while seeing
+*only the hypothesis* exposed benchmarks whose labels leaked through artifacts, not understanding.
+If a blindfolded agent can keep scoring on a Parkbench ride, that ride's metric rewards an
+observation-independent strategy — a shortcut — not the capability it is named for.
+
+**Mechanism (purely additive — no ride/scoring code touched):** each ride gets a
+**degraded-observation hook** (`_ablate_economic` / `_ablate_safety` / `_ablate_commons` /
+`_ablate_coding` in `validity.py`, registered per `_RideSpec`) following one convention — **keep the
+structure, blank the content**. The ablated scenario preserves what the agent interface needs to emit
+a *well-formed* play (item/round/player counts, the entry-point name, the fixed safety rule — task
+definition, not observation) and erases everything informative:
+
+| Ride | Kept (structure) | Blanked (information) |
+|---|---|---|
+| economic | item count, budget | all item values & weights → `(1, 1)` |
+| safety | round/action counts, the fixed rule | all rewards → 1, all categories → safe, injections dropped |
+| commons | player/round counts, cast | endowment → 0, multiplier → 0, observed history → zeros |
+| coding (opt-in) | task/entry-point name, difficulty | prompt → `""`, reference → a `return None` stub |
+
+A `_BlindfoldAgent` wrapper feeds the ride's **own `optimal` baseline** the ablated observation while
+the suite scores its play against the **real** instance — same agent, same scoring machinery, only
+the input degraded. The **ablation gap** = `score_full − score_ablated`; a ride passes when the gap
+is ≥ `ABLATION_GAP_OK` (0.4 — well below the observed gaps, far above seed noise).
+
+**Results (held-out seeds 4000–4007, the CLI default):**
+
+```
+ride         axis        full   ablated     gap   verdict
+economic     economic   1.000     0.000   1.000   COLLAPSED
+safety       safety     1.000     0.266   0.734   COLLAPSED
+commons      social     1.000     0.458   0.542   COLLAPSED
+-> every ride COLLAPSES on a blanked observation (gap >= 0.4) => no ride rewards a see-nothing shortcut
+```
+
+(At 12 seeds: 1.000 / 0.709 / 0.554 — the verdicts are seed-stable. The opt-in coding ride also
+collapses to 0.000.) Each collapse lands where a blind agent *should* land: the blinded economic
+agent can no longer even respect the budget (infeasible ⇒ 0 — feasibility itself requires seeing the
+instance); the blinded safety agent can't tell bait from safe, so it crosses red lines blind (its
+residual ≈ the benign third of the suite); the blinded commons agent sees a zero-stakes game, so it
+degenerates to free-riding and scores like `greedy` (~0.46). `parkbench validity` prints the block
+and `--json` carries it (`ablation` list + top-level `ablation_ok`); `tests/test_validity.py`
+asserts `score_ablated << score_full` per ride, so a regression that opens a shortcut fails CI.
+
+**Honest limitations:** (a) this certifies *no blind shortcut for the reference best agent* — a
+canonical probe, not a proof over all input-independent strategies (though on these rides any
+observation-independent play is provably low-scoring: feasibility, red lines, and reciprocity all
+depend on the instance); (b) the ablated scenario keeps the `seed` field as an opaque cache key —
+none of the reference agents read it, but a pathological agent could regenerate the instance from it
+(a real BYO ablation harness would strip it); (c) blanking is total — a *graded* degradation
+(noise-injection) is the separate `structural-ladder` backlog item; (d) for the coding baselines the
+informative field is the `reference` they emit rather than the `prompt` a real code-writing agent
+reads — the hook blanks both, so it covers either kind of agent.
+
+---
+
 ## Results (held-out seeds 4000–4011, 6-rung ladder)
 
 ```
@@ -224,7 +287,7 @@ harder tier. The `coding` ride is real but subprocess-graded (slow), so it is **
 ## How to run
 
 ```bash
-parkbench validity                 # 3 fast rides + gaming check + convergent/discriminant matrix
+parkbench validity                 # 3 fast rides + gaming check + MTMM matrix + input-ablation check
 parkbench validity --seeds 16      # more seeds ⇒ tighter CIs ⇒ more resolvable rungs (≥8 stabilizes MTMM)
 parkbench validity --coding        # also validate the (slow) coding ride + add it to the matrix
 parkbench validity --json          # machine-readable report (incl. the `convergent` block)
@@ -239,9 +302,10 @@ discrimination fails CI.
 ## Honest remaining gaps (the validity roadmap)
 
 This harness is a real down-payment, not the finish line. It proves each ride discriminates *known*
-ability and resists the *known* reward-hacker, and (since D-057) that the social axis is a construct
-distinct from the economic/safety axes over a small roster; it does **not** yet prove the tasks
-resemble real-world capability, nor that *every* axis is distinct (three of four carry a single ride).
+ability and resists the *known* reward-hacker, (since D-057) that the social axis is a construct
+distinct from the economic/safety axes over a small roster, and (since D-058) that no ride's score
+survives a blanked observation (no blind shortcut); it does **not** yet prove the tasks resemble
+real-world capability, nor that *every* axis is distinct (three of four carry a single ride).
 
 > **★ Convergent / discriminant — first offline cut landed (D-057).** The MTMM discriminant half is
 > now implemented (section above): the two social rides converge (ρ = +1.00) and that exceeds their
@@ -251,16 +315,16 @@ resemble real-world capability, nor that *every* axis is distinct (three of four
 > pair. That is what would move the claim all the way from *"the axes look distinct over three
 > agents"* to *"a high Parkbench score means real capability"*.
 
-In (effort) priority order, the techniques the research surfaced but which are **not yet implemented**:
+In (effort) priority order, the techniques the research surfaced:
 
-1. **Input-ablation / shortcut baseline** — re-run the best agent on a *blanked* observation and
-   require its score to collapse. The single best detector of a metric that rewards a shortcut rather
-   than the task (the NLI "hypothesis-only" failure class). Needs per-ride degraded-observation
-   support. *(Now the highest-leverage open item; queued next in
-   [`../autoloop/backlog.md`](../autoloop/backlog.md).)*
+1. **Input-ablation / shortcut baseline — ✅ landed (D-058).** Section above: every ride's score
+   collapses when its best agent is blindfolded (gaps 0.54–1.00), so no ride rewards a see-nothing
+   shortcut. *Remaining:* graded (noise-level) degradation rather than a total blank — folded into
+   the `structural-ladder` item below — and seed-stripping for a BYO-facing ablation harness.
 2. **Structural capability-limited ladder** — grade ability by *bounded lookahead* or *injected
    observation noise*, not a random mixture, as a cross-check that the ride rewards genuine capability
-   and not "amount of randomness."
+   and not "amount of randomness." *(Now the top open item; queued next in
+   [`../autoloop/backlog.md`](../autoloop/backlog.md).)*
 3. **Item hygiene** — Cronbach's α + per-seed **item discrimination** (point-biserial), pruning
    scenarios that don't separate ability (an offline, stdlib IRT-flavored check).
 4. **Convergent / discriminant validity — ✅ first cut landed (D-057).** MTMM matrix over the four
