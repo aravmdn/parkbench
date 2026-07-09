@@ -79,9 +79,14 @@ Tier A (stdlib-only, keep `pytest` green + baselines byte-identical).
   discriminant PASS (Campbell-Fiske, scoped to the social row/column). +6 tests, 195 green, baselines
   byte-identical. Honest limits (N=3, only social has a within-axis pair, ≥8 seeds to stabilize) in
   `docs/12-validity.md`.
-- [ ] `ablation-baseline` — Re-run the best agent on a **blanked/degraded observation** and require its
+- [x] `ablation-baseline` — Re-run the best agent on a **blanked/degraded observation** and require its
   score to collapse (the single best shortcut detector). Needs a per-ride "degraded scenario" hook.
   **Done when:** each ride reports an ablation gap and a test asserts `score_ablated << score_full` (Tier A).
+  ✅ landed (D-058) — per-ride `ablate` hooks + a `_BlindfoldAgent` (all in `validity.py`; no ride code
+  touched): `parkbench validity` (+`--json` `ablation` block / `ablation_ok`) shows every ride COLLAPSES
+  on a blanked observation — economic 1.000→0.000, safety 1.000→0.266, commons 1.000→0.458 (gaps
+  1.00/0.73/0.54 ≥ 0.4; opt-in coding → 0.000). +6 tests, 201 green, baselines byte-identical. Honest
+  limits (canonical probe, seed kept as cache key, total-blank only) in `docs/12-validity.md`.
 - [ ] `structural-ladder` — A capability-limited ability ladder (bounded lookahead / injected
   observation noise) as a cross-check that the ride rewards capability, not "amount of randomness".
   **Done when:** the structural ladder reproduces ρ ≥ 0.9 on the fast rides (Tier A).
