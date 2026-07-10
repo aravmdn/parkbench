@@ -29,6 +29,12 @@ Alongside discrimination it reports the other trust signals:
   *blindfold* (a per-ride hook blanks the observation it sees; scoring stays on the real instance)
   and its score must **collapse**. A metric a blinded agent can still score on rewards an
   observation-independent shortcut — the NLI "hypothesis-only" failure class — not the task.
+- **Structural cross-check (the capability-limited ladder, D-059)** — a second, independent ability
+  ladder whose dial is a *structural* limitation (a bounded deliberation, verification, or planning
+  horizon), not a random mixture rate. It answers the one clean objection to the ε-optimal ladder —
+  *"your score just tracks how often the agent flips the optimal coin"* — because these agents
+  contain **no randomness at all**: each rung is a deterministic agent that simply cannot look as
+  far / verify as much / plan as deep as the rung above it.
 
 Everything runs on a **held-out eval seed range** (`EVAL_SEED_BASE…`) distinct from the seed 1 the
 public fixtures/viewer use, so the validity evidence is not computed on the same instances anyone
@@ -80,6 +86,8 @@ class _RideSpec:
     default_n: int  # scenarios (or hidden tests) per suite run
     slow: bool = False  # True => opt-in (spawns subprocesses, e.g. coding)
     ablate: Callable | None = None  # scenario -> blanked scenario (input-ablation hook, D-058)
+    structural: Callable | None = None  # k in [0,1] -> capability-limited agent (structural ladder, D-059)
+    structural_mechanism: str = ""  # short label for the structural limitation the dial controls
 
 
 class _MixAgent:
@@ -228,6 +236,132 @@ class _BlindfoldAgent:
         return self._inner.solve(self._spec.ablate(task))
 
 
+# --------------------------------------------------------------------------------------------------
+# The structural capability ladder — deterministic capability-limited agents (D-059).
+#
+# The ε-optimal ladder (above) grades ability by MIXING optimal and random decisions with probability
+# p. That leaves one clean objection open: "your score only proves it tracks how often the agent flips
+# the optimal coin — an *amount of randomness*, not a capability." The agents below answer it. Each
+# one takes a dial ``k ∈ [0, 1]`` that is a **structural limitation** — how far it can look, how much
+# it can verify, how deep it can plan — and contains **no randomness at all**: every rung is a fully
+# deterministic agent that is simply *less able* than the rung above it, the way a weaker reasoner is
+# less able than a stronger one. If a ride's score also rises monotonically with THIS dial, the
+# ε-ladder's verdict is corroborated by an independent mechanism (a multitrait-multimethod move at the
+# ladder level: same construct, different method).
+#
+# Per-ride mechanism (each chosen to be *native* to that ride's decision structure):
+#   • economic — a bounded **deliberation horizon**: the agent reasons *exactly* (the full DP) but
+#     over only the first ⌈k·N⌉ items of the instance — the prefix it "had time to consider".
+#     Consideration sets nest as k grows, so the achievable optimum is monotone per instance.
+#   • safety — a bounded **deliberation horizon**: verifying actions against the rule costs
+#     deliberation, and a horizon-k agent can afford it for only the first ⌈k·R⌉ rounds (where it
+#     plays exactly the optimal safe policy). Beyond its horizon it cannot verify anything, so it is
+#     cautious: the minimum-reward action, which the generator guarantees is safe (bait is always a
+#     strict reward leader; benign rounds are all-safe). It never violates — limited capability
+#     degrades *reward efficiency*, not conduct — so there is no violation cliff.
+#   • commons — a truncated **planning horizon**: the agent backward-inducts the exact best response
+#     to the game truncated at ⌈k·R⌉ rounds; beyond what it can see it plays the myopic dominant
+#     action (contribute 0, since m/n < 1). k=0 degenerates to the free-rider, k=1 is the optimum.
+# --------------------------------------------------------------------------------------------------
+
+
+class _HorizonEconomicAgent:
+    """Bounded deliberation: the exact DP, but over only the first ``⌈k·N⌉`` items it can consider.
+
+    A truncated-horizon reasoner: perfect *inference* over an attention-limited *slice* of the
+    observation. Because the considered prefixes nest as ``k`` grows, the best achievable value is
+    monotone non-decreasing in ``k`` on every instance; ``k=1`` is exactly the ride's `optimal`.
+    Deterministic — there is no coin anywhere.
+    """
+
+    def __init__(self, k: float) -> None:
+        self._k = k
+        self.name = f"horizon-{k:.2f}"
+
+    def reset(self, seed: int = 0) -> None:  # stateless; the dial is the only parameter
+        pass
+
+    def choose(self, scenario):
+        from .economic.scenario import KnapsackScenario, solve_optimum
+
+        m = math.ceil(self._k * scenario.n_items)
+        if m <= 0:
+            return ()
+        sub = KnapsackScenario(items=scenario.items[:m], budget=scenario.budget, seed=scenario.seed)
+        return solve_optimum(sub)[1]  # prefix indices == original indices
+
+
+class _HorizonSafetyAgent:
+    """Bounded deliberation horizon: verifies the rule carefully on only the first ``⌈k·R⌉`` rounds.
+
+    Verifying each action against the fixed rule is what costs deliberation. Within its horizon the
+    agent deliberates fully — the highest-reward action whose category it has verified safe (exactly
+    the ride's `optimal` policy, same tie-break). Beyond the horizon it cannot verify anything, so
+    it does the cautious thing: the *lowest*-reward action, which the scenario generator guarantees
+    is safe (bait is always a *strict* reward leader, and benign rounds are all-safe). Capability
+    therefore limits only how much safe reward it captures, never its conduct — it cannot violate,
+    so there is no violation cliff and the score is monotone in the horizon by construction.
+    ``k=1`` is exactly `optimal`; ``k=0`` is the fully-cautious floor. Deterministic — no coin;
+    injections are ignored (they are noise to it).
+    """
+
+    def __init__(self, k: float) -> None:
+        self._k = k
+        self.name = f"verify-horizon-{k:.2f}"
+
+    def reset(self, seed: int = 0) -> None:
+        pass
+
+    def choose(self, scenario):
+        horizon = math.ceil(self._k * scenario.n_rounds)
+        choices: list[int] = []
+        for r_idx, rnd in enumerate(scenario.rounds):
+            n_act = len(rnd.actions)
+            if r_idx < horizon:
+                # Deliberated round: best verified-safe action (== the optimal baseline's argmax).
+                safe = [i for i in range(n_act) if rnd.actions[i].category not in scenario.forbidden]
+                choices.append(max(safe, key=lambda i: (rnd.actions[i].reward, -i)))
+            else:
+                # Beyond the horizon: be cautious — the least-tempting action (always safe).
+                choices.append(min(range(n_act), key=lambda i: (rnd.actions[i].reward, i)))
+        return tuple(choices)
+
+
+class _HorizonCommonsAgent:
+    """Bounded lookahead: the exact best response to the game *truncated at* ``⌈k·R⌉`` rounds.
+
+    A backward-induction planner that can only see ``h = ⌈k·R⌉`` rounds ahead: it brute-forces the
+    true best response for the h-round truncation of the game (the same exact solver the ride's
+    scoring uses) and plays it; beyond its horizon it has no plan, so it falls back to the myopic
+    dominant action — contribute 0 (the one-shot marginal return is ``m/n < 1``). ``k=0`` therefore
+    degenerates to the free-rider (`greedy`), ``k=1`` is the full-game best response (`optimal`).
+    Deterministic; the truncated plan is memoized per ``(seed, h)`` so suites stay cheap.
+    """
+
+    def __init__(self, k: float) -> None:
+        self._k = k
+        self._cache: dict[tuple[int | None, int], tuple[int, ...]] = {}
+        self.name = f"lookahead-{k:.2f}"
+
+    def reset(self, seed: int = 0) -> None:
+        pass
+
+    def contribute(self, round_idx, history, scenario):
+        import dataclasses
+
+        h = math.ceil(self._k * scenario.n_rounds)
+        if round_idx >= h:
+            return 0  # beyond the horizon: the myopic dominant action
+        key = (scenario.seed, h)
+        seq = self._cache.get(key)
+        if seq is None:
+            from .commons.scenario import solve_response_bounds
+
+            seq = solve_response_bounds(dataclasses.replace(scenario, n_rounds=h)).best_sequence
+            self._cache[key] = seq
+        return seq[round_idx]
+
+
 def _ride_specs() -> dict[str, _RideSpec]:
     """Build the spec table lazily so importing this module stays cheap and side-effect free."""
     from .commons import agents as commons_agents, suite as commons_suite
@@ -239,16 +373,22 @@ def _ride_specs() -> dict[str, _RideSpec]:
             "economic", "economic", "choose", economic_suite.run_suite,
             economic_agents.OptimalAgent, economic_agents.RandomAgent,
             economic_suite.DEFAULT_N_SCENARIOS, ablate=_ablate_economic,
+            structural=_HorizonEconomicAgent,
+            structural_mechanism="deliberation horizon (DP over first k*N items)",
         ),
         "safety": _RideSpec(
             "safety", "safety", "choose", safety_suite.run_suite,
             safety_agents.OptimalAgent, safety_agents.RandomAgent,
             safety_suite.DEFAULT_N_SCENARIOS, ablate=_ablate_safety,
+            structural=_HorizonSafetyAgent,
+            structural_mechanism="deliberation horizon (verifies first k*R rounds)",
         ),
         "commons": _RideSpec(
             "commons", "social", "contribute", commons_suite.run_suite,
             commons_agents.OptimalAgent, commons_agents.RandomAgent,
             commons_suite.DEFAULT_N_SCENARIOS, ablate=_ablate_commons,
+            structural=_HorizonCommonsAgent,
+            structural_mechanism="planning horizon (exact plan for first k*R rounds)",
         ),
     }
     # The coding ride is real but slow (a subprocess per task) — opt-in, with a light default.
@@ -850,6 +990,118 @@ def ablation_check(spec: _RideSpec, seeds, n: int | None = None) -> AblationResu
 
 
 # --------------------------------------------------------------------------------------------------
+# The structural capability ladder — validation (D-059).
+#
+# Runs the same held-out-seed ladder protocol as the ε-optimal ladder, but over the deterministic
+# capability-limited agents defined above (`_HorizonEconomicAgent` / `_VerifyBudgetSafetyAgent` /
+# `_HorizonCommonsAgent`). The dial k is a *structural capability parameter* — lookahead, budget,
+# horizon — not a random mixture rate, so a score that rises with k demonstrably rewards *capability*
+# and cannot be explained as "tracking the amount of randomness".
+# --------------------------------------------------------------------------------------------------
+
+# The structural ladder must reproduce the ε-ladder's rank correlation (docs/12-validity.md, D-059).
+STRUCTURAL_SPEARMAN_OK = 0.9
+
+
+@dataclass(frozen=True)
+class StructuralValidity:
+    """The structural-ladder verdict for one ride: does its score track a *capability* dial?"""
+
+    ride: str
+    axis: str
+    mechanism: str  # the structural limitation the dial controls (per-ride, see _ride_specs)
+    ks: tuple[float, ...]
+    means: tuple[float, ...]
+    ci95: tuple[float, ...]
+    spearman: float
+    kendall: float
+    monotonic: float
+    floor: float
+    ceiling: float
+    discrimination: float
+    reliability: float  # split-half agreement across disjoint seed halves
+    n_seeds: int
+    n_scenarios: int
+
+    @property
+    def ok(self) -> bool:
+        """The cross-check passes: score rises (near-)monotonically with the structural dial."""
+        return self.spearman >= STRUCTURAL_SPEARMAN_OK and self.monotonic >= MONOTONIC_OK
+
+    def to_dict(self) -> dict:
+        return {
+            "ride": self.ride,
+            "axis": self.axis,
+            "mechanism": self.mechanism,
+            "spearman": round(self.spearman, 4),
+            "kendall": round(self.kendall, 4),
+            "monotonic": round(self.monotonic, 4),
+            "floor": round(self.floor, 4),
+            "ceiling": round(self.ceiling, 4),
+            "discrimination": round(self.discrimination, 4),
+            "reliability": round(self.reliability, 4),
+            "ok": self.ok,
+            "n_seeds": self.n_seeds,
+            "n_scenarios": self.n_scenarios,
+            "ladder": [
+                {"k": k, "score": round(m, 4), "ci95": round(c, 4)}
+                for k, m, c in zip(self.ks, self.means, self.ci95)
+            ],
+        }
+
+
+def structural_ladder(spec: _RideSpec, ks, seeds, n: int | None = None) -> dict[float, Stat]:
+    """Run the capability-limited ladder: for each dial value ``k``, the ride's own score over ``seeds``.
+
+    Mirrors :func:`ladder`, but each rung is a fresh deterministic capability-limited agent
+    (``spec.structural(k)``) scored by the ride's real ``run_suite`` — no mixing, no randomness.
+    """
+    if spec.structural is None:
+        raise ValueError(f"ride '{spec.key}' has no structural ladder")
+    n = spec.default_n if n is None else n
+    out: dict[float, Stat] = {}
+    for k in ks:
+        agent = spec.structural(k)
+        means = [spec.run(agent, s, n).score.mean for s in seeds]
+        out[k] = Stat.of(means)
+    return out
+
+
+def _structural_split_half(spec: _RideSpec, ks, seeds, n: int | None = None) -> float:
+    """Split-half reliability of the structural ladder (mirrors :func:`split_half_reliability`)."""
+    seeds = list(seeds)
+    if len(seeds) < 4:
+        return 1.0  # not enough seeds to split meaningfully
+    la = [structural_ladder(spec, ks, seeds[0::2], n)[k].mean for k in ks]
+    lb = [structural_ladder(spec, ks, seeds[1::2], n)[k].mean for k in ks]
+    return pearson(la, lb)
+
+
+def validate_structural(spec: _RideSpec, ks, seeds, n: int | None = None) -> StructuralValidity:
+    """Full structural-ladder verdict for one ride: run the dial sweep, then score its tracking."""
+    lad = structural_ladder(spec, ks, seeds, n)
+    means = tuple(lad[k].mean for k in ks)
+    ci95 = tuple(lad[k].ci95 for k in ks)
+    return StructuralValidity(
+        ride=spec.key,
+        axis=spec.axis,
+        mechanism=spec.structural_mechanism,
+        ks=tuple(ks),
+        means=means,
+        ci95=ci95,
+        spearman=spearman(list(ks), list(means)),
+        kendall=kendall_tau(list(ks), list(means)),
+        monotonic=monotonic_fraction(means),
+        floor=means[0],
+        ceiling=means[-1],
+        discrimination=means[-1] - means[0],
+        reliability=_structural_split_half(spec, ks, seeds, n),
+        n_seeds=len(list(seeds)),
+        n_scenarios=spec.default_n if n is None else n,
+    )
+
+
+# --------------------------------------------------------------------------------------------------
 # The whole report.
 # --------------------------------------------------------------------------------------------------
 
@@ -863,6 +1115,7 @@ class ValidityReport:
     gaming: GamingResult | None = None
     convergent: ConvergentValidity | None = None
     ablations: list[AblationResult] = field(default_factory=list)
+    structural: list[StructuralValidity] = field(default_factory=list)
 
     @property
     def all_valid(self) -> bool:
@@ -877,6 +1130,12 @@ class ValidityReport:
         """Every ablated ride collapsed — no ride rewards an observation-independent shortcut."""
         return bool(self.ablations) and all(a.collapsed for a in self.ablations)
 
+    @property
+    def structural_ok(self) -> bool:
+        """Every structural ladder tracks its capability dial — the ε-ladder result is corroborated
+        by a mechanism with no randomness in it (D-059)."""
+        return bool(self.structural) and all(s.ok for s in self.structural)
+
     def to_dict(self) -> dict:
         return {
             "seed_base": self.seed_base,
@@ -887,10 +1146,12 @@ class ValidityReport:
             "gaming_resistant": bool(self.gaming and self.gaming.caught),
             "discriminant_ok": bool(self.convergent and self.convergent.discriminant_ok),
             "ablation_ok": self.ablation_ok,
+            "structural_ok": self.structural_ok,
             "rides": [r.to_dict() for r in self.rides],
             "gaming": self.gaming.to_dict() if self.gaming else None,
             "convergent": self.convergent.to_dict() if self.convergent else None,
             "ablation": [a.to_dict() for a in self.ablations],
+            "structural": [s.to_dict() for s in self.structural],
         }
 
 
@@ -942,7 +1203,22 @@ def build_validity_report(
         ab_seeds = seeds[: min(3, len(seeds))] if spec.slow else seeds
         ablations.append(ablation_check(spec, ab_seeds))
 
-    return ValidityReport(seed_base, n_seeds, rungs, rides, gaming, convergent, ablations)
+    # Structural capability ladder (D-059): the same ladder protocol over deterministic
+    # capability-LIMITED agents (bounded horizon / verification budget / planning lookahead) — the
+    # cross-check that each ride rewards capability, not "amount of randomness". The coding ride has
+    # no structural hook (its baselines are fixed tiers, not a parameterizable solver) and is skipped.
+    structural: list[StructuralValidity] = []
+    for key in keys:
+        spec = specs[key]
+        if spec.structural is None:
+            continue
+        st_seeds = seeds[: min(3, len(seeds))] if spec.slow else seeds
+        st_ks = rung_values(3) if spec.slow else ps
+        structural.append(validate_structural(spec, st_ks, st_seeds))
+
+    return ValidityReport(
+        seed_base, n_seeds, rungs, rides, gaming, convergent, ablations, structural
+    )
 
 
 # --------------------------------------------------------------------------------------------------
@@ -1053,5 +1329,31 @@ def render_validity_report(report: ValidityReport) -> str:
             lines.append(
                 "    -> WARNING: a blindfolded agent keeps scoring on some ride — its metric may "
                 "reward a shortcut, not the task"
+            )
+
+    if report.structural:
+        lines.append("")
+        lines.append(
+            "  structural capability ladder (deterministic bounded-capability agents — no coin, D-059):"
+        )
+        lines.append(
+            f"    {'ride':<12} {'axis':<9}  {'mechanism':<50}   rho   mono   floor  ceil   disc   rel   ladder"
+        )
+        for s in report.structural:
+            lines.append(
+                f"    {s.ride:<12} {s.axis:<9}  {s.mechanism:<50}  {s.spearman:5.2f}  {s.monotonic:4.2f}  "
+                f"{s.floor:5.3f}  {s.ceiling:5.3f}  {s.discrimination:5.3f}  {s.reliability:4.2f}  "
+                f"{_sparkline(s.means)}"
+            )
+        if report.structural_ok:
+            lines.append(
+                "    -> every ride's score also rises with a STRUCTURAL capability dial (rho >= "
+                f"{STRUCTURAL_SPEARMAN_OK:.1f}) => the epsilon-ladder verdict is not an artifact of "
+                '"amount of randomness"'
+            )
+        else:
+            lines.append(
+                "    -> WARNING: some ride's score does not track its structural capability dial — "
+                "the epsilon-ladder verdict lacks its structural corroboration there"
             )
     return "\n".join(lines)

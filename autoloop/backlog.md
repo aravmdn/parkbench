@@ -87,9 +87,16 @@ Tier A (stdlib-only, keep `pytest` green + baselines byte-identical).
   on a blanked observation — economic 1.000→0.000, safety 1.000→0.266, commons 1.000→0.458 (gaps
   1.00/0.73/0.54 ≥ 0.4; opt-in coding → 0.000). +6 tests, 201 green, baselines byte-identical. Honest
   limits (canonical probe, seed kept as cache key, total-blank only) in `docs/12-validity.md`.
-- [ ] `structural-ladder` — A capability-limited ability ladder (bounded lookahead / injected
+- [x] `structural-ladder` — A capability-limited ability ladder (bounded lookahead / injected
   observation noise) as a cross-check that the ride rewards capability, not "amount of randomness".
   **Done when:** the structural ladder reproduces ρ ≥ 0.9 on the fast rides (Tier A).
+  ✅ landed (D-059) — deterministic bounded-capability agents (economic: DP over first ⌈k·N⌉ items;
+  safety: verifies first ⌈k·R⌉ rounds, cautious-safe after; commons: exact plan for first ⌈k·R⌉
+  rounds, myopic after — no randomness anywhere, all in `validity.py`): `parkbench validity`
+  (+`--json` `structural` block / `structural_ok`) shows every fast ride tracks the structural dial
+  at ρ=1.00, perfectly monotone (floors 0.000/0.658/0.458 → ceilings 1.000). +8 tests, 209 green,
+  baselines byte-identical. Honest limits (one horizon-family per ride, hand-built reference
+  reasoners, no coding rung) in `docs/12-validity.md`.
 - [ ] `item-hygiene` — Cronbach's α + per-seed **item discrimination** (point-biserial), flagging/pruning
   scenarios that don't separate ability. **Done when:** the harness reports α + per-item discrimination
   and a test asserts no negative-discrimination item is retained (Tier A).

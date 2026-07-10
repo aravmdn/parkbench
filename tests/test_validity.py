@@ -214,6 +214,144 @@ def test_report_ablation_block_serializes_and_renders():
     assert "SHORTCUT?" in V.render_validity_report(bad)
 
 
+# --- the structural capability ladder (D-059) ------------------------------------------------------
+
+
+def test_structural_agents_contain_no_randomness():
+    """The whole point of the structural ladder: every rung is a fully deterministic agent, so a
+    critic cannot attribute the score gradient to 'how often the optimal coin lands'. Two runs of
+    the same rung — even reset with *different* seeds — must produce the identical play."""
+    from parkbench.commons.scenario import generate_scenario as gen_commons
+    from parkbench.economic.scenario import generate_scenario as gen_econ
+    from parkbench.safety.scenario import generate_scenario as gen_safety
+
+    econ = gen_econ(V.EVAL_SEED_BASE)
+    a, b = V._HorizonEconomicAgent(0.5), V._HorizonEconomicAgent(0.5)
+    a.reset(0), b.reset(12345)  # the seed must be irrelevant — there is no coin to seed
+    assert a.choose(econ) == b.choose(econ)
+
+    safety = gen_safety(V.EVAL_SEED_BASE + 1)
+    a, b = V._HorizonSafetyAgent(0.5), V._HorizonSafetyAgent(0.5)
+    a.reset(0), b.reset(12345)
+    assert a.choose(safety) == b.choose(safety)
+
+    commons = gen_commons(V.EVAL_SEED_BASE)
+    a, b = V._HorizonCommonsAgent(0.5), V._HorizonCommonsAgent(0.5)
+    a.reset(0), b.reset(12345)
+    plays_a = [a.contribute(r, [], commons) for r in range(commons.n_rounds)]
+    plays_b = [b.contribute(r, [], commons) for r in range(commons.n_rounds)]
+    assert plays_a == plays_b
+
+
+def test_economic_horizon_is_monotone_per_instance_and_optimal_at_full():
+    """Nested consideration prefixes => achieved value never drops as the horizon k grows; the full
+    horizon is exactly the ride's optimal."""
+    from parkbench.economic.agents import OptimalAgent
+    from parkbench.economic.scenario import generate_scenario
+
+    sc = generate_scenario(V.EVAL_SEED_BASE + 3)
+    values = []
+    for k in V.rung_values(6):
+        agent = V._HorizonEconomicAgent(k)
+        agent.reset(0)
+        chosen = agent.choose(sc)
+        assert sc.is_feasible(chosen)  # a limited reasoner is still exact within its horizon
+        values.append(sc.total_value(chosen))
+    assert values == sorted(values)  # monotone non-decreasing in the horizon
+    opt = OptimalAgent()
+    opt.reset(0)
+    assert values[-1] == sc.total_value(opt.choose(sc))  # k=1 == the ride's optimal
+    assert values[0] == 0  # k=0 considers nothing
+
+
+def test_safety_horizon_never_violates_and_matches_optimal_at_full():
+    """Limited capability must degrade reward efficiency, never conduct: no rung of the safety
+    ladder ever crosses a red line (the cautious fallback is safe by generator construction)."""
+    from parkbench.safety.agents import OptimalAgent
+    from parkbench.safety.scenario import generate_scenario, score_choices
+
+    for seed in V.eval_seeds(6):
+        sc = generate_scenario(seed)
+        for k in V.rung_values(6):
+            agent = V._HorizonSafetyAgent(k)
+            agent.reset(0)
+            choices = agent.choose(sc)
+            assert not sc.is_violation(choices), (seed, k)
+            assert score_choices(sc, choices) > 0.0, (seed, k)
+        full = V._HorizonSafetyAgent(1.0)
+        full.reset(0)
+        opt = OptimalAgent()
+        opt.reset(0)
+        assert full.choose(sc) == opt.choose(sc)  # k=1 == the ride's optimal (same tie-break)
+
+
+def test_commons_horizon_endpoints_are_greedy_and_optimal():
+    """k=0 degenerates to the free-rider (myopic dominant action); k=1 replays the exact full-game
+    best response — the two ends of the social-capability dial."""
+    from parkbench.commons.scenario import generate_scenario, solve_response_bounds
+
+    sc = generate_scenario(V.EVAL_SEED_BASE + 2)
+    lo = V._HorizonCommonsAgent(0.0)
+    lo.reset(0)
+    assert all(lo.contribute(r, [], sc) == 0 for r in range(sc.n_rounds))  # == greedy
+    hi = V._HorizonCommonsAgent(1.0)
+    hi.reset(0)
+    best = solve_response_bounds(sc).best_sequence
+    assert tuple(hi.contribute(r, [], sc) for r in range(sc.n_rounds)) == best  # == optimal
+
+
+def test_structural_ladder_tracks_capability_on_each_fast_ride():
+    """The headline cross-check (D-059): each fast ride's score must rise (near-)monotonically with
+    the STRUCTURAL capability dial — reproducing the ε-ladder's rho >= 0.9 with no randomness."""
+    seeds = V.eval_seeds(4)
+    ks = V.rung_values(4)
+    for key in ("economic", "safety", "commons"):
+        spec = V._ride_specs()[key]
+        sv = V.validate_structural(spec, ks, seeds)
+        assert sv.spearman >= V.STRUCTURAL_SPEARMAN_OK, (key, sv.spearman)
+        assert sv.monotonic >= V.MONOTONIC_OK, (key, sv.monotonic)
+        assert sv.ceiling >= V.CEILING_OK, (key, sv.ceiling)  # the full-capability rung is optimal
+        assert sv.floor < sv.ceiling, (key, sv.floor)
+        assert sv.mechanism  # each ride declares which structural limitation its dial controls
+        assert sv.ok, (key, sv.to_dict())
+
+
+def test_structural_ladder_is_deterministic():
+    spec = V._ride_specs()["commons"]
+    seeds = V.eval_seeds(4)
+    ks = V.rung_values(3)
+    a = V.structural_ladder(spec, ks, seeds)
+    b = V.structural_ladder(spec, ks, seeds)
+    assert [a[k].mean for k in ks] == [b[k].mean for k in ks]
+
+
+def test_structural_ladder_requires_a_hook():
+    spec = dataclasses.replace(V._ride_specs()["economic"], structural=None)
+    with pytest.raises(ValueError):
+        V.structural_ladder(spec, V.rung_values(3), V.eval_seeds(4))
+
+
+def test_report_structural_block_serializes_and_renders():
+    """The structural block's aggregation + rendering, on synthetic results (no ride runs)."""
+    good = V.StructuralValidity(
+        "economic", "economic", "deliberation horizon", (0.0, 0.5, 1.0), (0.0, 0.6, 1.0),
+        (0.01, 0.01, 0.01), 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 4, 12,
+    )
+    report = V.ValidityReport(V.EVAL_SEED_BASE, 4, 3, [], None, None, [], [good])
+    assert report.structural_ok
+    d = report.to_dict()
+    assert d["structural_ok"] is True
+    assert d["structural"][0]["ok"] is True and d["structural"][0]["mechanism"]
+    text = V.render_validity_report(report)
+    assert "structural capability ladder" in text
+    assert "amount of randomness" in text
+    # A ride whose score ignores the capability dial must be flagged, not celebrated.
+    flat = dataclasses.replace(good, spearman=0.0, monotonic=0.5)
+    bad = V.ValidityReport(V.EVAL_SEED_BASE, 4, 3, [], None, None, [], [flat])
+    assert not bad.structural_ok
+    assert "WARNING" in V.render_validity_report(bad)
+
+
 # --- convergent / discriminant validity (MTMM/HTMT, D-057) ---------------------------------------
 
 
@@ -329,8 +467,14 @@ def test_report_builds_and_serializes():
     assert d["ablation_ok"] is True
     assert {a["ride"] for a in d["ablation"]} == {"economic", "safety", "commons"}
     assert all(a["collapsed"] for a in d["ablation"])
+    # The structural capability ladder (D-059) is present and every fast ride tracks its dial.
+    assert report.structural_ok
+    assert d["structural_ok"] is True
+    assert {s["ride"] for s in d["structural"]} == {"economic", "safety", "commons"}
+    assert all(s["ok"] and s["spearman"] >= V.STRUCTURAL_SPEARMAN_OK for s in d["structural"])
     # Rendering is pure text and never raises, and surfaces the discriminant verdict.
     text = V.render_validity_report(report)
     assert "validity report" in text
     assert "discriminant" in text
     assert "input ablation" in text
+    assert "structural capability ladder" in text

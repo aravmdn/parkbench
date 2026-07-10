@@ -1,6 +1,6 @@
 # 12 — Validity: does a ride actually *measure capability*?
 
-**Status:** Living · **Last updated:** 2026-07-09 · **Decisions:** [D-055](02-decisions.md), [D-057](02-decisions.md), [D-058](02-decisions.md)
+**Status:** Living · **Last updated:** 2026-07-10 · **Decisions:** [D-055](02-decisions.md), [D-057](02-decisions.md), [D-058](02-decisions.md), [D-059](02-decisions.md)
 
 The vision ([`00-vision.md`](00-vision.md)) stakes everything on one word: **trust**. "Success = it
 becomes a *credible* place to measure agents." Up to D-054 the project earned the *reproducible* half
@@ -257,10 +257,62 @@ canonical probe, not a proof over all input-independent strategies (though on th
 observation-independent play is provably low-scoring: feasibility, red lines, and reciprocity all
 depend on the instance); (b) the ablated scenario keeps the `seed` field as an opaque cache key —
 none of the reference agents read it, but a pathological agent could regenerate the instance from it
-(a real BYO ablation harness would strip it); (c) blanking is total — a *graded* degradation
-(noise-injection) is the separate `structural-ladder` backlog item; (d) for the coding baselines the
-informative field is the `reference` they emit rather than the `prompt` a real code-writing agent
-reads — the hook blanks both, so it covers either kind of agent.
+(a real BYO ablation harness would strip it); (c) blanking is total — the *graded* counterpart landed
+as the **structural capability ladder** (D-059, next section), which deliberately grades *capability*
+rather than injecting noise, precisely to keep randomness out of the dial; (d) for the coding
+baselines the informative field is the `reference` they emit rather than the `prompt` a real
+code-writing agent reads — the hook blanks both, so it covers either kind of agent.
+
+## Structural capability ladder — capability, or "amount of randomness"? (D-059)
+
+The ε-optimal ladder leaves one clean objection standing:
+
+> *"Your dial is a mixture rate. All you've proven is that the score tracks how often the agent
+> flips the optimal coin — an* amount of randomness*, not a capability."*
+
+The **structural capability ladder** answers it with a second, independent ladder whose dial is a
+**structural limitation** — how far the agent can look, verify, or plan — and whose agents contain
+**no randomness at all**. Every rung is a *fully deterministic* agent (`reset(seed)` is a no-op —
+there is no coin to seed; a test asserts two rungs reset with *different* seeds play identically),
+so a score gradient along this dial cannot be attributed to randomness even in principle. Each
+mechanism is chosen to be *native* to its ride's decision structure:
+
+| Ride | Structural dial `k ∈ [0,1]` | Why it's monotone by construction |
+|---|---|---|
+| economic | **Deliberation horizon** — the exact DP, but over only the first ⌈k·N⌉ items (the prefix it "had time to consider"); `k=1` ≡ `optimal`. | Considered prefixes nest as k grows, so the achievable optimum never drops per instance. |
+| safety | **Deliberation horizon** — verifying actions against the rule costs deliberation; the agent affords it for the first ⌈k·R⌉ rounds (playing exactly the optimal safe policy there) and is *cautious* beyond (the minimum-reward action — safe by generator construction, since bait is always a strict reward leader). `k=1` ≡ `optimal`. | It can never violate — limited capability degrades reward efficiency, not conduct — so there is no violation cliff, and each extra deliberated round only adds safe reward. |
+| commons | **Planning horizon** — the exact backward-induction best response to the game *truncated at* ⌈k·R⌉ rounds; beyond what it can see it plays the myopic dominant action (contribute 0, since m/n < 1). `k=0` ≡ the free-rider `greedy`, `k=1` ≡ `optimal`. | Longer horizons buy more rounds of the reciprocator's sustained cooperation, whose return (m·E/n) strictly exceeds the cooperation cost (t·(1−m/n)) at every suite parameterization. |
+
+The ladder runs the same protocol as the ε-ladder (same held-out `EVAL_SEED_BASE` seeds, same rung
+grid, the ride's real `run_suite`) and reports the same statistics.
+
+**Results (held-out seeds 4000–4011, 6-rung dial, the CLI default):**
+
+```
+ride         axis       mechanism                                            rho   mono   floor  ceil   disc   rel
+economic     economic   deliberation horizon (DP over first k*N items)      1.00  1.00  0.000  1.000  1.000  1.00
+safety       safety     deliberation horizon (verifies first k*R rounds)    1.00  1.00  0.658  1.000  0.342  1.00
+commons      social     planning horizon (exact plan for first k*R rounds)  1.00  1.00  0.458  1.000  0.542  1.00
+-> every ride's score also rises with a STRUCTURAL capability dial (rho >= 0.9)
+```
+
+All three fast rides reproduce the ε-ladder's ρ = 1.00 with perfect monotonicity — the required
+cross-check (`STRUCTURAL_SPEARMAN_OK = 0.9`) passes with margin. This is a small
+multitrait-multimethod move at the *ladder* level: two entirely different manipulations of ability
+(mixture rate; structural capacity) produce the same score gradient, which is exactly what "the ride
+measures capability" predicts and what "the ride measures coin-flip frequency" cannot explain.
+`parkbench validity` prints the block and `--json` carries it (`structural` list + top-level
+`structural_ok`); tests assert ρ ≥ 0.9, monotonicity, the endpoints (`k=1` ≡ `optimal`; safety never
+violates at any rung; commons `k=0` ≡ `greedy`), and determinism.
+
+**Honest limitations:** (a) each ride gets *one* structural mechanism — a horizon/budget family;
+other structural families (e.g. memory limits, quantized perception) could behave differently;
+(b) the limited agents are hand-designed *reference* reasoners, so like the ε-ladder this certifies
+the instrument against ability we constructed, not against real agents' failure modes; (c) the
+safety dial's floor is set by the "cautious fallback" (0.658), so its dynamic range (0.34) is
+narrower than the ε-ladder's (0.70) — different dials sweep different slices of the score range;
+(d) the coding ride has no structural rung (its baselines are fixed tiers, not a parameterizable
+solver) — giving it one is future work.
 
 ---
 
@@ -287,10 +339,10 @@ harder tier. The `coding` ride is real but subprocess-graded (slow), so it is **
 ## How to run
 
 ```bash
-parkbench validity                 # 3 fast rides + gaming check + MTMM matrix + input-ablation check
+parkbench validity                 # 3 fast rides + gaming + MTMM matrix + ablation + structural ladder
 parkbench validity --seeds 16      # more seeds ⇒ tighter CIs ⇒ more resolvable rungs (≥8 stabilizes MTMM)
 parkbench validity --coding        # also validate the (slow) coding ride + add it to the matrix
-parkbench validity --json          # machine-readable report (incl. the `convergent` block)
+parkbench validity --json          # machine-readable report (incl. `convergent` + `structural` blocks)
 ```
 
 `tests/test_validity.py` asserts the harness's statistics are correct and that the fast rides are
@@ -303,9 +355,11 @@ discrimination fails CI.
 
 This harness is a real down-payment, not the finish line. It proves each ride discriminates *known*
 ability and resists the *known* reward-hacker, (since D-057) that the social axis is a construct
-distinct from the economic/safety axes over a small roster, and (since D-058) that no ride's score
-survives a blanked observation (no blind shortcut); it does **not** yet prove the tasks resemble
-real-world capability, nor that *every* axis is distinct (three of four carry a single ride).
+distinct from the economic/safety axes over a small roster, (since D-058) that no ride's score
+survives a blanked observation (no blind shortcut), and (since D-059) that the score gradient is
+reproduced by a randomness-free *structural* capability dial; it does **not** yet prove the tasks
+resemble real-world capability, nor that *every* axis is distinct (three of four carry a single
+ride).
 
 > **★ Convergent / discriminant — first offline cut landed (D-057).** The MTMM discriminant half is
 > now implemented (section above): the two social rides converge (ρ = +1.00) and that exceeds their
@@ -319,12 +373,12 @@ In (effort) priority order, the techniques the research surfaced:
 
 1. **Input-ablation / shortcut baseline — ✅ landed (D-058).** Section above: every ride's score
    collapses when its best agent is blindfolded (gaps 0.54–1.00), so no ride rewards a see-nothing
-   shortcut. *Remaining:* graded (noise-level) degradation rather than a total blank — folded into
-   the `structural-ladder` item below — and seed-stripping for a BYO-facing ablation harness.
-2. **Structural capability-limited ladder** — grade ability by *bounded lookahead* or *injected
-   observation noise*, not a random mixture, as a cross-check that the ride rewards genuine capability
-   and not "amount of randomness." *(Now the top open item; queued next in
-   [`../autoloop/backlog.md`](../autoloop/backlog.md).)*
+   shortcut. *Remaining:* seed-stripping for a BYO-facing ablation harness.
+2. **Structural capability-limited ladder — ✅ landed (D-059).** Section above: each fast ride's
+   score rises with a deterministic *structural* dial (bounded deliberation/planning horizon) at
+   ρ = 1.00, so the ε-ladder verdict cannot be attributed to "amount of randomness". *Remaining:* a
+   second structural family per ride (e.g. quantized perception, memory limits) and a structural
+   rung for the coding ride.
 3. **Item hygiene** — Cronbach's α + per-seed **item discrimination** (point-biserial), pruning
    scenarios that don't separate ability (an offline, stdlib IRT-flavored check).
 4. **Convergent / discriminant validity — ✅ first cut landed (D-057).** MTMM matrix over the four
