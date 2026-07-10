@@ -1108,3 +1108,56 @@ well-formed play, not instance information); a partial economic blank (values on
 — rejected as a half-blindfold that under-detects; making the blindfolded agent a CLI-selectable
 roster entry (measurement stays out of the ride rosters, as with the ε-ladder). Extends D-055/D-057;
 builds on the per-ride suites (D-036/D-040/D-045) and the coding stub convention (D-039).
+
+### D-059 · 2026-07-10 · Structural capability ladder — capability, or "amount of randomness"?
+**Decision:** Extend the validity harness (`src/parkbench/validity.py`, `parkbench validity`) with a
+**structural capability-limited ladder** — item 2 of D-055's deferred gaps and the direct answer to
+the one clean objection the ε-optimal ladder leaves standing: *"your dial is a mixture rate, so all
+you've proven is that the score tracks how often the agent flips the optimal coin."* The new ladder
+grades ability by a **structural limitation** instead — how far the agent can look, verify, or plan —
+and its rungs are **fully deterministic agents with no randomness anywhere** (`reset(seed)` is a
+no-op; a test asserts two rungs reset with *different* seeds play identically), so the gradient
+cannot be attributed to randomness even in principle. Per-ride mechanisms, chosen to be native to
+each ride's decision structure: **economic** — `_HorizonEconomicAgent`, a bounded **deliberation
+horizon** (the exact DP over only the first ⌈k·N⌉ items; consideration prefixes nest, so the
+achievable optimum is monotone per instance; k=1 ≡ `optimal`); **safety** — `_HorizonSafetyAgent`, a
+bounded **deliberation horizon** over rounds (verifying actions against the rule costs deliberation:
+the agent plays the exact optimal-safe policy on the first ⌈k·R⌉ rounds and is *cautious* beyond —
+the minimum-reward action, safe by generator construction since bait is always a strict reward
+leader — so limited capability degrades reward efficiency, never conduct: no violation cliff);
+**commons** — `_HorizonCommonsAgent`, a truncated **planning horizon** (the exact backward-induction
+best response to the game truncated at ⌈k·R⌉ rounds, the myopic dominant action — contribute 0 —
+beyond it; k=0 ≡ the free-rider `greedy`, k=1 ≡ `optimal`). Same protocol as the ε-ladder: held-out
+eval seeds (`EVAL_SEED_BASE = 4000…`), same rung grid, the ride's real `run_suite`; reports
+Spearman/Kendall, monotonic fraction, floor/ceiling/discrimination, and split-half reliability, with
+threshold `STRUCTURAL_SPEARMAN_OK = 0.9`. Wired into the text report and `--json` (new `structural`
+list + top-level `structural_ok`).
+**Results (held-out seeds 4000–4011, 6-rung dial, CLI default):** all three fast rides reproduce the
+ε-ladder's verdict on the structural dial — **economic ρ = 1.00** (floor 0.000 → ceiling 1.000, disc
+1.000), **safety ρ = 1.00** (0.658 → 1.000, disc 0.342), **commons ρ = 1.00** (0.458 → 1.000, disc
+0.542); all perfectly monotone, split-half reliability 1.00. Two independent manipulations of ability
+(mixture rate; structural capacity) now produce the same score gradient — what "the ride measures
+capability" predicts and "the ride measures coin-flip frequency" cannot explain (an MTMM move at the
+ladder level). **209 passing tests** (+8 in `tests/test_validity.py`: no-randomness, per-instance
+monotonicity, never-violates + k=1 ≡ optimal endpoints, ρ ≥ 0.9 per fast ride, determinism, hook
+guard, block serialization/rendering); **baselines byte-identical** (purely additive measurement —
+no ride/scoring/agent code touched; everything lives in `validity.py`).
+**Honest limitations (documented in [`12-validity.md`](12-validity.md)):** (a) one structural family
+per ride (horizon-style) — other families (quantized perception, memory limits) could behave
+differently; (b) the limited agents are hand-designed reference reasoners: like the ε-ladder this
+certifies the instrument against constructed ability, not real agents' failure modes; (c) the safety
+dial's cautious-fallback floor (0.658) narrows its dynamic range (0.342) vs. the ε-ladder's (0.70);
+(d) the coding ride has no structural rung (its baselines are fixed tiers, not a parameterizable
+solver).
+**Why:** D-055 proved scores *rise* with known ability, D-058 that they *fall* without information;
+D-059 closes the loop on the ladder itself — the rise is reproduced by a mechanism containing no
+randomness, so the instrument demonstrably rewards *capability*. It was the top remaining item on
+the validity roadmap.
+**Rejected / deferred:** *injected observation noise* as the dial (a corruption *probability* is
+again a randomness-rate — the very objection this item answers; graded capability was chosen
+precisely to keep randomness out of the dial); a per-round **verification budget** for safety
+(m = ⌈k·A⌉ rule-checks per round — implemented first, but with only 2–3 actions per round it
+saturates at k ≈ 0.4 and the top rungs tie, ρ = 0.845 < 0.9; replaced by the round-horizon dial,
+ρ = 1.00); putting the limited agents inside the ride packages (kept in `validity.py` — measurement
+stays out of the ride rosters, as with the ε-ladder and blindfold). Extends D-055/D-057/D-058;
+builds on the per-ride exact solvers (D-036/D-040/D-045).
