@@ -1,6 +1,6 @@
 # 12 — Validity: does a ride actually *measure capability*?
 
-**Status:** Living · **Last updated:** 2026-07-10 · **Decisions:** [D-055](02-decisions.md), [D-057](02-decisions.md), [D-058](02-decisions.md), [D-059](02-decisions.md)
+**Status:** Living · **Last updated:** 2026-07-11 · **Decisions:** [D-055](02-decisions.md), [D-057](02-decisions.md), [D-058](02-decisions.md), [D-059](02-decisions.md), [D-060](02-decisions.md)
 
 The vision ([`00-vision.md`](00-vision.md)) stakes everything on one word: **trust**. "Success = it
 becomes a *credible* place to measure agents." Up to D-054 the project earned the *reproducible* half
@@ -314,6 +314,70 @@ narrower than the ε-ladder's (0.70) — different dials sweep different slices 
 (d) the coding ride has no structural rung (its baselines are fixed tiers, not a parameterizable
 solver) — giving it one is future work.
 
+## Item hygiene — is every *seed* pulling its weight? (D-060)
+
+The ladder statistics treat each ride's seed suite as one aggregated instrument. Classical test
+theory asks a finer question: is each **individual scenario instance** a good test item? Treating
+each held-out eval **seed as a test ITEM** and the ε-optimal ladder's **rungs as "persons"** of
+graded, known ability yields exactly the person×item score matrix classical item analysis needs —
+once again exploiting that in a synthetic benchmark, true ability is a dial we set. The matrix entry
+is the ride's real suite mean for `Agent_p` at that seed (`item_matrix` in `validity.py`, the
+ladder's own per-seed scores, just not aggregated).
+
+Two textbook statistics follow (exact formulas, as implemented):
+
+- **Cronbach's α** — internal consistency of the seed suite. With `k` items, item sample variances
+  `s²ᵢ` (each item's scores across the rungs) and the sample variance `s²_T` of the per-rung total
+  `T = Σᵢ Xᵢ`:
+
+  ```
+  α = k/(k−1) · (1 − Σᵢ s²ᵢ / s²_T)
+  ```
+
+  High α ⇒ the generated instances behave like parallel measurements of one construct, not a grab
+  bag. Threshold: `ALPHA_OK = 0.7` (Nunnally's classical "acceptable" floor). Degenerate cases
+  (fewer than 2 items/persons, zero-variance total) are defined as 0.
+- **Per-item discrimination** — the **corrected item-total correlation**: Pearson `r` between item
+  `i`'s scores and the **rest-of-test total** `T − Xᵢ`, across the rungs. (The *point-biserial*
+  coefficient is this same Pearson `r` in the dichotomous special case; Parkbench items are
+  continuous in `[0, 1]`, so the item-rest Pearson `r` is the exact analogue. Correlating against
+  the *rest* total rather than the full total removes the item's spurious correlation with itself.)
+- **Retention rule** — an item with **negative** discrimination (`r < ITEM_DISCRIMINATION_MIN = 0`)
+  *inverts* ability and is **flagged for pruning**: the harness's `retained` set excludes every
+  flagged seed, and a test asserts that invariant on real data. Items with `0 ≤ r < 0.2`
+  (`ITEM_WEAK`, Ebel's guideline) are marked *weak* but retained — informational only.
+
+This is a **reporting/flagging harness**: it never changes any ride's actual scoring, and all
+existing outputs are untouched. `parkbench validity` prints the block and `--json` carries it
+(`hygiene` list + top-level `hygiene_ok`).
+
+**Results (held-out seeds 4000–4011, 6-rung ladder, the CLI default):**
+
+```
+ride         axis       alpha   items  retained  flagged  weak   min r_it  max r_it
+economic     economic  0.994      12        12        0     0     +0.917    +0.996
+safety       safety    0.993      12        12        0     0     +0.916    +0.998
+commons      social    0.996      12        12        0     0     +0.950    +0.998
+-> every ride's seed suite is internally consistent (alpha >= 0.7) and no item has negative
+   discrimination => all items retained (the retention rule had nothing to prune)
+```
+
+Every generated instance discriminates ability strongly (worst item-rest r = +0.916) and each
+ride's 12-seed suite is highly consistent (α ≥ 0.993) — the generators are producing homogeneous,
+ability-sensitive items, with nothing to prune today.
+
+**Honest limitations:** (a) the "persons" are the six ε-ladder rungs — N = 6 graded synthetic
+abilities, not a population of real agents, so α and `r_it` certify consistency *against constructed
+ability* (the same scope caveat as the ladders); (b) the very high α is partly a consequence of that
+design — every item is scored by the same monotone instrument over the same rungs, so some
+inter-item correlation is built in; treat α as a *homogeneity* check, not proof of unidimensionality
+(with N = 6 persons a factor analysis is out of reach); (c) items here are **generated instances,
+not a fixed test form** — pruning a flagged seed would feed back into *generator tuning* (fix the
+generator so that region of instance space discriminates), not into deleting a question from a
+static test; the retained set is a report, and no ride's scoring consumes it; (d) the coding ride's
+item block runs only with `--coding` and on the light 3-rung/3-seed config, where α over 3 persons
+is coarse.
+
 ---
 
 ## Results (held-out seeds 4000–4011, 6-rung ladder)
@@ -339,7 +403,7 @@ harder tier. The `coding` ride is real but subprocess-graded (slow), so it is **
 ## How to run
 
 ```bash
-parkbench validity                 # 3 fast rides + gaming + MTMM matrix + ablation + structural ladder
+parkbench validity                 # 3 fast rides + gaming + MTMM + ablation + structural ladder + item hygiene
 parkbench validity --seeds 16      # more seeds ⇒ tighter CIs ⇒ more resolvable rungs (≥8 stabilizes MTMM)
 parkbench validity --coding        # also validate the (slow) coding ride + add it to the matrix
 parkbench validity --json          # machine-readable report (incl. `convergent` + `structural` blocks)
@@ -356,8 +420,9 @@ discrimination fails CI.
 This harness is a real down-payment, not the finish line. It proves each ride discriminates *known*
 ability and resists the *known* reward-hacker, (since D-057) that the social axis is a construct
 distinct from the economic/safety axes over a small roster, (since D-058) that no ride's score
-survives a blanked observation (no blind shortcut), and (since D-059) that the score gradient is
-reproduced by a randomness-free *structural* capability dial; it does **not** yet prove the tasks
+survives a blanked observation (no blind shortcut), (since D-059) that the score gradient is
+reproduced by a randomness-free *structural* capability dial, and (since D-060) that every
+individual held-out seed is itself a consistent, ability-discriminating test item; it does **not** yet prove the tasks
 resemble real-world capability, nor that *every* axis is distinct (three of four carry a single
 ride).
 
@@ -379,8 +444,10 @@ In (effort) priority order, the techniques the research surfaced:
    ρ = 1.00, so the ε-ladder verdict cannot be attributed to "amount of randomness". *Remaining:* a
    second structural family per ride (e.g. quantized perception, memory limits) and a structural
    rung for the coding ride.
-3. **Item hygiene** — Cronbach's α + per-seed **item discrimination** (point-biserial), pruning
-   scenarios that don't separate ability (an offline, stdlib IRT-flavored check).
+3. **Item hygiene — ✅ landed (D-060).** Section above: Cronbach's α + per-seed item-rest
+   discrimination over the ladder's person×item matrix; all 12 held-out seeds per fast ride are
+   retained (α ≥ 0.993, min r_it +0.916, nothing flagged). *Remaining:* wiring a flagged item back
+   into generator tuning if one ever appears, and a real-agent (non-synthetic) person sample.
 4. **Convergent / discriminant validity — ✅ first cut landed (D-057).** MTMM matrix over the four
    axes; social pair converges and clears its cross-axis correlations. *Remaining:* a larger roster
    (needs a negotiation `optimal`), a second ride per non-social axis, and an **external** criterion
