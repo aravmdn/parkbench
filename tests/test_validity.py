@@ -352,6 +352,106 @@ def test_report_structural_block_serializes_and_renders():
     assert "WARNING" in V.render_validity_report(bad)
 
 
+# --- item hygiene: seeds-as-items classical item analysis (D-060) ---------------------------------
+
+
+def test_cronbach_alpha_textbook_values():
+    """Hand-checkable α: identical items are perfectly consistent; a worked mid case; degenerates."""
+    # k identical columns => inter-item correlation 1 => alpha == 1 exactly.
+    assert math.isclose(V.cronbach_alpha([[1, 2, 3], [1, 2, 3]]), 1.0, abs_tol=1e-12)
+    # Worked example: items [1,2,3] and [1,3,2] -> s2_i = 1 each, total [2,5,5] -> s2_T = 3,
+    # alpha = 2/(2-1) * (1 - 2/3) = 2/3.
+    assert math.isclose(V.cronbach_alpha([[1, 2, 3], [1, 3, 2]]), 2.0 / 3.0, abs_tol=1e-12)
+    # Degenerate cases are defined as 0: a single item, and a zero-variance total.
+    assert V.cronbach_alpha([[1, 2, 3]]) == 0.0
+    assert V.cronbach_alpha([[1, 2, 3], [3, 2, 1]]) == 0.0  # totals [4,4,4]
+
+
+def test_item_rest_discrimination_is_corrected_and_signs_are_right():
+    """The item-REST correlation: an ability-inverting item must come out negative."""
+    cols = [[1, 2, 3], [2, 4, 6], [3, 2, 1]]
+    discs = V.item_rest_discrimination(cols)
+    assert math.isclose(discs[0], 1.0, abs_tol=1e-12)  # rises with its rest total [5, 6, 7]
+    assert math.isclose(discs[2], -1.0, abs_tol=1e-12)  # inverts its rest total [3, 6, 9] exactly
+    # A constant item carries no signal — defined as 0.0 (not flagged, but weak).
+    assert V.item_rest_discrimination([[1, 1, 1], [1, 2, 3]])[0] == 0.0
+
+
+def test_item_stats_flag_and_weak_rules():
+    """Retention rule: NEGATIVE discrimination => flagged; low-positive => weak but retained."""
+    assert V.ItemStats(seed=1, mean=0.5, discrimination=-0.1).flagged
+    weak = V.ItemStats(seed=2, mean=0.5, discrimination=0.1)
+    assert not weak.flagged and weak.weak
+    strong = V.ItemStats(seed=3, mean=0.5, discrimination=0.9)
+    assert not strong.flagged and not strong.weak
+
+
+def test_item_matrix_matches_ladder_and_is_deterministic():
+    """The person×item matrix is the ladder's own per-seed scores, just not aggregated."""
+    from parkbench.scoring import Stat
+
+    spec = V._ride_specs()["safety"]
+    ps = V.rung_values(3)
+    seeds = V.eval_seeds(4)
+    matrix = V.item_matrix(spec, ps, seeds)
+    assert V.item_matrix(spec, ps, seeds) == matrix  # deterministic
+    lad = V.ladder(spec, ps, seeds)
+    for i, p in enumerate(ps):
+        row = [matrix[s][i] for s in seeds]
+        assert math.isclose(Stat.of(row).mean, lad[p].mean, abs_tol=1e-12)
+
+
+def test_fast_ride_item_hygiene_no_negative_item_retained():
+    """The retention rule on real data: the retained set excludes every flagged item, and no
+    retained item has negative discrimination. On the held-out seeds all items are in fact clean:
+    every seed suite is internally consistent (alpha >= 0.7) with nothing flagged."""
+    seeds = V.eval_seeds(4)
+    ps = V.rung_values(4)
+    for key in ("economic", "safety", "commons"):
+        h = V.build_item_hygiene(V._ride_specs()[key], ps, seeds)
+        # Partition invariant: retained + flagged == all items, with no overlap.
+        assert set(h.retained) | set(h.flagged) == set(seeds), key
+        assert not set(h.retained) & set(h.flagged), key
+        # THE retention rule: no negative-discrimination item is retained.
+        retained_items = [i for i in h.items if i.seed in h.retained]
+        assert all(i.discrimination >= V.ITEM_DISCRIMINATION_MIN for i in retained_items), key
+        # And the actual finding: the current generators produce clean suites.
+        assert h.flagged == (), (key, h.to_dict())
+        assert h.alpha >= V.ALPHA_OK, (key, h.alpha)
+        assert h.clean, (key, h.to_dict())
+
+
+def test_report_hygiene_block_serializes_and_renders():
+    """The hygiene block's aggregation + rendering, on synthetic results (no ride runs)."""
+    clean = V.ItemHygiene(
+        "economic", "economic", (0.0, 0.5, 1.0), 0.99,
+        (V.ItemStats(4000, 0.8, 0.95), V.ItemStats(4001, 0.9, 0.97)), 12,
+    )
+    report = V.ValidityReport(V.EVAL_SEED_BASE, 4, 4, [], None, None, [], [], [clean])
+    assert report.hygiene_ok
+    d = report.to_dict()
+    assert d["hygiene_ok"] is True
+    assert d["hygiene"][0]["alpha_ok"] is True and d["hygiene"][0]["flagged"] == []
+    assert d["hygiene"][0]["retained"] == [4000, 4001]
+    text = V.render_validity_report(report)
+    assert "item hygiene" in text and "Cronbach" in text
+    # A flagged (negative-discrimination) item must be pruned from the retained set and warned about.
+    dirty = V.ItemHygiene(
+        "economic", "economic", (0.0, 0.5, 1.0), 0.99,
+        (V.ItemStats(4000, 0.8, 0.95), V.ItemStats(4001, 0.5, -0.4)), 12,
+    )
+    assert dirty.flagged == (4001,)
+    assert dirty.retained == (4000,)  # the flagged item is NOT retained
+    assert not dirty.clean
+    bad = V.ValidityReport(V.EVAL_SEED_BASE, 4, 4, [], None, None, [], [], [dirty])
+    assert not bad.hygiene_ok
+    bd = bad.to_dict()
+    assert bd["hygiene_ok"] is False
+    assert bd["hygiene"][0]["flagged"] == [4001] and 4001 not in bd["hygiene"][0]["retained"]
+    bad_text = V.render_validity_report(bad)
+    assert "flagged for pruning" in bad_text and "WARNING" in bad_text
+
+
 # --- convergent / discriminant validity (MTMM/HTMT, D-057) ---------------------------------------
 
 
@@ -472,9 +572,18 @@ def test_report_builds_and_serializes():
     assert d["structural_ok"] is True
     assert {s["ride"] for s in d["structural"]} == {"economic", "safety", "commons"}
     assert all(s["ok"] and s["spearman"] >= V.STRUCTURAL_SPEARMAN_OK for s in d["structural"])
+    # The item-hygiene block (D-060) is present: consistent suites, no flagged item retained.
+    assert report.hygiene_ok
+    assert d["hygiene_ok"] is True
+    assert {h["ride"] for h in d["hygiene"]} == {"economic", "safety", "commons"}
+    for h in d["hygiene"]:
+        assert h["alpha_ok"] and h["alpha"] >= V.ALPHA_OK
+        assert h["flagged"] == [] and h["n_items"] == len(h["retained"])
+        assert not set(h["retained"]) & set(h["flagged"])
     # Rendering is pure text and never raises, and surfaces the discriminant verdict.
     text = V.render_validity_report(report)
     assert "validity report" in text
     assert "discriminant" in text
     assert "input ablation" in text
     assert "structural capability ladder" in text
+    assert "item hygiene" in text

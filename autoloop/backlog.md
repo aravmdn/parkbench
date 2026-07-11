@@ -97,9 +97,16 @@ Tier A (stdlib-only, keep `pytest` green + baselines byte-identical).
   at ρ=1.00, perfectly monotone (floors 0.000/0.658/0.458 → ceilings 1.000). +8 tests, 209 green,
   baselines byte-identical. Honest limits (one horizon-family per ride, hand-built reference
   reasoners, no coding rung) in `docs/12-validity.md`.
-- [ ] `item-hygiene` — Cronbach's α + per-seed **item discrimination** (point-biserial), flagging/pruning
+- [x] `item-hygiene` — Cronbach's α + per-seed **item discrimination** (point-biserial), flagging/pruning
   scenarios that don't separate ability. **Done when:** the harness reports α + per-item discrimination
   and a test asserts no negative-discrimination item is retained (Tier A).
+  ✅ landed (D-060) — seeds-as-items classical item analysis over the ε-ladder's person×item matrix
+  (all in `validity.py`; reporting/flagging only): `parkbench validity` (+`--json` `hygiene` block /
+  `hygiene_ok`) reports α = 0.994/0.993/0.996 (economic/safety/commons), all 12 held-out items
+  retained, 0 flagged (min item-rest r +0.916); negative-discrimination items are pruned from the
+  retained set by rule, asserted on real data. +6 tests, 215 green, baselines byte-identical. Honest
+  limits (synthetic persons, built-in homogeneity, generated items ⇒ pruning = generator tuning) in
+  `docs/12-validity.md`.
 - [ ] `bootstrap-and-versioning` — Replace the normal-approx CI with a stdlib **bootstrap** CI, and stamp
   a **benchmark/generator version** into every `--json` result. **Done when:** results carry a version
   string + bootstrap CIs, covered by tests (Tier A).

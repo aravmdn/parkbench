@@ -1161,3 +1161,53 @@ saturates at k ≈ 0.4 and the top rungs tie, ρ = 0.845 < 0.9; replaced by the 
 ρ = 1.00); putting the limited agents inside the ride packages (kept in `validity.py` — measurement
 stays out of the ride rosters, as with the ε-ladder and blindfold). Extends D-055/D-057/D-058;
 builds on the per-ride exact solvers (D-036/D-040/D-045).
+
+### D-060 · 2026-07-11 · Item hygiene — Cronbach's α + per-seed item discrimination (seeds as test items)
+**Decision:** Extend the validity harness (`src/parkbench/validity.py`, `parkbench validity`) with
+**classical item analysis** — item 3 of D-055's deferred gaps. Treat each **held-out eval seed as a
+test ITEM** and the ε-optimal ladder's **rungs as "persons"** of graded, known ability; the ladder's
+per-seed suite means form the person×item score matrix (`item_matrix` — the natural stdlib-only
+design given the harness, and once again exploiting that true ability is a dial we set). Two
+textbook statistics per fast ride: **Cronbach's α** — internal consistency of the seed suite,
+`α = k/(k−1) · (1 − Σᵢ s²ᵢ / s²_T)` with sample variances of each item column and of the per-rung
+total, threshold `ALPHA_OK = 0.7` (Nunnally), degenerate cases defined as 0 — and **per-item
+discrimination** — the *corrected* item-total correlation: Pearson r of each item vs. the
+**rest-of-test total** `T − Xᵢ` across the rungs (the point-biserial coefficient is this same r in
+the dichotomous special case; Parkbench items are continuous in [0,1], so the item-rest Pearson r is
+the exact analogue). **Retention rule:** an item with **negative** discrimination
+(`r < ITEM_DISCRIMINATION_MIN = 0`) inverts ability and is **flagged for pruning** — the harness's
+`retained` set excludes every flagged seed, and a test asserts that invariant on real data; items
+with `0 ≤ r < 0.2` (`ITEM_WEAK`, Ebel) are marked *weak* but retained (informational). This is a
+**reporting/flagging harness only** — no ride's actual scoring changes and nothing consumes the
+retained set. Wired into the text report and `--json` (new `hygiene` list + top-level `hygiene_ok`),
+on the same held-out eval seeds (`EVAL_SEED_BASE = 4000…`); the slow coding ride's block is opt-in
+(`--coding`) on the light 3-rung/3-seed config.
+**Results (held-out seeds 4000–4011, 6-rung ladder, CLI default):** every ride's seed suite is
+highly consistent and nothing is flagged — **economic α = 0.994**, **safety α = 0.993**,
+**commons α = 0.996**; all 12 items retained per ride, 0 flagged, 0 weak; worst item-rest
+r = **+0.916** (economic/safety), best +0.998. The generators are producing homogeneous,
+ability-sensitive instances — the retention rule had nothing to prune. **215 passing tests** (+6 in
+`tests/test_validity.py`: textbook α values incl. a worked 2/3 case, item-rest sign/correction
+checks, the flag/weak rules, matrix↔ladder consistency + determinism, the no-negative-item-retained
+invariant on real data, block serialization/rendering incl. a flagged-item warning path); **baselines
+byte-identical** (purely additive measurement — no ride/scoring/agent code touched; everything lives
+in `validity.py`).
+**Honest limitations (documented in [`12-validity.md`](12-validity.md)):** (a) the "persons" are six
+synthetic ladder rungs, not real agents — α and r_it certify consistency against *constructed*
+ability; (b) the very high α is partly built in (every item scored by the same monotone instrument
+over the same rungs) — treat it as a homogeneity check, not proof of unidimensionality (N = 6 rules
+out factor analysis); (c) items are **generated instances, not a fixed test form** — a flagged seed
+feeds back into *generator tuning*, not question deletion, and the retained set is a report no
+scoring consumes; (d) the coding block is opt-in and coarse (3 persons).
+**Why:** D-055–D-059 validated each ride's *aggregate* score; item hygiene drills into the
+instrument's parts — a suite is only as trustworthy as its worst item, and a scenario that fails to
+separate (or inverts) ability would silently dilute every ladder statistic. It was the top remaining
+item on the validity roadmap.
+**Rejected / deferred:** true point-biserial on dichotomized scores (items are continuous — the
+item-rest Pearson r is the exact continuous analogue, and dichotomizing throws information away);
+using real-agent rosters as persons (N = 4 agents with unknown true ability — the rungs give N = 6
+*known* abilities, matching the harness's core trick); auto-pruning flagged seeds from ride suites
+(the harness must stay reporting-only — scoring changes would break byte-identity and D-020
+reproducibility; pruning feeds generator tuning instead); a full IRT model fit (needs optimization
+well beyond stdlib scope for N = 6). Extends D-055/D-057/D-058/D-059; builds on the ε-optimal
+ladder (D-055).

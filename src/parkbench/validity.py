@@ -1102,6 +1102,185 @@ def validate_structural(spec: _RideSpec, ks, seeds, n: int | None = None) -> Str
 
 
 # --------------------------------------------------------------------------------------------------
+# Item hygiene — classical item analysis with each held-out SEED as a test ITEM (D-060).
+#
+# The ladder statistics (above) treat the seed suite as one aggregated instrument. Classical test
+# theory asks a finer question: is each *individual scenario instance* pulling its weight? Treating
+# each held-out eval seed as a test **item** and the ε-optimal ladder's rungs as **persons** of
+# graded, known ability gives exactly the person×item score matrix classical item analysis needs —
+# with the usual unknown (true ability) once again a dial we set. Two textbook statistics follow:
+#
+#   • CRONBACH'S ALPHA — internal consistency of the seed suite. With k items, item sample variances
+#     s²ᵢ (across the rungs) and the sample variance s²_T of the per-rung total T = Σᵢ Xᵢ:
+#         α = k/(k−1) · (1 − Σᵢ s²ᵢ / s²_T)
+#     High α ⇒ the seeds behave like parallel measurements of one construct, not a grab bag.
+#   • ITEM DISCRIMINATION — the *corrected* item-total correlation: Pearson r between an item's
+#     scores and the REST-of-test total (T − Xᵢ), across the rungs. (The point-biserial coefficient
+#     is this same Pearson r in the dichotomous special case; our items are continuous in [0,1], so
+#     the item-rest Pearson r is the exact analogue.) An item that fails to rise with ability drags
+#     the instrument down; a NEGATIVE r means the item *inverts* ability — such items are **flagged
+#     for pruning** and excluded from the retained set.
+#
+# This is a reporting/flagging harness only: it never changes any ride's actual scoring. A flagged
+# seed feeds back into *generator* tuning (the instances are generated, not a fixed test form).
+# --------------------------------------------------------------------------------------------------
+
+# Internal-consistency floor (Nunnally's classical "acceptable" threshold for a research instrument).
+ALPHA_OK = 0.7
+# Retention rule: an item whose item-rest correlation is below this (i.e. negative) is pruned.
+ITEM_DISCRIMINATION_MIN = 0.0
+# Classical guideline (Ebel): items with r_it below this separate ability poorly (informational only).
+ITEM_WEAK = 0.2
+
+
+def item_matrix(spec: _RideSpec, ps, seeds, n: int | None = None) -> dict[int, tuple[float, ...]]:
+    """The person×item score matrix: ``{seed: (score at each ladder rung p, in order)}``.
+
+    Rungs of the ε-optimal ladder are the "persons" (their true ability is known by construction);
+    each held-out seed is an "item" (one generated scenario instance, scored by the ride's real
+    ``run_suite``). Deterministic: same seeds ⇒ the identical matrix.
+    """
+    n = spec.default_n if n is None else n
+    seeds = list(seeds)
+    cols: dict[int, list[float]] = {s: [] for s in seeds}
+    for p in ps:
+        agent = _MixAgent(spec, p)
+        for s in seeds:
+            cols[s].append(spec.run(agent, s, n).score.mean)
+    return {s: tuple(v) for s, v in cols.items()}
+
+
+def cronbach_alpha(columns) -> float:
+    """Cronbach's α over item columns (each column = one item's scores across the persons).
+
+    ``α = k/(k−1) · (1 − Σᵢ s²ᵢ / s²_T)`` with sample variances; 0.0 when degenerate (fewer than
+    2 items / 2 persons, or a zero-variance total — nothing to be consistent *about*).
+    """
+    cols = [list(c) for c in columns]
+    k = len(cols)
+    if k < 2 or any(len(c) < 2 for c in cols):
+        return 0.0
+    totals = [sum(vals) for vals in zip(*cols)]
+    var_total = statistics.variance(totals)
+    if var_total <= 0:
+        return 0.0
+    var_items = sum(statistics.variance(c) for c in cols)
+    return (k / (k - 1)) * (1.0 - var_items / var_total)
+
+
+def item_rest_discrimination(columns) -> list[float]:
+    """Corrected item-total discrimination per item: Pearson r of each column vs. the REST total.
+
+    The rest total ``T − Xᵢ`` (not the full total) avoids the item's spurious correlation with
+    itself. Returns one r per column, in order; a constant column (or rest) yields 0.0.
+    """
+    cols = [list(c) for c in columns]
+    totals = [sum(vals) for vals in zip(*cols)]
+    return [pearson(c, [t - x for t, x in zip(totals, c)]) for c in cols]
+
+
+@dataclass(frozen=True)
+class ItemStats:
+    """One item (= one held-out eval seed) of a ride's suite, under classical item analysis."""
+
+    seed: int
+    mean: float  # mean score across the ladder rungs (item difficulty, inverted)
+    discrimination: float  # corrected item-total (item-rest) Pearson r across the rungs
+
+    @property
+    def flagged(self) -> bool:
+        """Negative discrimination — the item *inverts* ability and is flagged for pruning."""
+        return self.discrimination < ITEM_DISCRIMINATION_MIN
+
+    @property
+    def weak(self) -> bool:
+        """Retained, but separates ability poorly (r_it below the classical 0.2 guideline)."""
+        return not self.flagged and self.discrimination < ITEM_WEAK
+
+    def to_dict(self) -> dict:
+        return {
+            "seed": self.seed,
+            "mean": round(self.mean, 4),
+            "discrimination": round(self.discrimination, 4),
+            "flagged": self.flagged,
+            "weak": self.weak,
+        }
+
+
+@dataclass(frozen=True)
+class ItemHygiene:
+    """The item-analysis verdict for one ride's held-out seed suite (D-060)."""
+
+    ride: str
+    axis: str
+    ps: tuple[float, ...]  # the ladder rungs used as graded "persons"
+    alpha: float  # Cronbach's α across the seed items
+    items: tuple[ItemStats, ...]
+    n_scenarios: int
+
+    @property
+    def alpha_ok(self) -> bool:
+        return self.alpha >= ALPHA_OK
+
+    @property
+    def flagged(self) -> tuple[int, ...]:
+        """Seeds flagged for pruning (negative item-rest discrimination)."""
+        return tuple(i.seed for i in self.items if i.flagged)
+
+    @property
+    def retained(self) -> tuple[int, ...]:
+        """The retained item set — every seed EXCEPT the flagged ones (the retention rule)."""
+        return tuple(i.seed for i in self.items if not i.flagged)
+
+    @property
+    def n_weak(self) -> int:
+        return sum(1 for i in self.items if i.weak)
+
+    @property
+    def clean(self) -> bool:
+        """Internally consistent and nothing flagged — the suite needs no pruning."""
+        return self.alpha_ok and not self.flagged
+
+    def to_dict(self) -> dict:
+        return {
+            "ride": self.ride,
+            "axis": self.axis,
+            "alpha": round(self.alpha, 4),
+            "alpha_ok": self.alpha_ok,
+            "n_items": len(self.items),
+            "n_persons": len(self.ps),
+            "n_flagged": len(self.flagged),
+            "n_weak": self.n_weak,
+            "clean": self.clean,
+            "retained": list(self.retained),
+            "flagged": list(self.flagged),
+            "n_scenarios": self.n_scenarios,
+            "items": [i.to_dict() for i in self.items],
+        }
+
+
+def build_item_hygiene(spec: _RideSpec, ps, seeds, n: int | None = None) -> ItemHygiene:
+    """Run the classical item analysis for one ride: the ladder matrix, then α + per-item r."""
+    n = spec.default_n if n is None else n
+    seeds = list(seeds)
+    matrix = item_matrix(spec, ps, seeds, n)
+    cols = [matrix[s] for s in seeds]
+    discs = item_rest_discrimination(cols)
+    items = tuple(
+        ItemStats(seed=s, mean=statistics.fmean(col), discrimination=d)
+        for s, col, d in zip(seeds, cols, discs)
+    )
+    return ItemHygiene(
+        ride=spec.key,
+        axis=spec.axis,
+        ps=tuple(ps),
+        alpha=cronbach_alpha(cols),
+        items=items,
+        n_scenarios=n,
+    )
+
+
+# --------------------------------------------------------------------------------------------------
 # The whole report.
 # --------------------------------------------------------------------------------------------------
 
@@ -1116,6 +1295,7 @@ class ValidityReport:
     convergent: ConvergentValidity | None = None
     ablations: list[AblationResult] = field(default_factory=list)
     structural: list[StructuralValidity] = field(default_factory=list)
+    hygiene: list[ItemHygiene] = field(default_factory=list)
 
     @property
     def all_valid(self) -> bool:
@@ -1136,6 +1316,12 @@ class ValidityReport:
         by a mechanism with no randomness in it (D-059)."""
         return bool(self.structural) and all(s.ok for s in self.structural)
 
+    @property
+    def hygiene_ok(self) -> bool:
+        """Every ride's seed suite is internally consistent (α ≥ 0.7) with no item flagged for
+        pruning — the retention rule (D-060) had nothing to remove."""
+        return bool(self.hygiene) and all(h.clean for h in self.hygiene)
+
     def to_dict(self) -> dict:
         return {
             "seed_base": self.seed_base,
@@ -1147,11 +1333,13 @@ class ValidityReport:
             "discriminant_ok": bool(self.convergent and self.convergent.discriminant_ok),
             "ablation_ok": self.ablation_ok,
             "structural_ok": self.structural_ok,
+            "hygiene_ok": self.hygiene_ok,
             "rides": [r.to_dict() for r in self.rides],
             "gaming": self.gaming.to_dict() if self.gaming else None,
             "convergent": self.convergent.to_dict() if self.convergent else None,
             "ablation": [a.to_dict() for a in self.ablations],
             "structural": [s.to_dict() for s in self.structural],
+            "hygiene": [h.to_dict() for h in self.hygiene],
         }
 
 
@@ -1216,8 +1404,19 @@ def build_validity_report(
         st_ks = rung_values(3) if spec.slow else ps
         structural.append(validate_structural(spec, st_ks, st_seeds))
 
+    # Item hygiene (D-060): classical item analysis with each held-out seed as a test ITEM and the
+    # ladder rungs as graded "persons" — Cronbach's α (internal consistency of the seed suite) +
+    # per-item item-rest discrimination, flagging any item with a NEGATIVE r for pruning.
+    # Reporting/flagging only: no ride's actual scoring changes.
+    hygiene: list[ItemHygiene] = []
+    for key in keys:
+        spec = specs[key]
+        hy_seeds = seeds[: min(3, len(seeds))] if spec.slow else seeds
+        hy_ps = rung_values(3) if spec.slow else ps
+        hygiene.append(build_item_hygiene(spec, hy_ps, hy_seeds))
+
     return ValidityReport(
-        seed_base, n_seeds, rungs, rides, gaming, convergent, ablations, structural
+        seed_base, n_seeds, rungs, rides, gaming, convergent, ablations, structural, hygiene
     )
 
 
@@ -1355,5 +1554,43 @@ def render_validity_report(report: ValidityReport) -> str:
             lines.append(
                 "    -> WARNING: some ride's score does not track its structural capability dial — "
                 "the epsilon-ladder verdict lacks its structural corroboration there"
+            )
+
+    if report.hygiene:
+        lines.append("")
+        lines.append(
+            "  item hygiene (each held-out SEED as a test ITEM: Cronbach's alpha + item-rest "
+            "discrimination, D-060):"
+        )
+        lines.append(
+            "    ride         axis       alpha   items  retained  flagged  weak   min r_it  max r_it"
+        )
+        for h in report.hygiene:
+            discs = [i.discrimination for i in h.items]
+            lines.append(
+                f"    {h.ride:<12} {h.axis:<9} {h.alpha:5.3f}   {len(h.items):>5}  {len(h.retained):>8}  "
+                f"{len(h.flagged):>7}  {h.n_weak:>4}    {min(discs):+7.3f}   {max(discs):+7.3f}"
+            )
+            if h.flagged:
+                lines.append(
+                    f"      !! {h.ride}: flagged for pruning (negative item-rest r): "
+                    f"seeds {', '.join(str(s) for s in h.flagged)}"
+                )
+        if report.hygiene_ok:
+            lines.append(
+                f"    -> every ride's seed suite is internally consistent (alpha >= {ALPHA_OK:.1f}) "
+                "and no item has negative"
+            )
+            lines.append(
+                "       discrimination => all items retained (the retention rule had nothing to prune)"
+            )
+        else:
+            lines.append(
+                "    -> WARNING: some seed suite is inconsistent or contains flagged items — flagged "
+                "items are excluded"
+            )
+            lines.append(
+                "       from the retained set and should feed back into generator tuning "
+                "(see docs/12-validity.md)"
             )
     return "\n".join(lines)
