@@ -1,6 +1,6 @@
 # 12 — Validity: does a ride actually *measure capability*?
 
-**Status:** Living · **Last updated:** 2026-07-11 · **Decisions:** [D-055](02-decisions.md), [D-057](02-decisions.md), [D-058](02-decisions.md), [D-059](02-decisions.md), [D-060](02-decisions.md)
+**Status:** Living · **Last updated:** 2026-07-12 · **Decisions:** [D-055](02-decisions.md), [D-057](02-decisions.md), [D-058](02-decisions.md), [D-059](02-decisions.md), [D-060](02-decisions.md), [D-061](02-decisions.md)
 
 The vision ([`00-vision.md`](00-vision.md)) stakes everything on one word: **trust**. "Success = it
 becomes a *credible* place to measure agents." Up to D-054 the project earned the *reproducible* half
@@ -73,8 +73,8 @@ For each ride it runs the ladder over a **held-out eval seed range** and compute
   R² says each equal step of ability buys an equal step of score (no dead band, no all-or-nothing
   cliff). A shape diagnostic, not a pass/fail.
 - **Resolvable rungs** — how many *adjacent* ability levels are statistically separable (their 95%
-  CIs don't overlap). The ride's effective resolution: it's one thing to *order* ability, another to
-  *tell neighbours apart*.
+  **bootstrap** CIs don't overlap — see the CI section below, D-061). The ride's effective
+  resolution: it's one thing to *order* ability, another to *tell neighbours apart*.
 - **Split-half reliability** — Pearson agreement of the ladder computed on two disjoint halves of the
   seed pool. Is the reading an artifact of a lucky seed set, or stable?
 
@@ -378,6 +378,50 @@ static test; the retained set is a report, and no ride's scoring consumes it; (d
 item block runs only with `--coding` and on the light 3-rung/3-seed config, where α over 3 persons
 is coarse.
 
+## Bootstrap CIs + benchmark versioning — trustworthy error bars, unambiguous provenance (D-061)
+
+Two finishing pieces of measurement hygiene, one per half of "a score you can trust":
+
+### Bootstrap confidence intervals
+
+Until D-061 the ladder's per-rung CIs were the textbook **normal approximation**
+(`±1.96·σ/√n`, from `Stat`). At the harness's small n (8–12 held-out seeds) and with scores clipped
+to `[0, 1]` — many rungs hug the ceiling at ~1.0 — normality is exactly the assumption not to lean
+on. The harness now uses a **seeded percentile bootstrap** (`bootstrap_ci` in `validity.py`), which
+makes no distributional assumption:
+
+```
+draw B = 2,000 resamples of size n (with replacement) from the per-seed suite means
+CI95 = (2.5th, 97.5th percentiles of the B resampled means)      # the percentile method
+```
+
+Percentiles use linear interpolation between closest ranks (the Hyndman–Fan **type-7** convention —
+R/NumPy's default). Resampling is driven by a **fixed-seed stdlib RNG** (`BOOTSTRAP_SEED`), so the
+CI is fully deterministic: same inputs ⇒ the identical interval, every run (the D-020 discipline
+extended to the error bars). The interval is naturally **asymmetric** near the ceiling and can never
+leave the sample's convex hull (it respects the `[0, 1]` score range, unlike the normal CI, which
+happily crossed 1.0). Degenerate cases are defined: a constant sample gives a zero-width interval;
+n ≤ 1 gives `(v, v)` / `(0, 0)`.
+
+**Consumers switched with it:** the **resolvable-rungs** statistic now tests true interval
+non-overlap (`lo_{i+1} > hi_i`) instead of the old symmetric half-width heuristic, and both ladders'
+JSON now carries `ci_lo`/`ci_hi` per rung (replacing the old `ci95` half-width). The rung **means and
+every other statistic (ρ, τ, monotonicity, discrimination, R², reliability) are unchanged** — only
+the error bars and what's derived from them moved. The public rides' own `Stat.ci95` (run logs,
+radar/career JSON, viewer) is untouched — this is the *harness's* CI.
+
+### Benchmark versioning
+
+Every JSON result the CLI emits — `radar/career/leaderboard/validity --json` — now carries a
+top-level **`benchmark_version`** stamp (first key; initial value **`1.0.0`**, defined once as
+`parkbench.BENCHMARK_VERSION`), so a stored or shared score is never ambiguous about which
+generation of scenario generators + scoring produced it. **Bumping convention (D-061):** bump when
+scenario generators, scoring formulas, or default suites/rosters change in a way that **alters
+scores** — major for breaks in comparability, minor for score-altering re-tunes, patch for
+score-neutral generator fixes worth marking. **Purely additive reporting** (new JSON keys, new
+commands, new measurement harnesses — like this one) does **not** bump: scores stay comparable.
+The stamp is applied at the CLI emission point, so run logs and viewer fixtures are unchanged.
+
 ---
 
 ## Results (held-out seeds 4000–4011, 6-rung ladder)
@@ -386,11 +430,16 @@ is coarse.
 ride        axis       verdict          rho   mono   floor  ceil   disc    lin   res  rel
 economic    economic   VALID            1.00  1.00  0.706  1.000  0.294   0.99   4/5  0.99
 safety      safety     VALID            1.00  1.00  0.303  1.000  0.697   1.00   4/5  0.99
-commons     social     VALID            1.00  1.00  0.483  1.000  0.517   1.00   3/5  0.99
+commons     social     VALID            1.00  1.00  0.483  1.000  0.517   1.00   4/5  0.99
 overall: ALL RIDES DISCRIMINATIVE   mean rho = 1.000
 
 gaming: greedy CAUGHT (even below random) — economic 0.985 but career 0.148, Goodhart gap 0.836
 ```
+
+(Since D-061 the `res` column is computed from the bootstrap CIs: **commons rose 3/5 → 4/5** — near
+the ceiling the percentile intervals are asymmetric and tighter than the old normal ±1.96·σ/√n, so
+one more adjacent commons pair separates. Economic and safety stay 4/5, and every other number in
+the table is unchanged, as expected for a CI-only swap.)
 
 All three pure-Python rides genuinely track known ability (ρ = 1.00, perfectly monotone, ceiling
 reached) and resolve 3–4 of 5 rungs. The harness is also **honest about weakness**: the **economic
@@ -421,8 +470,10 @@ This harness is a real down-payment, not the finish line. It proves each ride di
 ability and resists the *known* reward-hacker, (since D-057) that the social axis is a construct
 distinct from the economic/safety axes over a small roster, (since D-058) that no ride's score
 survives a blanked observation (no blind shortcut), (since D-059) that the score gradient is
-reproduced by a randomness-free *structural* capability dial, and (since D-060) that every
-individual held-out seed is itself a consistent, ability-discriminating test item; it does **not** yet prove the tasks
+reproduced by a randomness-free *structural* capability dial, (since D-060) that every
+individual held-out seed is itself a consistent, ability-discriminating test item, and (since
+D-061) that its error bars are assumption-free bootstrap intervals and every emitted result names
+the benchmark version that produced it; it does **not** yet prove the tasks
 resemble real-world capability, nor that *every* axis is distinct (three of four carry a single
 ride).
 
@@ -452,8 +503,11 @@ In (effort) priority order, the techniques the research surfaced:
    axes; social pair converges and clears its cross-axis correlations. *Remaining:* a larger roster
    (needs a negotiation `optimal`), a second ride per non-social axis, and an **external** criterion
    correlation.
-5. **Bootstrap CIs + benchmark/generator versioning stamped into every result** — replace the current
-   normal-approx CI, and make a score unambiguous about which benchmark version produced it.
+5. **Bootstrap CIs + benchmark versioning — ✅ landed (D-061).** Section above: the harness's CIs
+   are now seeded percentile-bootstrap intervals (B = 2,000, type-7 percentiles, deterministic) and
+   every `--json` result carries a top-level `benchmark_version` (initial `1.0.0`, bump-on-score-change
+   convention). *Remaining:* stamping the version into run logs / server responses, and a bootstrap
+   CI on derived statistics (ρ, discrimination) rather than only the rung means.
 6. **Harder difficulty tiers + a saturation monitor** — a difficulty knob so a ride can be re-hardened
    once the field's best agent reaches the ceiling (esp. the narrow-range economic ride).
 

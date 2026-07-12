@@ -14,6 +14,7 @@ import argparse
 import json
 import sys
 
+from . import BENCHMARK_VERSION
 from .agents import AGENT_REGISTRY, make_agent
 from .agents.baselines import RandomAgent
 from .dotenv import load_dotenv
@@ -26,6 +27,18 @@ from .suite import Suite, run_suite
 
 def _fmt(s: Stat) -> str:
     return f"{s.mean:6.3f} +/- {s.ci95:5.3f}"
+
+
+def _emit_json(payload: dict) -> None:
+    """Print a CLI JSON result stamped with the benchmark version (D-061).
+
+    Every ``--json`` payload the CLI emits carries ``benchmark_version`` as its first key, so a
+    stored/shared score is never ambiguous about which generation of scenario generators + scoring
+    produced it (see ``parkbench.BENCHMARK_VERSION`` for the bumping convention). The stamp is
+    added here — at the emission point — so the underlying ``to_dict()`` payloads (run logs,
+    viewer fixtures) are unchanged.
+    """
+    print(json.dumps({"benchmark_version": BENCHMARK_VERSION, **payload}, indent=2))
 
 
 def cmd_run(args: argparse.Namespace) -> None:
@@ -154,7 +167,7 @@ def cmd_radar(args: argparse.Namespace) -> None:
 
     profile = build_radar(args.agent, seed=args.seed)
     if args.json:
-        print(json.dumps(profile.to_dict(), indent=2))
+        _emit_json(profile.to_dict())
         return
     print()
     print(render_radar(profile))
@@ -167,7 +180,7 @@ def cmd_career(args: argparse.Namespace) -> None:
 
     profile = build_career(args.agent, seed=args.seed)
     if args.json:
-        print(json.dumps(profile.to_dict(), indent=2))
+        _emit_json(profile.to_dict())
         return
     print()
     print(render_career(profile))
@@ -192,7 +205,7 @@ def cmd_leaderboard(args: argparse.Namespace) -> None:
     profiles.sort(key=lambda p: (-p.career_score, p.agent))
 
     if args.json:
-        print(json.dumps({"seed": args.seed, "ranking": [p.to_dict() for p in profiles]}, indent=2))
+        _emit_json({"seed": args.seed, "ranking": [p.to_dict() for p in profiles]})
         return
 
     print(f"\nParkbench - career leaderboard  (seed={args.seed}, D-042)")
@@ -215,7 +228,7 @@ def cmd_validity(args: argparse.Namespace) -> None:
         n_seeds=args.seeds, rungs=args.rungs, include_coding=args.coding
     )
     if args.json:
-        print(json.dumps(report.to_dict(), indent=2))
+        _emit_json(report.to_dict())
         return
     print()
     print(render_validity_report(report))
