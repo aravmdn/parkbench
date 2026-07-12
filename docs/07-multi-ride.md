@@ -314,6 +314,13 @@ mindshare wedge), adding no runtime dependency (D-023). Verified rendering in Ch
 errors). Bundled fixtures: `viewer/sample-{radar,career,leaderboard}.json`. See **D-044** in
 [`02-decisions.md`](02-decisions.md).
 
+> **Benchmark version stamp (D-061):** every `--json` payload the CLI emits (`radar`, `career`,
+> `leaderboard`, `validity`) carries a top-level **`benchmark_version`** key (first key; from
+> `parkbench.BENCHMARK_VERSION`, initial `1.0.0`), so a stored score names the generator/scoring
+> generation that produced it. It bumps only on score-altering changes — see
+> [`12-validity.md`](12-validity.md) (D-061) for the convention. Viewers/fixtures ignore unknown
+> keys, so the stamp is transparent to the pages above.
+
 ## Agent identity & versioning (D-038)
 
 So results stay **attributable and reproducible over time**, every agent now has a stable identity

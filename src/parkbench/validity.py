@@ -418,6 +418,20 @@ def eval_seeds(n: int = DEFAULT_N_SEEDS, base: int = EVAL_SEED_BASE) -> list[int
     return list(range(base, base + n))
 
 
+def ladder_samples(spec: _RideSpec, ps, seeds, n: int | None = None) -> dict[float, list[float]]:
+    """The ε-optimal ladder's raw samples: ``{p: [per-seed suite mean, ...]}`` in seed order.
+
+    This is the ladder before aggregation — the per-seed suite means each rung's mean and
+    bootstrap CI (D-061) are computed from. Deterministic: same seeds ⇒ identical samples.
+    """
+    n = spec.default_n if n is None else n
+    out: dict[float, list[float]] = {}
+    for p in ps:
+        agent = _MixAgent(spec, p)
+        out[p] = [spec.run(agent, s, n).score.mean for s in seeds]
+    return out
+
+
 def ladder(spec: _RideSpec, ps, seeds, n: int | None = None) -> dict[float, Stat]:
     """Run the ε-optimal ladder: for each ability ``p``, the ride's own score across ``seeds``.
 
@@ -425,13 +439,7 @@ def ladder(spec: _RideSpec, ps, seeds, n: int | None = None) -> dict[float, Stat
     ability ``p`` should yield a higher score than a lower one, the resulting curve is the evidence
     that the ride discriminates capability.
     """
-    n = spec.default_n if n is None else n
-    out: dict[float, Stat] = {}
-    for p in ps:
-        agent = _MixAgent(spec, p)
-        means = [spec.run(agent, s, n).score.mean for s in seeds]
-        out[p] = Stat.of(means)
-    return out
+    return {p: Stat.of(v) for p, v in ladder_samples(spec, ps, seeds, n).items()}
 
 
 # --------------------------------------------------------------------------------------------------
@@ -522,19 +530,72 @@ def linear_r2(xs, ys) -> float:
     return 1.0 - ss_res / ss_tot if ss_tot > 0 else 1.0
 
 
-def resolvable_rungs(means, ci95) -> int:
+# --- Bootstrap confidence intervals (D-061) -------------------------------------------------------
+#
+# Until D-061 the harness's CIs were the Stat normal approximation (±1.96·σ/√n). At the harness's
+# small n (8–12 held-out seeds) and with scores clipped to [0, 1] — many rungs hug the ceiling —
+# normality is exactly the assumption not to lean on. The bootstrap makes no distributional
+# assumption: resample the observed per-seed means with replacement, recompute the statistic each
+# time, and read the CI straight off the resampled distribution (the *percentile method*). Seeded
+# stdlib RNG ⇒ fully deterministic: same inputs, same CI, every run (D-020 discipline).
+
+BOOTSTRAP_B = 2_000  # resamples per CI — plenty for a 95% percentile interval, still instant
+BOOTSTRAP_SEED = 0xB007  # fixed RNG seed => deterministic resampling ("boot")
+BOOTSTRAP_ALPHA = 0.05  # 95% interval: the (2.5th, 97.5th) percentiles of the bootstrap means
+
+
+def _percentile(sorted_vals, q: float) -> float:
+    """Percentile ``q ∈ [0, 1]`` of an ascending list, with linear interpolation between closest
+    ranks (the Hyndman–Fan type-7 convention — the default in R/NumPy)."""
+    n = len(sorted_vals)
+    if n == 1:
+        return sorted_vals[0]
+    pos = q * (n - 1)
+    i = int(math.floor(pos))
+    frac = pos - i
+    if i + 1 < n:
+        return sorted_vals[i] * (1.0 - frac) + sorted_vals[i + 1] * frac
+    return sorted_vals[i]
+
+
+def bootstrap_ci(
+    values,
+    b: int = BOOTSTRAP_B,
+    alpha: float = BOOTSTRAP_ALPHA,
+    seed: int = BOOTSTRAP_SEED,
+) -> tuple[float, float]:
+    """Seeded percentile-bootstrap CI ``(lo, hi)`` for the MEAN of ``values`` (D-061).
+
+    Draw ``b`` resamples of size n with replacement, take each resample's mean, sort them, and
+    return the ``(alpha/2, 1 − alpha/2)`` percentiles (type-7 interpolation). Distribution-free,
+    respects the [0, 1] score range (the interval can never leave the sample's convex hull), and
+    naturally asymmetric near the ceiling. Deterministic: the RNG is seeded with a fixed constant,
+    so the same inputs always produce the identical CI. Degenerate cases: n == 0 → ``(0.0, 0.0)``;
+    n == 1 → ``(v, v)`` (a single observation has no resampling spread).
+    """
+    vals = list(values)
+    n = len(vals)
+    if n == 0:
+        return (0.0, 0.0)
+    if n == 1:
+        return (vals[0], vals[0])
+    rng = _random.Random(seed)
+    boot = sorted(
+        math.fsum(vals[rng.randrange(n)] for _ in range(n)) / n for _ in range(b)
+    )
+    return (_percentile(boot, alpha / 2.0), _percentile(boot, 1.0 - alpha / 2.0))
+
+
+def resolvable_rungs(cis) -> int:
     """How many *adjacent* ability rungs are statistically separable (95% CIs don't overlap).
 
     Monotone-but-flat is useless; this counts the rungs the ride can actually tell apart — its
-    effective resolution. Two neighbours are resolved when the gap in their means exceeds the sum of
-    their 95% half-widths (a conservative non-overlap test).
+    effective resolution. ``cis`` is the per-rung sequence of ``(lo, hi)`` bootstrap intervals
+    (D-061); two neighbours are resolved when the higher rung's lower bound clears the lower
+    rung's upper bound (interval non-overlap, in the increasing direction).
     """
-    means, ci95 = list(means), list(ci95)
-    return sum(
-        1
-        for i in range(len(means) - 1)
-        if (means[i + 1] - means[i]) > (ci95[i] + ci95[i + 1])
-    )
+    cis = [tuple(c) for c in cis]
+    return sum(1 for i in range(len(cis) - 1) if cis[i + 1][0] > cis[i][1])
 
 
 # --------------------------------------------------------------------------------------------------
@@ -557,7 +618,8 @@ class RideValidity:
     axis: str
     ps: tuple[float, ...]
     means: tuple[float, ...]
-    ci95: tuple[float, ...]
+    ci_lo: tuple[float, ...]  # per-rung 95% bootstrap CI lower bounds (percentile method, D-061)
+    ci_hi: tuple[float, ...]  # per-rung 95% bootstrap CI upper bounds
     spearman: float
     kendall: float
     monotonic: float
@@ -615,8 +677,8 @@ class RideValidity:
             "n_seeds": self.n_seeds,
             "n_scenarios": self.n_scenarios,
             "ladder": [
-                {"p": p, "score": round(m, 4), "ci95": round(c, 4)}
-                for p, m, c in zip(self.ps, self.means, self.ci95)
+                {"p": p, "score": round(m, 4), "ci_lo": round(lo, 4), "ci_hi": round(hi, 4)}
+                for p, m, lo, hi in zip(self.ps, self.means, self.ci_lo, self.ci_hi)
             ],
         }
 
@@ -637,16 +699,21 @@ def split_half_reliability(spec: _RideSpec, ps, seeds, n: int | None = None) -> 
 
 
 def validate_ride(spec: _RideSpec, ps, seeds, n: int | None = None) -> RideValidity:
-    """Full validity verdict for one ride: run the ladder, then score its discrimination + reliability."""
-    lad = ladder(spec, ps, seeds, n)
-    means = tuple(lad[p].mean for p in ps)
-    ci95 = tuple(lad[p].ci95 for p in ps)
+    """Full validity verdict for one ride: run the ladder, then score its discrimination + reliability.
+
+    Rung means are the plain per-seed averages (identical to the pre-D-061 values); the per-rung
+    CIs are seeded percentile-bootstrap intervals over the same per-seed samples (D-061).
+    """
+    samples = ladder_samples(spec, ps, seeds, n)
+    means = tuple(statistics.fmean(samples[p]) for p in ps)
+    cis = tuple(bootstrap_ci(samples[p]) for p in ps)
     return RideValidity(
         ride=spec.key,
         axis=spec.axis,
         ps=tuple(ps),
         means=means,
-        ci95=ci95,
+        ci_lo=tuple(lo for lo, _ in cis),
+        ci_hi=tuple(hi for _, hi in cis),
         spearman=spearman(list(ps), list(means)),
         kendall=kendall_tau(list(ps), list(means)),
         monotonic=monotonic_fraction(means),
@@ -654,7 +721,7 @@ def validate_ride(spec: _RideSpec, ps, seeds, n: int | None = None) -> RideValid
         ceiling=means[-1],
         discrimination=means[-1] - means[0],
         linearity=linear_r2(list(ps), list(means)),
-        resolved=resolvable_rungs(means, ci95),
+        resolved=resolvable_rungs(cis),
         reliability=split_half_reliability(spec, ps, seeds, n),
         n_seeds=len(list(seeds)),
         n_scenarios=spec.default_n if n is None else n,
@@ -1012,7 +1079,8 @@ class StructuralValidity:
     mechanism: str  # the structural limitation the dial controls (per-ride, see _ride_specs)
     ks: tuple[float, ...]
     means: tuple[float, ...]
-    ci95: tuple[float, ...]
+    ci_lo: tuple[float, ...]  # per-rung 95% bootstrap CI lower bounds (percentile method, D-061)
+    ci_hi: tuple[float, ...]  # per-rung 95% bootstrap CI upper bounds
     spearman: float
     kendall: float
     monotonic: float
@@ -1044,10 +1112,28 @@ class StructuralValidity:
             "n_seeds": self.n_seeds,
             "n_scenarios": self.n_scenarios,
             "ladder": [
-                {"k": k, "score": round(m, 4), "ci95": round(c, 4)}
-                for k, m, c in zip(self.ks, self.means, self.ci95)
+                {"k": k, "score": round(m, 4), "ci_lo": round(lo, 4), "ci_hi": round(hi, 4)}
+                for k, m, lo, hi in zip(self.ks, self.means, self.ci_lo, self.ci_hi)
             ],
         }
+
+
+def structural_ladder_samples(
+    spec: _RideSpec, ks, seeds, n: int | None = None
+) -> dict[float, list[float]]:
+    """The structural ladder's raw samples: ``{k: [per-seed suite mean, ...]}`` in seed order.
+
+    Mirrors :func:`ladder_samples` — the per-seed means each rung's mean and bootstrap CI (D-061)
+    are computed from.
+    """
+    if spec.structural is None:
+        raise ValueError(f"ride '{spec.key}' has no structural ladder")
+    n = spec.default_n if n is None else n
+    out: dict[float, list[float]] = {}
+    for k in ks:
+        agent = spec.structural(k)
+        out[k] = [spec.run(agent, s, n).score.mean for s in seeds]
+    return out
 
 
 def structural_ladder(spec: _RideSpec, ks, seeds, n: int | None = None) -> dict[float, Stat]:
@@ -1056,15 +1142,7 @@ def structural_ladder(spec: _RideSpec, ks, seeds, n: int | None = None) -> dict[
     Mirrors :func:`ladder`, but each rung is a fresh deterministic capability-limited agent
     (``spec.structural(k)``) scored by the ride's real ``run_suite`` — no mixing, no randomness.
     """
-    if spec.structural is None:
-        raise ValueError(f"ride '{spec.key}' has no structural ladder")
-    n = spec.default_n if n is None else n
-    out: dict[float, Stat] = {}
-    for k in ks:
-        agent = spec.structural(k)
-        means = [spec.run(agent, s, n).score.mean for s in seeds]
-        out[k] = Stat.of(means)
-    return out
+    return {k: Stat.of(v) for k, v in structural_ladder_samples(spec, ks, seeds, n).items()}
 
 
 def _structural_split_half(spec: _RideSpec, ks, seeds, n: int | None = None) -> float:
@@ -1078,17 +1156,22 @@ def _structural_split_half(spec: _RideSpec, ks, seeds, n: int | None = None) -> 
 
 
 def validate_structural(spec: _RideSpec, ks, seeds, n: int | None = None) -> StructuralValidity:
-    """Full structural-ladder verdict for one ride: run the dial sweep, then score its tracking."""
-    lad = structural_ladder(spec, ks, seeds, n)
-    means = tuple(lad[k].mean for k in ks)
-    ci95 = tuple(lad[k].ci95 for k in ks)
+    """Full structural-ladder verdict for one ride: run the dial sweep, then score its tracking.
+
+    Rung means are the plain per-seed averages (identical to the pre-D-061 values); the per-rung
+    CIs are seeded percentile-bootstrap intervals over the same per-seed samples (D-061).
+    """
+    samples = structural_ladder_samples(spec, ks, seeds, n)
+    means = tuple(statistics.fmean(samples[k]) for k in ks)
+    cis = tuple(bootstrap_ci(samples[k]) for k in ks)
     return StructuralValidity(
         ride=spec.key,
         axis=spec.axis,
         mechanism=spec.structural_mechanism,
         ks=tuple(ks),
         means=means,
-        ci95=ci95,
+        ci_lo=tuple(lo for lo, _ in cis),
+        ci_hi=tuple(hi for _, hi in cis),
         spearman=spearman(list(ks), list(means)),
         kendall=kendall_tau(list(ks), list(means)),
         monotonic=monotonic_fraction(means),

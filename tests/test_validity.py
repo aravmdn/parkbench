@@ -50,10 +50,72 @@ def test_linear_r2_of_a_straight_ramp_is_one():
 
 
 def test_resolvable_rungs_counts_non_overlapping_neighbours():
-    # Gaps of 0.5 each dwarf the CI half-widths (0.1) => both steps resolved.
-    assert V.resolvable_rungs([0.0, 0.5, 1.0], [0.1, 0.1, 0.1]) == 2
+    # Tight CIs around 0.0 / 0.5 / 1.0 leave clear water between neighbours => both steps resolved.
+    assert V.resolvable_rungs([(-0.1, 0.1), (0.4, 0.6), (0.9, 1.1)]) == 2
     # Wide CIs swallow the gaps => nothing resolved.
-    assert V.resolvable_rungs([0.0, 0.1, 0.2], [0.5, 0.5, 0.5]) == 0
+    assert V.resolvable_rungs([(-0.5, 0.5), (-0.4, 0.6), (-0.3, 0.7)]) == 0
+    # Touching intervals are NOT resolved (a strict-clearance test).
+    assert V.resolvable_rungs([(0.0, 0.5), (0.5, 1.0)]) == 0
+
+
+# --- bootstrap confidence intervals (D-061) --------------------------------------------------------
+
+
+def test_bootstrap_ci_of_a_constant_sample_is_degenerate():
+    """No spread in, no spread out — plus the defined degenerate cases."""
+    assert V.bootstrap_ci([0.7] * 10) == (0.7, 0.7)
+    assert V.bootstrap_ci([]) == (0.0, 0.0)
+    assert V.bootstrap_ci([0.3]) == (0.3, 0.3)
+
+
+def test_bootstrap_ci_is_deterministic_and_brackets_the_mean():
+    """Seeded resampling: same inputs => the identical CI; and the interval behaves like one."""
+    import statistics
+
+    vals = [0.1, 0.4, 0.35, 0.8, 0.6, 0.55, 0.2, 0.9]
+    a = V.bootstrap_ci(vals)
+    b = V.bootstrap_ci(vals)
+    assert a == b  # deterministic — the D-020 discipline extends to the CIs
+    lo, hi = a
+    m = statistics.fmean(vals)
+    assert lo < m < hi  # a real (non-degenerate) interval around the sample mean
+    # The percentile method can never leave the sample's convex hull — it respects the [0,1] range.
+    assert min(vals) <= lo and hi <= max(vals)
+
+
+def test_bootstrap_ci_coverage_on_a_known_distribution():
+    """Coverage sanity: ~95% of CIs from uniform(0,1) samples should contain the true mean 0.5.
+
+    The percentile bootstrap slightly under-covers at small n, so the assertion is a generous
+    floor, not the nominal rate.
+    """
+    import random
+
+    rng = random.Random(123)
+    trials, hits = 100, 0
+    for _ in range(trials):
+        sample = [rng.random() for _ in range(16)]
+        lo, hi = V.bootstrap_ci(sample, b=400)
+        hits += lo <= 0.5 <= hi
+    assert hits >= 80, hits
+
+
+def test_ride_ladder_cis_come_from_the_bootstrap():
+    """validate_ride's per-rung CIs are exactly the seeded bootstrap over the ladder's raw samples,
+    the means are the plain per-seed averages (unchanged from pre-D-061), and the CIs serialize."""
+    import statistics
+
+    spec = V._ride_specs()["economic"]
+    seeds = V.eval_seeds(4)
+    ps = V.rung_values(3)
+    rv = V.validate_ride(spec, ps, seeds)
+    samples = V.ladder_samples(spec, ps, seeds)
+    for p, m, lo, hi in zip(rv.ps, rv.means, rv.ci_lo, rv.ci_hi):
+        assert m == statistics.fmean(samples[p])
+        assert (lo, hi) == V.bootstrap_ci(samples[p])
+        assert lo <= m <= hi
+    d = rv.to_dict()
+    assert {"p", "score", "ci_lo", "ci_hi"} <= set(d["ladder"][0])
 
 
 def test_rung_values_and_eval_seeds():
@@ -335,7 +397,7 @@ def test_report_structural_block_serializes_and_renders():
     """The structural block's aggregation + rendering, on synthetic results (no ride runs)."""
     good = V.StructuralValidity(
         "economic", "economic", "deliberation horizon", (0.0, 0.5, 1.0), (0.0, 0.6, 1.0),
-        (0.01, 0.01, 0.01), 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 4, 12,
+        (0.0, 0.59, 0.99), (0.01, 0.61, 1.0), 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 4, 12,
     )
     report = V.ValidityReport(V.EVAL_SEED_BASE, 4, 3, [], None, None, [], [good])
     assert report.structural_ok

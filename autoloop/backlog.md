@@ -107,6 +107,19 @@ Tier A (stdlib-only, keep `pytest` green + baselines byte-identical).
   retained set by rule, asserted on real data. +6 tests, 215 green, baselines byte-identical. Honest
   limits (synthetic persons, built-in homogeneity, generated items ⇒ pruning = generator tuning) in
   `docs/12-validity.md`.
-- [ ] `bootstrap-and-versioning` — Replace the normal-approx CI with a stdlib **bootstrap** CI, and stamp
+- [x] `bootstrap-and-versioning` — Replace the normal-approx CI with a stdlib **bootstrap** CI, and stamp
   a **benchmark/generator version** into every `--json` result. **Done when:** results carry a version
   string + bootstrap CIs, covered by tests (Tier A).
+  ✅ landed (D-061) — the harness's per-rung CIs are now a **seeded percentile bootstrap** (B=2,000,
+  type-7 percentiles, fixed-seed RNG ⇒ deterministic; `bootstrap_ci` + `ci_lo`/`ci_hi` in
+  `validity.py`; resolvable-rungs tests true interval non-overlap — commons rose 3/5 → 4/5, all
+  ladder means/ρ unchanged), and every CLI `--json` (radar/career/leaderboard/validity) is stamped
+  with top-level `benchmark_version` = `parkbench.BENCHMARK_VERSION` (`"1.0.0"`; bump only on
+  score-altering changes). +8 tests, 223 green; JSON diffs = the version key only, text outputs
+  byte-identical. Method + honest limits in `docs/12-validity.md`.
+
+> **All five trust-track tasks are done** (D-057 convergent/discriminant · D-058 ablation ·
+> D-059 structural ladder · D-060 item hygiene · D-061 bootstrap CIs + versioning). What remains on
+> the validity roadmap is the *external* work (criterion validity, a second ride per non-social
+> axis) and harder difficulty tiers + a saturation monitor — decompose from `docs/12-validity.md`
+> "Honest remaining gaps" when picking the track back up.

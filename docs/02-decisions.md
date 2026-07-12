@@ -1211,3 +1211,54 @@ using real-agent rosters as persons (N = 4 agents with unknown true ability — 
 reproducibility; pruning feeds generator tuning instead); a full IRT model fit (needs optimization
 well beyond stdlib scope for N = 6). Extends D-055/D-057/D-058/D-059; builds on the ε-optimal
 ladder (D-055).
+
+### D-061 · 2026-07-12 · Bootstrap CIs in the validity harness + a benchmark version stamped into every JSON result
+**Decision:** Two measurement-hygiene moves, item 5 of D-055's deferred gaps. **(a) Bootstrap CIs:**
+the validity harness's per-rung confidence intervals switch from the normal approximation
+(`±1.96·σ/√n`, `Stat.ci95`) to a **seeded percentile bootstrap** (`bootstrap_ci` in
+`src/parkbench/validity.py`): draw `B = 2,000` resamples of size n with replacement from the
+per-seed suite means, take each resample's mean, and read the 95% CI off the (2.5th, 97.5th)
+percentiles of those bootstrap means (linear interpolation between closest ranks — the Hyndman–Fan
+**type-7** convention). Resampling uses a **fixed-seed stdlib RNG** (`BOOTSTRAP_SEED`), so the CI is
+fully deterministic — same inputs ⇒ the identical interval (the D-020 discipline extended to error
+bars). Rationale: at n = 8–12 seeds with `[0, 1]`-clipped scores hugging the ceiling, normality is
+exactly the assumption not to lean on; the percentile CI is distribution-free, naturally asymmetric
+near the ceiling, and never leaves the sample's convex hull. Consumers switched with it: the
+**resolvable-rungs** statistic now tests true interval non-overlap (`lo_{i+1} > hi_i`) instead of
+the symmetric half-width heuristic, and both ladders (`RideValidity`, `StructuralValidity`) carry
+`ci_lo`/`ci_hi` per rung in place of the old `ci95` half-width (new `ladder_samples` /
+`structural_ladder_samples` expose the raw per-seed means the CIs are bootstrapped from). Rung
+means and every other statistic (ρ, τ, monotonicity, discrimination, R², reliability) are computed
+exactly as before; the rides' own `Stat.ci95` (run logs, radar/career JSON, viewers, CLI text) is
+untouched. **(b) Benchmark versioning:** a single constant **`parkbench.BENCHMARK_VERSION`**
+(initial **`"1.0.0"`**) is stamped as the **first key `benchmark_version`** of every JSON result the
+CLI emits — `radar/career/leaderboard/validity --json` — via one `_emit_json` helper in `cli.py`, so
+a stored/shared score is unambiguous about which generator/scoring generation produced it.
+**Bumping convention:** bump when scenario generators, scoring formulas, or default suites/rosters
+change in a way that **alters scores** (major = breaks comparability, minor = score-altering
+re-tune, patch = score-neutral generator fix worth marking); **purely additive reporting** (new JSON
+keys, new commands, new measurement harnesses) does **not** bump. The stamp lives at the CLI
+emission point, so `to_dict()` payloads (run logs, viewer fixtures, server) are byte-unchanged.
+**Results (held-out seeds 4000–4011, 6-rung ladder):** all ladder means/ρ identical to D-060's;
+the only shifted number is **commons resolvable rungs 3/5 → 4/5** (near the ceiling the bootstrap
+intervals are asymmetric and tighter than the normal ones, so one more adjacent pair separates);
+economic/safety stay 4/5. Verified: `radar/leaderboard/career --json` diffed against pre-change
+captures — the **only** difference is the added `benchmark_version` key; `economic/commons/safety`
+text outputs byte-identical. **223 passing tests** (+8: bootstrap degenerate/determinism/hull +
+coverage-on-a-known-distribution + bootstrap-fed ladder CIs in `tests/test_validity.py`; semver
+shape, stamp-is-only-change, all-four-commands-stamped (stubbed), and a real radar end-to-end in new
+`tests/test_versioning.py`).
+**Honest limitations:** (a) the percentile method slightly under-covers at small n (the coverage
+test asserts a generous floor, not the nominal 95%) — BCa would correct bias/skew but is a poor
+stdlib fit; (b) the CI is bootstrapped over per-seed suite means (n = seeds), not per-scenario
+scores, matching what resolvable-rungs compares; (c) the version stamp covers CLI JSON only — run
+logs and `serve` responses still carry only the agent-identity versioning (D-038); (d) one shared
+fixed bootstrap seed means rungs of equal n reuse the same resample index pattern (common random
+numbers — deliberate, keeps neighbour comparisons paired).
+**Rejected / deferred:** replacing `Stat.ci95` globally (would change every ride's public text/JSON
+output and break byte-identity for zero validity gain); the BCa/bootstrap-t variants (stdlib-heavy
+for marginal benefit at B = 2,000); stamping the version inside each `to_dict()` (would ripple into
+run logs, server payloads, and every stored fixture — the emission point is the contract boundary);
+deriving the stamp from `__version__` (code can change without the measurement changing — the two
+version numbers answer different questions). Extends D-055 (harness) and D-038 (identity);
+completes the D-055 deferred-gaps list.
