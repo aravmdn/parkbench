@@ -64,6 +64,52 @@ from the top; each is one-session-sized; Tier B unless it adds engine code (then
 > multiple trainers on-screen; a BYO-agent connector to the world) into 3–5 tasks — that refill is
 > itself a valid task.
 
+## Now (visual world — chunk 3: living park)
+
+Decomposed 2026-07-13 from `docs/11-visual-world.md` "Next" + the chunk-2 closing note above +
+`docs/03-roadmap.md` #4/#5. Same rules: pull from the top; each is one-session-sized; Tier B unless it
+adds/touches engine code (then Tier A too, stdlib-only + tested + baselines byte-identical).
+
+- [ ] `multi-trainers` — Render **multiple trainer sprites** on-screen at once, one per baseline agent
+  (`random` / `greedy` / `heuristic` / `optimal`), each palette-swapped so they're visually distinct
+  (procedural, original/CC0-by-construction — extend `pixels.js`'s trainer generator with a per-agent
+  tint rather than adding art files) and each wandering/patrolling independently (reuse/extend
+  `trainer.js`'s patrol logic per instance). Connect the roster to the stats screen: walking near a
+  trainer (or a keypress cycling through them) selects that agent for the `S` stats screen, so the
+  world and the radar agree on "who". **Done when:** ≥4 distinct, independently-moving trainers render
+  with no visual overlap-confusion (distinct palette per agent), selecting a trainer changes the stats
+  screen's agent, the build is clean with no console errors, and a screenshot is committed to
+  `autoloop/shots/<ts>/` (Tier B; no engine code — trainer identity already exists in the fixtures).
+- [ ] `fixture-provenance` — Regenerate all `web/src/fixtures/*.json` and `viewer/*.html`-consumed
+  fixtures from the now-versioned CLI (`benchmark_version` "1.0.0", D-061) so every committed fixture
+  carries the version key, and surface it in the UIs: the stats screen and Hall of Fame scene each show
+  a small version footer/tag, and the two static viewer pages (`viewer/profiles.html`,
+  `viewer/park.html`) do the same for their embedded/loaded JSON. **Done when:** every fixture file
+  contains `benchmark_version`, both `web/` scenes and both viewer pages display it, the build is clean,
+  and a screenshot is committed (Tier B; fixtures are verbatim CLI JSON re-generated via existing
+  `parkbench ... --json` commands — no engine code changes).
+- [ ] `live-profiles` — Replace (or offer as an alternative to) committed fixture JSON with a **live or
+  freshly-exported** data path: either (a) a small **read-only** `parkbench serve --profiles`-style HTTP
+  endpoint that serves `radar`/`career`/`leaderboard` JSON on demand (Tier A: stdlib-only `http.server`
+  subclass, no scoring logic, tested), or (b) if a live server is judged too large for one session, a
+  documented **static-export** flow/script (`parkbench export-profiles ./web/src/fixtures/` or similar)
+  that regenerates all `web/` + `viewer/` fixtures in one command instead of hand-copied JSON (Tier A if
+  it's new engine-side CLI surface, Tier B for the `web/` fetch-vs-fixture wiring). Pick whichever fits
+  in one session and note the choice in the PR/commit. **Done when:** the world can show data that did
+  not require hand-editing fixture files into `web/src/fixtures/`, the chosen path is documented in
+  `web/README.md`, `pytest` stays green if engine code changed, build is clean, screenshot committed
+  (Tier A+B).
+- [ ] `byo-trainer` — Let a **BYO agent** (per the documented wire protocol, `docs/09-byo-protocol.md`)
+  appear as a trainer in the world: given a BYO agent's identity + a completed run's JSON (fixture or
+  live per `live-profiles`), render it as an additional palette-swapped trainer alongside the baselines,
+  labeled distinctly (e.g. a "BYO" tag) so spectators can tell a third-party agent from the built-in
+  baselines. **Done when:** at least one non-baseline agent identity renders as a trainer with correct
+  labeling, reachable/enterable like the others, build clean, screenshot committed (Tier B; no engine
+  code — consumes existing run/identity JSON per D-038).
+
+> When this chunk lands, close it out here the way chunk 2 was closed, and decompose chunk 4 from
+> whatever's left in `docs/11-visual-world.md` "Next" at that time.
+
 ## Now (trust track — validity, roadmap #6)
 
 The validity harness landed (D-055, `parkbench validity`, [`../docs/12-validity.md`](../docs/12-validity.md)):
