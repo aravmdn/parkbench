@@ -1,6 +1,6 @@
 # 11 — The Visual World (Pokémon-style spectator park)
 
-**Status:** Draft · **Last updated:** 2026-07-03
+**Status:** Draft · **Last updated:** 2026-07-13
 
 This is the **front-of-house** vision (D-050). The **behind-the-scenes** is the benchmark engine you
 already have — rides are scored capability tests, with a deterministic radar/career/leaderboard. The
@@ -72,7 +72,16 @@ verbatim `parkbench radar --json` fixtures, reachable with `S` and cycled with �
 procedurally generated (`web/src/pixels.js`, original/CC0), and the front-end stays presentation-only
 (D-012) — no engine code changed. Screenshots for each lap are under `autoloop/shots/`.
 
-**Next** (to be decomposed into the backlog): deepen the world, a **Hall of Fame** from
-`leaderboard --json`, **badge / reputation** visuals (revoked for a reward-hacker whose reputation
-collapsed), and the headline **"trainer enters gym → run plays → result"** flow — a trainer walking into
-a gym triggering a run and the radar updating. Keep this doc updated as the world takes shape.
+**Chunk 2 landed (2026-07-03–07):** the **Hall of Fame** scene (`leaderboard --json`, reachable with
+`H`), **badge/reputation** visuals on the stats screen (earned vs. cracked gym badges from `career`/
+`leaderboard` `legs`), the headline **"trainer enters gym → run plays → result"** flow, and
+**world-signposts** (entrance sign, per-land props, a controls legend). See `autoloop/backlog.md`
+("visual world — chunk 2: spectator payoffs") for the landed task records.
+
+**Chunk 3 decomposed (2026-07-13):** into `autoloop/backlog.md` ("visual world — chunk 3: living
+park") — `multi-trainers` (one palette-swapped trainer per baseline agent, roster tied to the stats
+screen's agent selection), `fixture-provenance` (regenerate fixtures with the now-versioned CLI,
+D-061's `benchmark_version`, and surface it in the `web/` scenes + `viewer/` pages), `live-profiles`
+(a live read-only profiles endpoint or a one-command static-export flow, replacing hand-copied
+fixture JSON), and `byo-trainer` (a third-party BYO agent rendered as a labeled trainer). Pull tasks
+from the top of the backlog; keep this doc updated as the chunk lands.
