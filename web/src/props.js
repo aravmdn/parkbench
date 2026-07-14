@@ -49,7 +49,7 @@ export function buildProps(k) {
     k.z(100),
   ]);
   k.add([
-    k.text("arrows: walk   ·   S: stats   ·   H: hall   ·   step into a gym to ride", {
+    k.text("arrows: walk · tab: pick trainer · S: stats · H: hall · gyms: ride", {
       size: 7,
       font: "monospace",
     }),
