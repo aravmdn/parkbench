@@ -119,17 +119,21 @@ export function makeBuilding(accent) {
 // --- Trainer sprite sheet ------------------------------------------------------------------------
 // A 3×4 walk-cycle sheet (16×16 cells): rows = facing down/left/right/up, cols = step-left / stand /
 // step-right. Original art, drawn procedurally on a transparent canvas so grass shows through.
+// The sheet is palette-swappable: pass an `outfit` (cap/shirt/pants hex) and the same drawing is
+// re-tinted, so every agent gets a visually-distinct trainer without any new art files.
 export const TRAINER_CELL = 16;
 export const TRAINER_COLS = 3;
 export const TRAINER_ROWS = 4;
 
-function drawTrainer(ctx, ox, oy, dir, frame) {
-  const CAP = "#c0392b";
-  const CAPD = "#8e2c20";
+const OUTFIT_DEFAULTS = { cap: "#c0392b", shirt: "#3f7d9a", pants: "#2c3e66" };
+
+function drawTrainer(ctx, ox, oy, dir, frame, outfit) {
+  const CAP = outfit.cap;
+  const CAPD = darken(outfit.cap, 0.3);
   const SKIN = "#e8c39e";
   const HAIR = "#5a3a22";
-  const SHIRT = "#3f7d9a";
-  const PANTS = "#2c3e66";
+  const SHIRT = outfit.shirt;
+  const PANTS = outfit.pants;
   const SHOE = "#3a2a1a";
   const INK = "#0f1410";
   const p = (x, y, w, h, color) => px(ctx, ox + x, oy + y, w, h, color);
@@ -171,7 +175,8 @@ function drawTrainer(ctx, ox, oy, dir, frame) {
   p(9, 14 + rOff, 2, 1, SHOE);
 }
 
-export function makeTrainer() {
+export function makeTrainer(outfit = {}) {
+  const o = { ...OUTFIT_DEFAULTS, ...outfit };
   const W = TRAINER_CELL * TRAINER_COLS;
   const H = TRAINER_CELL * TRAINER_ROWS;
   const c = document.createElement("canvas");
@@ -182,7 +187,7 @@ export function makeTrainer() {
   const dirs = ["down", "left", "right", "up"];
   for (let r = 0; r < TRAINER_ROWS; r++) {
     for (let col = 0; col < TRAINER_COLS; col++) {
-      drawTrainer(ctx, col * TRAINER_CELL, r * TRAINER_CELL, dirs[r], col);
+      drawTrainer(ctx, col * TRAINER_CELL, r * TRAINER_CELL, dirs[r], col, o);
     }
   }
   return c.toDataURL();

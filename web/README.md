@@ -28,6 +28,17 @@ npm run preview  # serve the production build locally
 
 A blank/placeholder Kaplay canvas should boot with **no console errors**.
 
+## In the world
+
+- **The full baseline roster walks the park at once** — one trainer per agent
+  (`heuristic` / `greedy` / `optimal` / `random`), each palette-swapped (procedurally re-tinted cap +
+  shirt, no art files) and patrolling its own beat of the park at its own pace.
+- **Controls:** arrow keys walk the player trainer (`heuristic`); **Tab** (or **T**) cycles which
+  trainer is *selected*, and **walking the player up to another trainer selects it** — the selected
+  trainer gets a gold `>name` tag and is the agent the **S** stats screen opens on (the top-right HUD
+  shows `S: stats [<agent>]`). **S** = stats/radar screen (← → cycles agents there too), **H** = Hall
+  of Fame, and stepping the player into a **gym** plays that ride and reveals the real score.
+
 ## Layout
 
 ```

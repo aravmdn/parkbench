@@ -70,7 +70,7 @@ Decomposed 2026-07-13 from `docs/11-visual-world.md` "Next" + the chunk-2 closin
 `docs/03-roadmap.md` #4/#5. Same rules: pull from the top; each is one-session-sized; Tier B unless it
 adds/touches engine code (then Tier A too, stdlib-only + tested + baselines byte-identical).
 
-- [ ] `multi-trainers` — Render **multiple trainer sprites** on-screen at once, one per baseline agent
+- [x] `multi-trainers` — Render **multiple trainer sprites** on-screen at once, one per baseline agent
   (`random` / `greedy` / `heuristic` / `optimal`), each palette-swapped so they're visually distinct
   (procedural, original/CC0-by-construction — extend `pixels.js`'s trainer generator with a per-agent
   tint rather than adding art files) and each wandering/patrolling independently (reuse/extend
@@ -80,6 +80,9 @@ adds/touches engine code (then Tier A too, stdlib-only + tested + baselines byte
   with no visual overlap-confusion (distinct palette per agent), selecting a trainer changes the stats
   screen's agent, the build is clean with no console errors, and a screenshot is committed to
   `autoloop/shots/<ts>/` (Tier B; no engine code — trainer identity already exists in the fixtures).
+  ✅ landed — all four baselines patrol at once (palette-swapped outfits via `pixels.js` tint,
+  per-instance routes/speeds); Tab/T or walking near a trainer selects it for the `S` stats screen
+  (gold `>name` tag + HUD `S: stats [<agent>]`); player arrows/gym-entry/H unchanged.
 - [ ] `fixture-provenance` — Regenerate all `web/src/fixtures/*.json` and `viewer/*.html`-consumed
   fixtures from the now-versioned CLI (`benchmark_version` "1.0.0", D-061) so every committed fixture
   carries the version key, and surface it in the UIs: the stats screen and Hall of Fame scene each show

@@ -1,17 +1,51 @@
-// trainer.js — the agent avatar: a trainer sprite that walks the overworld.
+// trainer.js — the agent avatars: trainer sprites that walk the overworld.
 //
-// A trainer is an agent (heuristic / greedy / optimal / llm / BYO…). This lap adds one with a
-// 4-direction walk cycle: arrow-key controllable, and — so the world is alive on load and in
-// screenshots — auto-patrolling the park paths when idle. Presentation only (D-012).
+// A trainer is an agent (heuristic / greedy / optimal / random / llm / BYO…). Each baseline agent
+// now walks the park at once: every instance gets its own palette-swapped sprite sheet (pixels.js
+// re-tints the same procedural drawing — original / CC0 by construction), its own patrol route +
+// speed, and a name tag. One trainer is the *player* (arrow-key control overrides its patrol; it is
+// the one that enters gyms); the rest wander as NPCs. `setSelected` highlights whichever trainer is
+// currently driving the S stats screen. Presentation only (D-012).
 
 import { makeTrainer, TRAINER_COLS, TRAINER_ROWS } from "./pixels.js";
 import { WORLD_W, WORLD_H } from "./world.js";
 import { PALETTE } from "./theme.js";
 
-const SPEED = 52; // px/sec
+const SPEED = 52; // default px/sec
 
-export function addTrainer(k, agent = "heuristic", startX = 152, startY = 138) {
-  k.loadSprite("trainer", makeTrainer(), {
+// Palette-swapped outfits so each baseline agent reads at a glance (cap + shirt hex fed to
+// pixels.js's trainer generator; pants default everywhere so the silhouette stays shared).
+export const AGENT_OUTFITS = {
+  heuristic: { cap: "#c0392b", shirt: "#3f7d9a" }, // the classic red-cap look — the player
+  greedy: { cap: "#d9a441", shirt: "#a8752c" }, // gold — the Market Midway star (and reward-hacker)
+  optimal: { cap: "#e6f0d6", shirt: "#8a5aa8" }, // white cap + violet — the champion
+  random: { cap: "#52525a", shirt: "#8a8f98" }, // grey — the coin-flipper
+};
+
+// The classic patrol: out-and-back along each arm of the central crossroads.
+const DEFAULT_ROUTE = [
+  [152, 60],
+  [152, 138],
+  [56, 138],
+  [152, 138],
+  [152, 236],
+  [152, 138],
+  [252, 138],
+  [152, 138],
+];
+
+const SELECTED_HEX = "#f6de8a"; // lamp-glow gold for the selected trainer's tag
+
+export function addTrainer(k, agent = "heuristic", opts = {}) {
+  const {
+    x: startX = 152,
+    y: startY = 138,
+    route = DEFAULT_ROUTE,
+    speed = SPEED,
+    player = false,
+  } = opts;
+
+  k.loadSprite("trainer-" + agent, makeTrainer(AGENT_OUTFITS[agent]), {
     sliceX: TRAINER_COLS,
     sliceY: TRAINER_ROWS,
     anims: {
@@ -27,12 +61,12 @@ export function addTrainer(k, agent = "heuristic", startX = 152, startY = 138) {
   });
 
   const t = k.add([
-    k.sprite("trainer"),
+    k.sprite("trainer-" + agent),
     k.pos(startX, startY),
     k.anchor("center"),
     k.z(40),
     k.scale(1.5),
-    { facing: "down", agent },
+    { facing: "down", agent, player },
   ]);
   let curName = "down-idle";
   t.play(curName);
@@ -47,6 +81,12 @@ export function addTrainer(k, agent = "heuristic", startX = 152, startY = 138) {
     k.z(41),
   ]);
 
+  // Highlight (or clear) this trainer as the one the stats screen will show.
+  t.setSelected = (sel) => {
+    tag.text = (sel ? ">" : "") + agent;
+    tag.color = k.Color.fromHex(sel ? SELECTED_HEX : PALETTE.paper);
+  };
+
   const setAnim = (dir, moving) => {
     t.facing = dir;
     const name = moving ? dir : dir + "-idle";
@@ -56,17 +96,6 @@ export function addTrainer(k, agent = "heuristic", startX = 152, startY = 138) {
     }
   };
 
-  // A scripted patrol loop around the central crossroads, so the trainer is visibly walking.
-  const route = [
-    [152, 60],
-    [152, 138],
-    [56, 138],
-    [152, 138],
-    [152, 236],
-    [152, 138],
-    [252, 138],
-    [152, 138],
-  ];
   let wp = 0;
 
   const heldDir = () => {
@@ -79,18 +108,18 @@ export function addTrainer(k, agent = "heuristic", startX = 152, startY = 138) {
   const DELTA = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
 
   t.onUpdate(() => {
-    // Frozen while a gym run's overlay is showing (gymrun.js sets t.paused).
+    // Frozen while a gym run's overlay is showing (gymrun.js sets t.paused on the player).
     if (t.paused) {
       setAnim(t.facing, false);
       tag.pos = k.vec2(t.pos.x, t.pos.y - 16);
       return;
     }
 
-    // Player control takes over whenever an arrow key is held.
-    const kd = heldDir();
+    // Player control takes over whenever an arrow key is held (player trainer only).
+    const kd = player ? heldDir() : null;
     if (kd) {
       const [dx, dy] = DELTA[kd];
-      t.move(dx * SPEED, dy * SPEED);
+      t.move(dx * speed, dy * speed);
       setAnim(kd, true);
     } else {
       // Auto-patrol toward the current waypoint.
@@ -103,7 +132,7 @@ export function addTrainer(k, agent = "heuristic", startX = 152, startY = 138) {
         setAnim(t.facing, false);
       } else {
         const dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : dy < 0 ? "up" : "down";
-        t.move((dx / dist) * SPEED, (dy / dist) * SPEED);
+        t.move((dx / dist) * speed, (dy / dist) * speed);
         setAnim(dir, true);
       }
     }
