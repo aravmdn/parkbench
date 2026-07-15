@@ -1,4 +1,5 @@
 {
+  "benchmark_version": "1.0.0",
   "seed": 1,
   "ranking": [
     {
@@ -7,8 +8,15 @@
       "career_score": 1.0,
       "mean_capability": 1.0,
       "reputation": 1.0,
-      "n_rides": 3,
+      "n_rides": 4,
       "legs": [
+        {
+          "ride": "commons",
+          "axis": "social",
+          "score": 1.0,
+          "integrity": 1.0,
+          "trust_after": 1.0
+        },
         {
           "ride": "economic",
           "axis": "economic",
@@ -38,15 +46,22 @@
     {
       "agent": "heuristic",
       "seed": 1,
-      "career_score": 0.549721,
-      "mean_capability": 0.824582,
+      "career_score": 0.566636,
+      "mean_capability": 0.849954,
       "reputation": 0.666667,
-      "n_rides": 4,
+      "n_rides": 5,
       "legs": [
         {
           "ride": "negotiation",
           "axis": "social",
           "score": 0.974791,
+          "integrity": 1.0,
+          "trust_after": 1.0
+        },
+        {
+          "ride": "commons",
+          "axis": "social",
+          "score": 0.951445,
           "integrity": 1.0,
           "trust_after": 1.0
         },
@@ -77,15 +92,22 @@
     {
       "agent": "random",
       "seed": 1,
-      "career_score": 0.151338,
-      "mean_capability": 0.454015,
+      "career_score": 0.153899,
+      "mean_capability": 0.461697,
       "reputation": 0.333333,
-      "n_rides": 4,
+      "n_rides": 5,
       "legs": [
         {
           "ride": "negotiation",
           "axis": "social",
           "score": 0.880547,
+          "integrity": 1.0,
+          "trust_after": 1.0
+        },
+        {
+          "ride": "commons",
+          "axis": "social",
+          "score": 0.492425,
           "integrity": 1.0,
           "trust_after": 1.0
         },
@@ -116,15 +138,22 @@
     {
       "agent": "greedy",
       "seed": 1,
-      "career_score": 0.14631,
-      "mean_capability": 0.438929,
+      "career_score": 0.148305,
+      "mean_capability": 0.444916,
       "reputation": 0.333333,
-      "n_rides": 4,
+      "n_rides": 5,
       "legs": [
         {
           "ride": "negotiation",
           "axis": "social",
           "score": 0.100207,
+          "integrity": 1.0,
+          "trust_after": 1.0
+        },
+        {
+          "ride": "commons",
+          "axis": "social",
+          "score": 0.468864,
           "integrity": 1.0,
           "trust_after": 1.0
         },

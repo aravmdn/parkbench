@@ -368,7 +368,7 @@ function renderRadar(data) {
 
   $('radar-title').textContent = `Capability radar — ${data.agent ?? 'agent'}`;
   const covered = AXIS_ORDER.filter(a => !(data.missing_axes || []).includes(a)).length;
-  $('radar-sub').textContent = `seed ${data.seed ?? '—'} · ${covered}/4 axes covered`;
+  $('radar-sub').textContent = `seed ${data.seed ?? '—'} · ${covered}/4 axes covered${data.benchmark_version ? ` · bench v${data.benchmark_version}` : ''}`;
 
   drawRadarSVG(data);
   renderRadarLegend(data);
@@ -507,7 +507,7 @@ function renderCareer(data) {
   sec.classList.remove('hidden');
 
   $('career-title').textContent = `Park tour — ${data.agent ?? 'agent'}`;
-  $('career-sub').textContent = `seed ${data.seed ?? '—'} · ${data.n_rides ?? (data.legs||[]).length} legs`;
+  $('career-sub').textContent = `seed ${data.seed ?? '—'} · ${data.n_rides ?? (data.legs||[]).length} legs${data.benchmark_version ? ` · bench v${data.benchmark_version}` : ''}`;
 
   renderLegs(data.legs || []);
   renderCareerEquation(data);
@@ -597,7 +597,7 @@ function renderLeaderboard(data) {
 
   const ranking = data.ranking || [];
   $('board-title').textContent = 'Career standings';
-  $('board-sub').textContent = `seed ${data.seed ?? '—'} · ${ranking.length} agents`;
+  $('board-sub').textContent = `seed ${data.seed ?? '—'} · ${ranking.length} agents${data.benchmark_version ? ` · bench v${data.benchmark_version}` : ''}`;
 
   const econOf = (p) => {
     const leg = (p.legs || []).find(l => l.axis === 'economic');

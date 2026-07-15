@@ -1,4 +1,5 @@
 {
+  "benchmark_version": "1.0.0",
   "agent": "random",
   "seed": 1,
   "axes": {

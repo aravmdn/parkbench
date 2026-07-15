@@ -84,7 +84,9 @@ function drawHallOfFame(k) {
   });
 
   k.drawText({
-    text: "H / Esc  back to park",
+    text:
+      "H / Esc  back to park" +
+      (leaderboard.benchmark_version ? "   ·   bench v" + leaderboard.benchmark_version : ""),
     pos: k.vec2(WORLD_W / 2, WORLD_H - 14),
     size: 8,
     anchor: "center",

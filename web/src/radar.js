@@ -201,7 +201,10 @@ function drawStats(k, agent) {
     color: k.Color.fromHex(PALETTE.paper),
   });
   k.drawText({
-    text: "SKILL PROFILE · seed " + data.seed,
+    text:
+      "SKILL PROFILE · seed " +
+      data.seed +
+      (data.benchmark_version ? " · bench v" + data.benchmark_version : ""),
     pos: k.vec2(CX, 40),
     size: 8,
     anchor: "center",

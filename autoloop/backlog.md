@@ -83,14 +83,19 @@ adds/touches engine code (then Tier A too, stdlib-only + tested + baselines byte
   ✅ landed — all four baselines patrol at once (palette-swapped outfits via `pixels.js` tint,
   per-instance routes/speeds); Tab/T or walking near a trainer selects it for the `S` stats screen
   (gold `>name` tag + HUD `S: stats [<agent>]`); player arrows/gym-entry/H unchanged.
-- [ ] `fixture-provenance` — Regenerate all `web/src/fixtures/*.json` and `viewer/*.html`-consumed
+- [x] `fixture-provenance` — Regenerate all `web/src/fixtures/*.json` and `viewer/*.html`-consumed
   fixtures from the now-versioned CLI (`benchmark_version` "1.0.0", D-061) so every committed fixture
   carries the version key, and surface it in the UIs: the stats screen and Hall of Fame scene each show
   a small version footer/tag, and the two static viewer pages (`viewer/profiles.html`,
   `viewer/park.html`) do the same for their embedded/loaded JSON. **Done when:** every fixture file
   contains `benchmark_version`, both `web/` scenes and both viewer pages display it, the build is clean,
   and a screenshot is committed (Tier B; fixtures are verbatim CLI JSON re-generated via existing
-  `parkbench ... --json` commands — no engine code changes).
+  `parkbench ... --json` commands — no engine code changes). ✅ landed — all 5 `web/` fixtures + the 3
+  `viewer/sample-*.json` regenerated verbatim from the v1.0.0 CLI (the stale pre-commons `sample-radar`
+  is thereby refreshed too); `bench v1.0.0` shown in the stats screen, Hall of Fame footer, and all
+  three `profiles.html` payload subtitles. `park.html` loads no JSON (static entrance), so it honestly
+  gets no tag; `sample-run.json` is a run log (not CLI `--json`), left as-is — both noted here rather
+  than faked. Shots: `autoloop/shots/2026-07-15-1005/`.
 - [ ] `live-profiles` — Replace (or offer as an alternative to) committed fixture JSON with a **live or
   freshly-exported** data path: either (a) a small **read-only** `parkbench serve --profiles`-style HTTP
   endpoint that serves `radar`/`career`/`leaderboard` JSON on demand (Tier A: stdlib-only `http.server`
