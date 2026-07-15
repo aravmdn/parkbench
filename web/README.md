@@ -8,6 +8,11 @@ is a **trainer** who walks the park and steps into **gyms** (the rides) to be be
 > **Load-bearing rule (D-012):** this app is **presentation only**. It never computes or influences a
 > score — it *reads* the stdlib engine's JSON (`parkbench radar --json`, `career --json`,
 > `leaderboard --json`, run logs) and draws it. All truth stays in the engine.
+>
+> The committed fixtures under `src/fixtures/` are verbatim CLI output and carry the engine's
+> `benchmark_version` stamp (D-061); the stats screen and Hall of Fame surface it (`bench v1.0.0`) so a
+> spectator always knows which benchmark version produced the numbers on screen. To refresh, re-run the
+> same `parkbench ... --json` commands and overwrite the files.
 
 ## Stack
 
