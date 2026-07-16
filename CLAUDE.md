@@ -42,7 +42,56 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 | `docs/05-glossary.md` | Shared vocabulary (ride, house cast, BYO agent, radar profile, …). |
 | `docs/06-v1-architecture.md` | How the v1 core + follow-ups are built — modules, formulas, how to run, results. |
 
-## Current status (2026-07-08)
+## Current status (2026-07-16)
+
+**Trust track — DRAINED (D-058…D-061), on PR #16 awaiting merge.** A week of daily laps (Jul 9–15,
+branch `claude/project-progress-automation-pikvqv`, one verified commit per day) completed every
+remaining trust-track backlog item, all purely additive measurement in `src/parkbench/validity.py`:
+
+- **D-058 `ablation-baseline` (Jul 9)** — the input-ablation **shortcut detector**: each ride re-runs
+  its own `optimal` baseline on a *blanked* observation (`_BlindfoldAgent` + per-ride `ablate` hooks);
+  every ride **collapses** (economic 1.000→0.000 · safety →0.266 · commons →0.458 · opt-in coding
+  →0.000; gaps ≥ 0.4) ⇒ no ride's metric rewards a see-nothing shortcut.
+- **D-059 `structural-ladder` (Jul 10)** — a second, **structural** ability ladder: deterministic
+  bounded-deliberation agents (economic: DP over the first k·N items; safety: verifies the first k·R
+  rounds; commons: exact plan for the first k·R rounds). All three fast rides track the structural
+  dial at **ρ = 1.00** (mono 1.00, split-half rel 1.00) ⇒ the ε-ladder verdict is **not** an artifact
+  of "amount of randomness".
+- **D-060 `item-hygiene` (Jul 11)** — classical item analysis (seeds = items, ladder rungs = persons):
+  **Cronbach's α = 0.994/0.993/0.996** (economic/safety/commons) + per-item item-rest discrimination
+  with a negative-r pruning rule — **12/12 items retained**, min item-rest r **+0.916** (nothing to
+  prune, asserted not assumed).
+- **D-061 `bootstrap-and-versioning` (Jul 12)** — seeded **percentile bootstrap CIs** (B=2,000,
+  deterministic) replace the normal approximation; resolvable rungs now = true interval non-overlap
+  (commons 3/5→4/5); and **`benchmark_version` "1.0.0"** (`parkbench.BENCHMARK_VERSION`,
+  bump-only-on-score-change convention) is stamped into every CLI `--json` result.
+
+**223 passing tests** (195 → +6+8+6+8); public seed-1 baselines **byte-identical** throughout (the
+sole intended JSON delta is the D-061 version key, verified key-popped-equal). What validity work
+remains is the *external* half — criterion validity against a trusted external measure, a second ride
+per non-social axis, harder difficulty tiers — parked honestly in `docs/12-validity.md` §gaps and
+`docs/04-open-questions.md`.
+
+**Visual world — chunk 3 (living park) started (Jul 13–15).** The chunk was decomposed into the
+backlog (`multi-trainers` · `fixture-provenance` · `live-profiles` · `byo-trainer`), and the first
+two landed (Tier B, headless-verified, zero console errors, shots under `autoloop/shots/`): the **full
+baseline roster now walks the park** — four palette-swapped, independently patrolling trainers
+(random/greedy/heuristic/optimal) with name tags; **Tab/T or walking up to a trainer selects it** and
+`S` opens *that* agent's stats screen — and all spectator fixtures (5 × `web/src/fixtures/`, 3 ×
+`viewer/sample-*.json`, incl. a stale pre-commons `sample-radar.json`) were **regenerated verbatim
+from the v1.0.0 CLI**, with **`bench v1.0.0` surfaced** in the stats screen, Hall of Fame, and
+`profiles.html` subtitles (provenance from data, never hardcoded).
+
+**Where this lives + what's next:** the week's laps are commits `fd09c79…` on **PR #16 → `main`**
+(one dated commit per day, journal in `autoloop/log.md`) — **owner: review/merge PR #16**, then pull
+`main`. Next backlog task: **`live-profiles`** (then `byo-trainer`) — see `autoloop/HANDOFF.md`.
+Verify: `pytest` (223, ~4 min) · `parkbench validity` (~4 min: ladder + MTMM + ablation + structural +
+hygiene + bootstrap CIs, `--json` carries `benchmark_version`) · `cd web && npm install && npm run
+build` then walk the park (Tab picks a trainer, `S` stats, `H` hall).
+
+---
+
+## Prior status (2026-07-08)
 
 **Trust track — convergent/discriminant validity landed (D-057).** The validity harness now also
 answers the MTMM question *"are the four radar axes four distinct constructs, or one measured four
