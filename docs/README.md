@@ -115,6 +115,17 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
   **held-out eval seed range** (contamination down-payment). All three fast rides are **VALID**;
   `greedy`'s Goodhart gap is 0.836. New doc [`12-validity.md`](12-validity.md). **186 passing tests**
   (+12); baselines byte-identical (purely additive). Updated `02`, `03`, `04`, root `CLAUDE.md`.
+- **2026-07-09 → 07-12** — **Trust track drained (D-058–D-061):** four daily laps completed every
+  remaining validity-roadmap backlog item — the **input-ablation shortcut detector** (every ride
+  collapses blindfolded, D-058), the **structural bounded-horizon ladder** (ρ = 1.00 without a
+  randomness dial, D-059), **item hygiene** (Cronbach's α ≥ 0.993, all items retained, D-060), and
+  **bootstrap CIs + `benchmark_version` stamping** in every CLI `--json` (D-061). **223 passing
+  tests**; baselines byte-identical throughout. Updated `02`, `12`, backlog, root `CLAUDE.md`.
+- **2026-07-13 → 07-15** — **Visual-world chunk 3 (living park) started:** chunk decomposed into the
+  backlog, then `multi-trainers` (the full baseline roster patrols the park; Tab/walk-up selection
+  feeds the stats screen) and `fixture-provenance` (all spectator fixtures regenerated verbatim from
+  the v1.0.0 CLI; `bench v1.0.0` surfaced in the web scenes + `profiles.html`) landed Tier-B-verified
+  (headless, zero console errors, shots in `autoloop/shots/`). Updated `11`, backlog, `web/README.md`.
 - **2026-07-02** — **Loop re-scoped to a local build loop + the visual-world vision** (D-050, D-051):
   the loop becomes a *genuinely build-forward* loop run **locally, fresh worker per lap** (dodges the
   single-session context limit; can drive the browser). New doc [`11-visual-world.md`](11-visual-world.md)

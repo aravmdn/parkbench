@@ -7,39 +7,35 @@
 
 ---
 
-**Updated:** 2026-07-08
+**Updated:** 2026-07-16
 **Loop state:** IDLE
 
 **Active task:** — (none)
 **Acceptance criteria:** —
-**Task branch:** — (none active; local-driver laps use `autoloop/task-<slug>` → land on `main`, D-051)
-**Tree state:** clean · on `main`
+**Task branch:** `claude/project-progress-automation-pikvqv` (the Jul 9–16 daily-lap chain, PR #16 →
+`main`; this chain ran as coordinator + fresh worker sub-agents rather than the D-056 local `/loop`)
+**Tree state:** clean · on `claude/project-progress-automation-pikvqv`
 **Last durable commit:** (see `git log -1`)
 
-**Last landed (this session):** `convergent-validity` (D-057) — a convergent/discriminant MTMM matrix
-in `parkbench validity` (+`--json`). Over the shared roster `{random,greedy,heuristic}` (the only set
-scorable on every ride, since negotiation has no `optimal`), the two social rides converge
-(negotiation×commons ρ=+1.00) and that exceeds every social cross-axis ρ=+0.50 ⇒ discriminant PASS
-(Campbell-Fiske). Purely additive: pytest 195 green (+6), baselines byte-identical. Honest limits (N=3;
-only social has a within-axis pair; economic×safety also ties at +1.00; ≥8 seeds needed) documented in
-`docs/12-validity.md`.
+**Last landed (this chain, Jul 9–15):** seven daily laps — the **trust track drained** (D-058
+input-ablation shortcut detector · D-059 structural bounded-horizon ladder · D-060 item hygiene
+α + item-rest discrimination · D-061 bootstrap CIs + `benchmark_version` stamping; **223 passing
+tests**, baselines byte-identical throughout) and **visual-world chunk 3 started** (chunk decomposed
+into the backlog; `multi-trainers` + `fixture-provenance` landed with headless-verified screenshots).
+Details per lap: [`log.md`](log.md); full narrative: root `CLAUDE.md` Current status.
 
-**Loop / active driver (D-056):** the owner activated the **local `/loop` driver** (D-051 model) as the
-active driver on 2026-07-08. Setup + the standing driver/worker prompt: `autoloop/LOCAL_DRIVER_PROMPT.md`.
-Local laps work a `autoloop/task-<slug>` branch and **land on `main` gate-free**. The **hourly cloud-cron
-routine (D-054) remains DESIGNED + DOCUMENTED but UNARMED** (its prompt is `autoloop/ROUTINE_PROMPT.md`;
-arming is still blocked on owner approval of the scheduling MCP call) — use it only if switching back to
-the cloud model. Note: the last recorded laps (through `world-signposts`, 2026-07-04) ran on the cloud
-branch `claude/next-tasks-j7f20o`; the validity harness (D-055) + LLM-fallback landed as manual sessions,
-not autoloop laps.
+**Loop / active driver (D-056):** the owner-activated local `/loop` driver remains the standing
+mechanism (`autoloop/LOCAL_DRIVER_PROMPT.md`); this week's chain was a one-off coordinator session
+doing the same lap protocol with dated daily commits onto a PR branch. The **cloud-cron routine
+(D-054) stays DESIGNED + UNARMED**.
 
-**NEXT ACTION:** Loop is IDLE. The backlog is **not empty** — pull the TOP unchecked task, now
-**`ablation-baseline`** (trust track, roadmap #6, Tier A): re-run the best agent on a **blanked/degraded
-observation** and require its score to collapse (the single best shortcut detector). Needs a per-ride
-"degraded scenario" hook. **Done when:** each ride reports an ablation gap and a test asserts
-`score_ablated << score_full`; keep `pytest` green + baselines byte-identical (measurement is additive —
-do NOT edit scoring/agent/ride logic to move numbers). Create branch `autoloop/task-ablation-baseline`
-and begin. (After the trust track drains, a refill can decompose the next *visual* chunk — live/served
-profiles, multiple trainers, a BYO-agent connector.)
+**NEXT ACTION:** Loop is IDLE. PR #16 (the Jul 9–16 chain) awaits owner review/merge. The backlog is
+**not empty** — the next unchecked task is **`live-profiles`** (visual-world chunk 3, Tier A+B): a
+live or freshly-exported data path for the spectator surfaces — either a read-only
+`parkbench serve --profiles`-style endpoint (stdlib-only, tested) or a one-command static-export flow
+regenerating all `web/` + `viewer/` fixtures; then **`byo-trainer`**. After chunk 3, the trust track's
+remaining *external* work (criterion validity, a second ride per non-social axis, harder difficulty
+tiers) is parked in `docs/12-validity.md` / `docs/04-open-questions.md`.
 
-**Blockers / needs-owner:** none
+**Blockers / needs-owner:** review + merge PR #16 (or request changes); then pull `main` before the
+next lap.
