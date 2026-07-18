@@ -25,6 +25,8 @@ const NPC_TRAINERS = [
   { agent: "random", x: 36, y: 138, speed: 38, route: [[36, 138], [120, 138], [120, 152], [36, 152]] },
   { agent: "greedy", x: 268, y: 152, speed: 44, route: [[268, 152], [184, 152], [184, 138], [268, 138]] },
   { agent: "optimal", x: 152, y: 175, speed: 50, route: [[152, 175], [152, 230], [168, 230], [168, 175]] },
+  // The BYO guest slot: a third-party agent identity rendered from its own verbatim fixture.
+  { agent: "byo", label: "byo (BYO)", x: 136, y: 60, speed: 42, route: [[136, 60], [136, 118], [56, 118], [56, 60]] },
 ];
 
 // How close (px) the player must walk to an NPC trainer to select it for the stats screen.

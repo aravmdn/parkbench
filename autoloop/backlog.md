@@ -111,13 +111,18 @@ adds/touches engine code (then Tier A too, stdlib-only + tested + baselines byte
   byte-identical to the hand-run `--json` commands (same builders, same version stamp; 5 tests, 228
   green); documented in `web/README.md` + `viewer/README.md` + `docs/07-multi-ride.md`. The live
   HTTP endpoint (option a) stays a candidate for a future chunk. Shots: `autoloop/shots/2026-06-25-1030/`.
-- [ ] `byo-trainer` — Let a **BYO agent** (per the documented wire protocol, `docs/09-byo-protocol.md`)
+- [x] `byo-trainer` — Let a **BYO agent** (per the documented wire protocol, `docs/09-byo-protocol.md`)
   appear as a trainer in the world: given a BYO agent's identity + a completed run's JSON (fixture or
   live per `live-profiles`), render it as an additional palette-swapped trainer alongside the baselines,
   labeled distinctly (e.g. a "BYO" tag) so spectators can tell a third-party agent from the built-in
   baselines. **Done when:** at least one non-baseline agent identity renders as a trainer with correct
   labeling, reachable/enterable like the others, build clean, screenshot committed (Tier B; no engine
-  code — consumes existing run/identity JSON per D-038).
+  code — consumes existing run/identity JSON per D-038). ✅ landed — a fifth, guest-green trainer
+  `byo (BYO)` patrols Society Square from its own verbatim fixture (`radar --agent heuristic --seed 2
+  --json` as the honest stand-in identity: the stats screen titles it BYO but discloses `policy
+  heuristic · seed 2` from the data rather than faking a foreign agent); selectable via Tab/walk-up
+  like the baselines; the badge row correctly stays absent (no career legs for a guest). Build clean,
+  zero console errors. Shots: `autoloop/shots/2026-06-26-1100/`.
 
 > When this chunk lands, close it out here the way chunk 2 was closed, and decompose chunk 4 from
 > whatever's left in `docs/11-visual-world.md` "Next" at that time.

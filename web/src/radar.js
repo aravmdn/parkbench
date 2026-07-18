@@ -8,6 +8,7 @@ import radarHeuristic from "./fixtures/radar-heuristic.json";
 import radarGreedy from "./fixtures/radar-greedy.json";
 import radarOptimal from "./fixtures/radar-optimal.json";
 import radarRandom from "./fixtures/radar-random.json";
+import radarByo from "./fixtures/radar-byo.json";
 import leaderboard from "./fixtures/leaderboard.json";
 import { LANDS, ATTRACTIONS, PALETTE } from "./theme.js";
 import { WORLD_W, WORLD_H } from "./world.js";
@@ -17,8 +18,9 @@ export const RADARS = {
   greedy: radarGreedy,
   optimal: radarOptimal,
   random: radarRandom,
+  byo: radarByo, // the BYO guest slot — verbatim engine JSON for a non-baseline identity (D-038)
 };
-export const AGENT_ORDER = ["heuristic", "greedy", "optimal", "random"];
+export const AGENT_ORDER = ["heuristic", "greedy", "optimal", "random", "byo"];
 
 // Canonical axis order (matches LANDS + the engine's axis order): social, economic, coding, safety.
 const AXES = LANDS.map((l, i) => ({
@@ -204,6 +206,7 @@ function drawStats(k, agent) {
     text:
       "SKILL PROFILE · seed " +
       data.seed +
+      (agent !== data.agent ? " · policy " + data.agent : "") +
       (data.benchmark_version ? " · bench v" + data.benchmark_version : ""),
     pos: k.vec2(CX, 40),
     size: 8,

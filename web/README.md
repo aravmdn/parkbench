@@ -39,7 +39,10 @@ A blank/placeholder Kaplay canvas should boot with **no console errors**.
 
 - **The full baseline roster walks the park at once** — one trainer per agent
   (`heuristic` / `greedy` / `optimal` / `random`), each palette-swapped (procedurally re-tinted cap +
-  shirt, no art files) and patrolling its own beat of the park at its own pace.
+  shirt, no art files) and patrolling its own beat of the park at its own pace — plus a **BYO guest
+  slot**: a fifth, guest-green trainer tagged `byo (BYO)` rendered from its own verbatim fixture
+  (`web/src/fixtures/radar-byo.json`), demonstrating how a third-party agent (docs/09 wire protocol,
+  D-038 identity) appears in the world; its stats screen discloses the underlying policy + seed.
 - **Controls:** arrow keys walk the player trainer (`heuristic`); **Tab** (or **T**) cycles which
   trainer is *selected*, and **walking the player up to another trainer selects it** — the selected
   trainer gets a gold `>name` tag and is the agent the **S** stats screen opens on (the top-right HUD

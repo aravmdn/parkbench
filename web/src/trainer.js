@@ -20,6 +20,7 @@ export const AGENT_OUTFITS = {
   greedy: { cap: "#d9a441", shirt: "#a8752c" }, // gold — the Market Midway star (and reward-hacker)
   optimal: { cap: "#e6f0d6", shirt: "#8a5aa8" }, // white cap + violet — the champion
   random: { cap: "#52525a", shirt: "#8a8f98" }, // grey — the coin-flipper
+  byo: { cap: "#2f9e6e", shirt: "#1f6f5b" }, // guest green — the bring-your-own-agent slot
 };
 
 // The classic patrol: out-and-back along each arm of the central crossroads.
@@ -71,9 +72,11 @@ export function addTrainer(k, agent = "heuristic", opts = {}) {
   let curName = "down-idle";
   t.play(curName);
 
-  // A small name tag showing which agent this trainer is; follows the sprite.
+  // A small name tag showing which agent this trainer is; follows the sprite. A BYO guest can
+  // carry a longer label (opts.label) so spectators can tell third-party agents from baselines.
+  const tagName = opts.label || agent;
   const tag = k.add([
-    k.text(agent, { size: 6, font: "monospace" }),
+    k.text(tagName, { size: 6, font: "monospace" }),
     k.pos(startX, startY - 16),
     k.anchor("center"),
     k.color(k.Color.fromHex(PALETTE.paper)),
@@ -83,7 +86,7 @@ export function addTrainer(k, agent = "heuristic", opts = {}) {
 
   // Highlight (or clear) this trainer as the one the stats screen will show.
   t.setSelected = (sel) => {
-    tag.text = (sel ? ">" : "") + agent;
+    tag.text = (sel ? ">" : "") + tagName;
     tag.color = k.Color.fromHex(sel ? SELECTED_HEX : PALETTE.paper);
   };
 
