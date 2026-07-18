@@ -126,6 +126,26 @@ class CareerProfile:
         }
 
 
+# The deterministic reference ladder shared across the solo rides — the leaderboard's default roster
+# (D-042). `llm` is excluded on purpose: it is a live-network reference agent (needs a key) and only
+# covers the social axis, so a single-ride career would rank misleadingly against the full-tour ones.
+# Lives here (the career layer) so both the CLI and the fixture exporter draw the roster from one place.
+LEADERBOARD_AGENTS = ("random", "greedy", "heuristic", "optimal")
+
+
+def build_leaderboard(agents=None, seed: int = 1) -> list[CareerProfile]:
+    """Rank ``agents`` (default :data:`LEADERBOARD_AGENTS`) by career score, descending (D-042).
+
+    The single source of the leaderboard ordering: career score high→low, ties broken by agent name
+    so the ranking is deterministic. Shared by ``parkbench leaderboard`` and the fixture exporter so
+    both produce the identical ``ranking``.
+    """
+    roster = list(LEADERBOARD_AGENTS) if agents is None else list(agents)
+    profiles = [build_career(a, seed=seed) for a in roster]
+    profiles.sort(key=lambda p: (-p.career_score, p.agent))
+    return profiles
+
+
 def build_career(agent_name: str, seed: int = 1, rides=None) -> CareerProfile:
     """Roll the rides up into a reputation-weighted `CareerProfile` for ``agent_name`` (D-041).
 
