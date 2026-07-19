@@ -6,6 +6,7 @@
   parkbench radar   — roll every ride up into the agent's diagnostic radar profile (D-037).
   parkbench career  — the radar weighted by cross-ride reputation (D-041).
   parkbench leaderboard — rank agents by career score (D-042).
+  parkbench export-profiles — regenerate/--check the web/ + viewer/ spectator fixtures (D-062).
 """
 
 from __future__ import annotations
@@ -187,22 +188,12 @@ def cmd_career(args: argparse.Namespace) -> None:
     print()
 
 
-# The deterministic reference ladder shared across the solo rides — the leaderboard's default roster
-# (D-042). `llm` is excluded on purpose: it is a live-network reference agent (needs a key) and only
-# covers the social axis, so a single-ride career would rank misleadingly against the full-tour ones.
-LEADERBOARD_AGENTS = ("random", "greedy", "heuristic", "optimal")
-
-
 def cmd_leaderboard(args: argparse.Namespace) -> None:
     # Imported lazily so the core CLI carries no dependency on the career roll-up unless used (D-042).
-    from .career import build_career
+    from .career import build_leaderboard
 
-    agents = [a.strip() for a in args.agents.split(",") if a.strip()] if args.agents else list(
-        LEADERBOARD_AGENTS
-    )
-    profiles = [build_career(a, seed=args.seed) for a in agents]
-    # Rank by career score; break ties by agent name so the order is deterministic.
-    profiles.sort(key=lambda p: (-p.career_score, p.agent))
+    agents = [a.strip() for a in args.agents.split(",") if a.strip()] if args.agents else None
+    profiles = build_leaderboard(agents, seed=args.seed)
 
     if args.json:
         _emit_json({"seed": args.seed, "ranking": [p.to_dict() for p in profiles]})
@@ -218,6 +209,20 @@ def cmd_leaderboard(args: argparse.Namespace) -> None:
             f"{p.reputation:10.3f}   {len(p.legs):>4}{note}"
         )
     print()
+
+
+def cmd_export(args: argparse.Namespace) -> int:
+    # Imported lazily so the core CLI carries no dependency on the exporter unless used (D-062).
+    from .export import export_profiles, render_export_report
+
+    results = export_profiles(root=args.root, seed=args.seed, check=args.check)
+    print()
+    print(render_export_report(results, check=args.check, root=args.root))
+    print()
+    # In --check mode, drift/missing is a failure so CI (or a test) can gate on the exit code.
+    if args.check and any(not r.ok for r in results):
+        return 1
+    return 0
 
 
 def cmd_validity(args: argparse.Namespace) -> None:
@@ -432,6 +437,8 @@ def build_parser() -> argparse.ArgumentParser:
     cr.set_defaults(func=cmd_career)
 
     # Career leaderboard (D-042): rank a roster of agents by career score (spectator product).
+    from .career import LEADERBOARD_AGENTS
+
     lb = sub.add_parser("leaderboard", help="Rank agents by cross-ride career score.")
     lb.add_argument("--seed", type=int, default=1, help="Seed passed to each ride.")
     lb.add_argument(
@@ -481,14 +488,28 @@ def build_parser() -> argparse.ArgumentParser:
     )
     v.add_argument("--json", action="store_true", help="Emit the report as JSON instead of a table.")
     v.set_defaults(func=cmd_validity)
+
+    # Fixture exporter (D-062): regenerate the committed spectator fixtures from the versioned CLI so
+    # the web/viewer surfaces never need hand-copied JSON; --check gates provenance (drift => exit 1).
+    xp = sub.add_parser(
+        "export-profiles",
+        help="Regenerate (or --check) the committed web/ + viewer/ spectator fixtures from the CLI.",
+    )
+    xp.add_argument("--root", default=".", help="Repo root under which web/ and viewer/ live.")
+    xp.add_argument("--seed", type=int, default=1, help="Seed passed to each ride (default 1).")
+    xp.add_argument(
+        "--check", action="store_true",
+        help="Verify committed fixtures match the current CLI output without writing (drift => exit 1).",
+    )
+    xp.set_defaults(func=cmd_export)
     return p
 
 
 def main(argv: list[str] | None = None) -> int:
     load_dotenv()  # pick up a local .env (e.g. OPENROUTER_API_KEY); env vars win (D-033)
     args = build_parser().parse_args(argv)
-    args.func(args)
-    return 0
+    # Commands return None (success) or an int exit code (e.g. export-profiles --check drift).
+    return args.func(args) or 0
 
 
 if __name__ == "__main__":
