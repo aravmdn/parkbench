@@ -37,7 +37,10 @@ The metaphor is a near 1:1 with the engine — that's why it's worth doing prope
   dependencies and a build step** (the stdlib-only rule is an *engine* rule; it does not bind the
   front-end). It consumes the engine's JSON and renders the world. No scoring logic ever lives here.
 - **Data flow:** engine → JSON → `web/` reads it. During development the loop can generate fixture JSON
-  (e.g. from the seeded baselines) into `web/` so the world has something to render offline.
+  (e.g. from the seeded baselines) into `web/` so the world has something to render offline. Those
+  fixtures are no longer hand-copied: **`parkbench export-profiles`** (D-062) regenerates every
+  `web/` + `viewer/` fixture from the versioned CLI in one command, and `parkbench export-profiles
+  --check` is a standing provenance guard that fails if any committed fixture drifts from the engine.
 
 ## Stack
 
@@ -85,3 +88,7 @@ D-061's `benchmark_version`, and surface it in the `web/` scenes + `viewer/` pag
 (a live read-only profiles endpoint or a one-command static-export flow, replacing hand-copied
 fixture JSON), and `byo-trainer` (a third-party BYO agent rendered as a labeled trainer). Pull tasks
 from the top of the backlog; keep this doc updated as the chunk lands.
+
+**Chunk 3 progress:** `multi-trainers` + `fixture-provenance` landed (2026-07-13→15); `live-profiles`
+landed 2026-07-22 as the **static-export flow** (D-062, `parkbench export-profiles` — the live HTTP
+endpoint variant is deferred to `docs/04-open-questions.md`). Remaining: `byo-trainer`.

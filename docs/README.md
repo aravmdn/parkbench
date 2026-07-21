@@ -126,6 +126,13 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
   feeds the stats screen) and `fixture-provenance` (all spectator fixtures regenerated verbatim from
   the v1.0.0 CLI; `bench v1.0.0` surfaced in the web scenes + `profiles.html`) landed Tier-B-verified
   (headless, zero console errors, shots in `autoloop/shots/`). Updated `11`, backlog, `web/README.md`.
+- **2026-07-22** — **Fixture exporter** (D-062, visual-world chunk 3 `live-profiles`): `parkbench
+  export-profiles` [`--check`] regenerates **every** `web/` + `viewer/` spectator fixture from the
+  versioned CLI in one command (new `src/parkbench/export.py`), retiring the hand-copy step;
+  `--check` exits nonzero on drift as a standing provenance guard. Ranking logic consolidated into
+  `career.build_leaderboard()` (one source for CLI + exporter). Comparison is float-repr-tolerant so
+  it passes on Windows and the Linux cloud env. Purely additive; baselines byte-identical. **239
+  passing tests.** Updated `02`, `04`, `11`, backlog, `web/README.md`, root `CLAUDE.md`.
 - **2026-07-02** — **Loop re-scoped to a local build loop + the visual-world vision** (D-050, D-051):
   the loop becomes a *genuinely build-forward* loop run **locally, fresh worker per lap** (dodges the
   single-session context limit; can drive the browser). New doc [`11-visual-world.md`](11-visual-world.md)

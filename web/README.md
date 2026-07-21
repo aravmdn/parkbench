@@ -11,8 +11,24 @@ is a **trainer** who walks the park and steps into **gyms** (the rides) to be be
 >
 > The committed fixtures under `src/fixtures/` are verbatim CLI output and carry the engine's
 > `benchmark_version` stamp (D-061); the stats screen and Hall of Fame surface it (`bench v1.0.0`) so a
-> spectator always knows which benchmark version produced the numbers on screen. To refresh, re-run the
-> same `parkbench ... --json` commands and overwrite the files.
+> spectator always knows which benchmark version produced the numbers on screen.
+
+### Refreshing the fixtures
+
+Never hand-edit the fixture JSON. Regenerate **every** `web/` + `viewer/` spectator fixture from the
+versioned engine with one command (D-062), run from the repo root:
+
+```sh
+parkbench export-profiles          # (re)write every fixture from the current engine
+parkbench export-profiles --check  # verify committed fixtures still match the CLI (drift → exit 1)
+```
+
+Each file is the **verbatim** `parkbench <cmd> --json` output (radar per baseline + the leaderboard for
+`web/`, plus the `viewer/sample-*.json` samples), so provenance is automatic. `--check` is the standing
+guard (`tests/test_export.py`): it fails if any committed fixture drifts from what the engine now emits,
+so a stale fixture can't ship unnoticed. Comparison tolerates last-digit float-repr differences across
+platforms, and files are written with canonical LF newlines. (`viewer/sample-run.json` is a run *log*,
+not CLI `--json`, so it is intentionally left out; `viewer/park.html` loads no JSON.)
 
 ## Stack
 

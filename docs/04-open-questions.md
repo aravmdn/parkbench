@@ -1,6 +1,6 @@
 # 04 — Open Questions
 
-**Status:** Living · **Last updated:** 2026-06-04
+**Status:** Living · **Last updated:** 2026-07-22
 
 Questions still genuinely open. When one is resolved it becomes an entry in the decision log
 ([`02-decisions.md`](02-decisions.md)) and is listed under "Resolved" below.
@@ -50,6 +50,14 @@ below (D-027–D-030)._
   the filesystem by absolute path, runs with the parent's OS privileges, and has no CPU/memory/output
   caps — filesystem/network jails, resource limits, container/seccomp), folded into BYO-protocol
   hardening (roadmap #5); and continued vigilance as new ride types arrive._
+- **A live, read-only profiles endpoint for the spectator surfaces.** The `live-profiles` task shipped
+  its **static-export** half (D-062, `parkbench export-profiles` — one command regenerates every
+  `web/`+`viewer/` fixture from the versioned CLI, so nothing is hand-copied). What stays open is the
+  other half: a small **read-only** HTTP endpoint (a `parkbench serve --profiles`-style stdlib
+  `http.server` that returns `radar`/`career`/`leaderboard` JSON on demand) so the world can render
+  *fresh* data without a regenerate-and-commit step, and the `web/` app can `fetch` instead of import a
+  build-time fixture. Deferred as larger than one session and not required for a working offline world.
+  When picked up, keep it presentation-only (D-012): serve existing producers' JSON, no scoring logic.
 
 ## Resolved
 

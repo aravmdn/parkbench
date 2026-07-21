@@ -1262,3 +1262,47 @@ run logs, server payloads, and every stored fixture — the emission point is th
 deriving the stamp from `__version__` (code can change without the measurement changing — the two
 version numbers answer different questions). Extends D-055 (harness) and D-038 (identity);
 completes the D-055 deferred-gaps list.
+
+### D-062 · 2026-07-22 · One-command fixture export (`parkbench export-profiles`) with a provenance `--check`
+**Decision:** Add a CLI command that regenerates **every** committed spectator fixture from the
+versioned engine, replacing the hand-copy step the `web/`/`viewer/` surfaces relied on (the
+"live-profiles" backlog task, visual-world chunk 3, roadmap #4/#5). This is the **static-export**
+option (b) of that task; the live read-only HTTP endpoint (option a) is judged larger than one
+session and deferred. New stdlib module `src/parkbench/export.py` + `parkbench export-profiles`
+[`--check`] [`--seed`] [`--root`] + `tests/test_export.py`. A `FIXTURE_MANIFEST` maps each committed
+fixture to the `--json` invocation that produces it: `web/src/fixtures/radar-{heuristic,greedy,optimal,
+random}.json` + `web/src/fixtures/leaderboard.json`, and `viewer/sample-{radar,career,leaderboard}.json`.
+The exporter emits the **verbatim** CLI `--json` bytes (same `build_radar`/`build_career`/
+`build_leaderboard` producers, same `benchmark_version` stamp, same indent + trailing newline) — it
+invents no data. `--check` writes nothing and exits **1** on drift/missing, so CI or a test can gate
+provenance; `main()` now returns `func(args) or 0` so a command can carry an exit code (all existing
+commands return `None` → 0, unchanged).
+**Refactor:** `LEADERBOARD_AGENTS` and the ranking logic moved from `cli.py` into `career.py` as
+`build_leaderboard()` — one source of the roster + ordering for both the CLI and the exporter (no
+duplication/drift). `cli.cmd_leaderboard` now calls it; output byte-identical.
+**Provenance is compared *semantically*, not byte-for-byte.** Regenerating a fixture on a different
+machine can shift the **last digit of an *unrounded* float** in a ride's `detail` block (observed:
+negotiation `efficiency` `0.1002070438502885` on the Linux cloud env vs `0.10020704385028849` here —
+same value, shortest-repr one ULP apart; both round to the displayed `0.100207`). Byte-exactness across
+CPython builds therefore isn't a promise we can keep, so `--check` and the tests parse both sides and
+round every float to **12 dp** (`_COMPARE_DP`) before comparing — collapsing sub-display float noise
+while still catching any real change (a changed score, a stale pre-commons axis, a missing key: all
+differ far above 1e-12). Newlines are normalized (git stores LF; `core.autocrlf` shows CRLF in a
+Windows working tree) and writes force canonical **LF**, so results are identical on Windows and Linux.
+Write mode leaves a semantically-equal file **untouched** (no last-ULP churn / spurious git diffs) and
+only rewrites genuinely stale/absent fixtures.
+**Verification:** `parkbench export-profiles --check` → all 8 `ok`, exit 0 on the committed tree;
+`parkbench export-profiles` → `0/8 written` (all current), git stays clean. `tests/test_export.py`
+adds the standing guard: every committed fixture matches the CLI, `render_fixture` == real CLI print
+(DRY), write→check round-trips + is idempotent, drift and missing files fail `--check` with exit 1,
+and written files use LF. Purely additive engine-adjacent CLI surface — no ride/scoring code touched;
+public seed-1 baselines byte-identical.
+**Honest limitations:** (a) it is the *export* path, not a *live* server — the world still reads
+files, just no-longer-hand-edited ones; the `serve --profiles` HTTP endpoint (option a) remains open
+(`docs/04-open-questions.md`); (b) `--root` defaults to `.`, so the command assumes it is run from the
+repo root (tests pass an explicit root); (c) `viewer/sample-run.json` (a run *log*, not `--json`) and
+`viewer/park.html` (loads no JSON) are intentionally out of the manifest; (d) the 12-dp tolerance is a
+deliberate trade — a hypothetical real score change below 1e-12 would be missed, but every ride score
+is rounded to 6 dp upstream, so none can be that small. Extends D-061 (versioning), D-044/D-046
+(viewers), and the D-038 identity in the fixtures; delivers the visual-world chunk-3 `live-profiles`
+task (option b).
