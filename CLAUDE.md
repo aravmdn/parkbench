@@ -42,9 +42,40 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 | `docs/05-glossary.md` | Shared vocabulary (ride, house cast, BYO agent, radar profile, …). |
 | `docs/06-v1-architecture.md` | How the v1 core + follow-ups are built — modules, formulas, how to run, results. |
 
-## Current status (2026-07-16)
+## Current status (2026-07-22)
 
-**Trust track — DRAINED (D-058…D-061), on PR #16 awaiting merge.** A week of daily laps (Jul 9–15,
+**Visual world — chunk 3 `live-profiles` landed (D-062): one-command fixture provenance.** After a
+`git pull`/merge (PR #16's Jul 9–16 daily-lap chain was rebased into `origin/main` and is now on
+`main`), this lap shipped **`parkbench export-profiles`** [`--check`] — a new stdlib CLI command
+(`src/parkbench/export.py`) that regenerates **every** committed spectator fixture (5 ×
+`web/src/fixtures/` + 3 × `viewer/sample-*.json`) **verbatim from the versioned CLI** in one command,
+retiring the hand-copy step that the D-061 `fixture-provenance` lap had to do by hand. A
+`FIXTURE_MANIFEST` maps each file to its `radar`/`career`/`leaderboard --json` invocation; the exporter
+emits the exact CLI bytes (same producers, same `benchmark_version` stamp). **`--check`** writes nothing
+and **exits 1 on drift/missing**, so `tests/test_export.py` now pins the committed fixtures to the CLI
+forever (a stale fixture — like the pre-commons `sample-radar.json` that once drifted — can't ship
+unnoticed). The leaderboard roster + ranking moved from `cli.py` into **`career.build_leaderboard()`**
+(one source for CLI + exporter; output byte-identical). **Provenance is compared *semantically***: a
+fixture regenerated on a different machine can differ in the **last ULP of an unrounded float** (the
+Linux cloud env's `0.1002070438502885` vs this Windows box's `0.10020704385028849` — same value), so
+`--check` and the tests round every float to **12 dp** before comparing (collapsing sub-display float
+noise, catching any real change) and normalize newlines to canonical **LF** — identical results on
+Windows and Linux; write mode leaves a semantically-equal file untouched (no last-ULP churn). Chose the
+**static-export** option (b) of the task; the live read-only `serve --profiles` HTTP endpoint (option a)
+is deferred to `docs/04-open-questions.md`. **Purely additive — no ride/scoring code touched; public
+seed-1 baselines byte-identical; 239 passing tests (+16 from 223).** Tier-B verified: `web/` build clean,
+boots with no console errors, and the world renders the exported fixtures (shots
+`autoloop/shots/2026-07-22-1456/` — the living park + the heuristic stats screen showing `bench v1.0.0`,
+social 0.963 / economic 0.990 / coding 0.667 / safety 0.667 from the exported radar). This is the third
+of chunk 3's four tasks; **next is `byo-trainer`**. Verify: `parkbench export-profiles --check` (all 8
+`ok`, exit 0) · `parkbench export-profiles` (0/8 written, git stays clean) · `pytest tests/test_export.py`
+· `cd web && npm run build`. Decision: **D-062**.
+
+---
+
+## Prior status (2026-07-16)
+
+**Trust track — DRAINED (D-058…D-061), merged to `main` via PR #16.** A week of daily laps (Jul 9–15,
 branch `claude/project-progress-automation-pikvqv`, one verified commit per day) completed every
 remaining trust-track backlog item, all purely additive measurement in `src/parkbench/validity.py`:
 
@@ -82,12 +113,12 @@ baseline roster now walks the park** — four palette-swapped, independently pat
 from the v1.0.0 CLI**, with **`bench v1.0.0` surfaced** in the stats screen, Hall of Fame, and
 `profiles.html` subtitles (provenance from data, never hardcoded).
 
-**Where this lives + what's next:** the week's laps are commits `fd09c79…` on **PR #16 → `main`**
-(one dated commit per day, journal in `autoloop/log.md`) — **owner: review/merge PR #16**, then pull
-`main`. Next backlog task: **`live-profiles`** (then `byo-trainer`) — see `autoloop/HANDOFF.md`.
-Verify: `pytest` (223, ~4 min) · `parkbench validity` (~4 min: ladder + MTMM + ablation + structural +
-hygiene + bootstrap CIs, `--json` carries `benchmark_version`) · `cd web && npm install && npm run
-build` then walk the park (Tab picks a trainer, `S` stats, `H` hall).
+**Where this lives:** the week's laps (PR #16, one dated commit per day, journal in `autoloop/log.md`)
+were **merged into `main`** (upstream rebased them onto `origin/main`). `live-profiles` then landed on
+top (D-062, above). Next backlog task: **`byo-trainer`** — see `autoloop/HANDOFF.md`. Verify: `pytest`
+(239, ~6 min) · `parkbench validity` (~4 min: ladder + MTMM + ablation + structural + hygiene +
+bootstrap CIs, `--json` carries `benchmark_version`) · `cd web && npm install && npm run build` then
+walk the park (Tab picks a trainer, `S` stats, `H` hall).
 
 ---
 

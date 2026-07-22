@@ -96,7 +96,7 @@ adds/touches engine code (then Tier A too, stdlib-only + tested + baselines byte
   three `profiles.html` payload subtitles. `park.html` loads no JSON (static entrance), so it honestly
   gets no tag; `sample-run.json` is a run log (not CLI `--json`), left as-is — both noted here rather
   than faked. Shots: `autoloop/shots/2026-07-15-1005/`.
-- [ ] `live-profiles` — Replace (or offer as an alternative to) committed fixture JSON with a **live or
+- [x] `live-profiles` — Replace (or offer as an alternative to) committed fixture JSON with a **live or
   freshly-exported** data path: either (a) a small **read-only** `parkbench serve --profiles`-style HTTP
   endpoint that serves `radar`/`career`/`leaderboard` JSON on demand (Tier A: stdlib-only `http.server`
   subclass, no scoring logic, tested), or (b) if a live server is judged too large for one session, a
@@ -106,7 +106,12 @@ adds/touches engine code (then Tier A too, stdlib-only + tested + baselines byte
   in one session and note the choice in the PR/commit. **Done when:** the world can show data that did
   not require hand-editing fixture files into `web/src/fixtures/`, the chosen path is documented in
   `web/README.md`, `pytest` stays green if engine code changed, build is clean, screenshot committed
-  (Tier A+B).
+  (Tier A+B). ✅ landed (D-062) — chose option **(b)**: `parkbench export-profiles` [`--check`]
+  (`src/parkbench/export.py`) regenerates all 8 `web/`+`viewer/` fixtures verbatim from the versioned
+  CLI in one command; `--check` exits 1 on drift as a standing provenance guard (`tests/test_export.py`,
+  +16 → 239 tests). Ranking consolidated into `career.build_leaderboard()`. Comparison is
+  float-repr-tolerant (12 dp) + LF-canonical ⇒ portable across Windows/Linux. Baselines byte-identical;
+  documented in `web/README.md`. Live HTTP endpoint (option a) deferred to `docs/04-open-questions.md`.
 - [ ] `byo-trainer` — Let a **BYO agent** (per the documented wire protocol, `docs/09-byo-protocol.md`)
   appear as a trainer in the world: given a BYO agent's identity + a completed run's JSON (fixture or
   live per `live-profiles`), render it as an additional palette-swapped trainer alongside the baselines,

@@ -7,35 +7,37 @@
 
 ---
 
-**Updated:** 2026-07-16
+**Updated:** 2026-07-22
 **Loop state:** IDLE
 
 **Active task:** — (none)
 **Acceptance criteria:** —
-**Task branch:** `claude/project-progress-automation-pikvqv` (the Jul 9–16 daily-lap chain, PR #16 →
-`main`; this chain ran as coordinator + fresh worker sub-agents rather than the D-056 local `/loop`)
-**Tree state:** clean · on `claude/project-progress-automation-pikvqv`
+**Task branch:** `autoloop/task-live-profiles` → `main` (this lap ran in a normal owner session after a
+`git pull`/merge; PR #16's daily-lap chain was already merged upstream into `main`)
+**Tree state:** clean · on `main`
 **Last durable commit:** (see `git log -1`)
 
-**Last landed (this chain, Jul 9–15):** seven daily laps — the **trust track drained** (D-058
-input-ablation shortcut detector · D-059 structural bounded-horizon ladder · D-060 item hygiene
-α + item-rest discrimination · D-061 bootstrap CIs + `benchmark_version` stamping; **223 passing
-tests**, baselines byte-identical throughout) and **visual-world chunk 3 started** (chunk decomposed
-into the backlog; `multi-trainers` + `fixture-provenance` landed with headless-verified screenshots).
-Details per lap: [`log.md`](log.md); full narrative: root `CLAUDE.md` Current status.
+**Last landed (2026-07-22):** **`live-profiles`** (visual-world chunk 3, D-062) — `parkbench
+export-profiles` [`--check`] (new `src/parkbench/export.py`) regenerates all 8 `web/`+`viewer/`
+spectator fixtures verbatim from the versioned CLI in one command (chose the static-export option (b);
+the live HTTP endpoint option (a) is deferred to `docs/04-open-questions.md`). `--check` exits 1 on
+drift (standing provenance guard, `tests/test_export.py`, **239 passing tests**, +16). Ranking logic
+consolidated into `career.build_leaderboard()`. Comparison is float-repr-tolerant (12 dp) + LF-canonical
+⇒ portable across Windows/Linux. Baselines byte-identical; Tier-B shots in
+`autoloop/shots/2026-07-22-1456/`. Before this: the Jul 9–16 chain (PR #16, now on `main`) drained the
+trust track (D-058→D-061) and started chunk 3 (`multi-trainers`, `fixture-provenance`). Per-lap:
+[`log.md`](log.md); narrative: root `CLAUDE.md`.
 
 **Loop / active driver (D-056):** the owner-activated local `/loop` driver remains the standing
-mechanism (`autoloop/LOCAL_DRIVER_PROMPT.md`); this week's chain was a one-off coordinator session
-doing the same lap protocol with dated daily commits onto a PR branch. The **cloud-cron routine
-(D-054) stays DESIGNED + UNARMED**.
+mechanism (`autoloop/LOCAL_DRIVER_PROMPT.md`). The **cloud-cron routine (D-054) stays DESIGNED +
+UNARMED**.
 
-**NEXT ACTION:** Loop is IDLE. PR #16 (the Jul 9–16 chain) awaits owner review/merge. The backlog is
-**not empty** — the next unchecked task is **`live-profiles`** (visual-world chunk 3, Tier A+B): a
-live or freshly-exported data path for the spectator surfaces — either a read-only
-`parkbench serve --profiles`-style endpoint (stdlib-only, tested) or a one-command static-export flow
-regenerating all `web/` + `viewer/` fixtures; then **`byo-trainer`**. After chunk 3, the trust track's
-remaining *external* work (criterion validity, a second ride per non-social axis, harder difficulty
-tiers) is parked in `docs/12-validity.md` / `docs/04-open-questions.md`.
+**NEXT ACTION:** Loop is IDLE. The next unchecked backlog task is **`byo-trainer`** (visual-world
+chunk 3, Tier B, no engine code): render a BYO agent (per `docs/09-byo-protocol.md`) as an additional
+palette-swapped, distinctly-labeled trainer alongside the baselines, from a completed run's identity
+JSON (D-038). When chunk 3 closes, decompose chunk 4 from `docs/11-visual-world.md` "Next". The trust
+track's remaining *external* work (criterion validity, a second ride per non-social axis, harder
+difficulty tiers) + the deferred live `serve --profiles` endpoint are parked in `docs/12-validity.md`
+/ `docs/04-open-questions.md`.
 
-**Blockers / needs-owner:** review + merge PR #16 (or request changes); then pull `main` before the
-next lap.
+**Blockers / needs-owner:** none. `main` reflects reality (this lap committed + pushed).
