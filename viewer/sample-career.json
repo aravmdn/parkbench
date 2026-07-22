@@ -1,11 +1,11 @@
 {
-  "benchmark_version": "1.0.0",
+  "benchmark_version": "1.1.0",
   "agent": "greedy",
   "seed": 1,
-  "career_score": 0.148305,
-  "mean_capability": 0.444916,
+  "career_score": 0.173982,
+  "mean_capability": 0.521947,
   "reputation": 0.333333,
-  "n_rides": 5,
+  "n_rides": 6,
   "legs": [
     {
       "ride": "negotiation",
@@ -25,6 +25,13 @@
       "ride": "economic",
       "axis": "economic",
       "score": 0.988844,
+      "integrity": 1.0,
+      "trust_after": 1.0
+    },
+    {
+      "ride": "exchange",
+      "axis": "economic",
+      "score": 0.907101,
       "integrity": 1.0,
       "trust_after": 1.0
     },

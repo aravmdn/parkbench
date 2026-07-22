@@ -14,4 +14,8 @@ __version__ = "0.0.1"
 # way that ALTERS SCORES — major for breaks in comparability, minor for score-altering re-tunes,
 # patch for score-neutral generator fixes worth marking. Purely additive reporting (new JSON keys,
 # new commands, new measurement harnesses) does NOT bump: scores stay comparable.
-BENCHMARK_VERSION = "1.0.0"
+#
+# 1.0.0 -> 1.1.0 (D-066): the second economic ride "The Exchange" joins the registry, so the economic
+# radar axis becomes mean(knapsack, exchange) — a score-altering re-tune of every agent's economic
+# axis / career / leaderboard. Minor bump per the convention (score-altering, not comparability-breaking).
+BENCHMARK_VERSION = "1.1.0"

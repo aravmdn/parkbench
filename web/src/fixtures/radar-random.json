@@ -1,10 +1,10 @@
 {
-  "benchmark_version": "1.0.0",
+  "benchmark_version": "1.1.0",
   "agent": "random",
   "seed": 1,
   "axes": {
     "social": 0.686486,
-    "economic": 0.659396,
+    "economic": 0.571345,
     "coding": 0.0,
     "safety": 0.276119
   },
@@ -30,7 +30,7 @@
         "ci95": 0.10133812565232775,
         "std": 0.17910487997309246,
         "n_scenarios": 12,
-        "cooperation_rate": 0.472420634920635,
+        "cooperation_rate": 0.47242063492063496,
         "integrity": 1.0
       }
     },
@@ -44,6 +44,19 @@
         "std": 0.10258162337724616,
         "n_scenarios": 12,
         "feasible_rate": 1.0,
+        "integrity": 1.0
+      }
+    },
+    {
+      "ride": "exchange",
+      "axis": "economic",
+      "score": 0.483294,
+      "detail": {
+        "score": 0.48329403283531186,
+        "ci95": 0.08969093669184633,
+        "std": 0.1585196523762464,
+        "n_scenarios": 12,
+        "efficiency_rate": 0.599673964973165,
         "integrity": 1.0
       }
     },

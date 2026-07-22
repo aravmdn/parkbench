@@ -1,5 +1,5 @@
 {
-  "benchmark_version": "1.0.0",
+  "benchmark_version": "1.1.0",
   "agent": "optimal",
   "seed": 1,
   "axes": {
@@ -33,6 +33,19 @@
         "std": 0.0,
         "n_scenarios": 12,
         "feasible_rate": 1.0,
+        "integrity": 1.0
+      }
+    },
+    {
+      "ride": "exchange",
+      "axis": "economic",
+      "score": 1.0,
+      "detail": {
+        "score": 1.0,
+        "ci95": 0.0,
+        "std": 0.0,
+        "n_scenarios": 12,
+        "efficiency_rate": 1.0,
         "integrity": 1.0
       }
     },
