@@ -1677,3 +1677,188 @@ def render_validity_report(report: ValidityReport) -> str:
                 "(see docs/12-validity.md)"
             )
     return "\n".join(lines)
+
+
+# ==================================================================================================
+# Criterion validity (external, offline) — the INSTRUMENT, not the evidence yet. (docs/13, §B)
+# ==================================================================================================
+#
+# The internal harness (everything above) proves each ride discriminates *known* ability and resists
+# the *known* reward-hacker. It says nothing about whether a Parkbench score correlates with a measure
+# the world ALREADY TRUSTS (an external benchmark or a real task outcome) — that is **criterion
+# validity**, the project's central open risk (docs/04-open-questions.md).
+#
+# The honest boundary (docs/13 §B.1): a *meaningful* criterion cohort needs REAL agents (LLMs / BYO)
+# scored on BOTH Parkbench and an external benchmark. The deterministic baselines are synthetic
+# capability tiers with no external score, and public benchmarks would score them degenerately. So the
+# cohort itself requires a one-time ONLINE step (real-agent runs) or curated published numbers — it
+# cannot be produced purely offline with stdlib.
+#
+# What CAN be built offline, and IS built below, is the **instrument**: the data contract for a cohort
+# plus the correlation machinery (reusing the rank stats above). The moment a real cohort exists, the
+# verdict is one call away. The cohort shipped here (`PLACEHOLDER_COHORT`) is synthetic and flagged
+# `is_evidence=False` — it exercises the machinery in tests but is NEVER a validity claim, and this
+# scaffold is deliberately NOT wired into `build_validity_report` (so `parkbench validity` output and
+# every seed-1 fixture stay byte-identical until real evidence is supplied).
+
+# Moderate bar (docs/13 §B.3): DELIBERATELY below the internal ladder's 0.90 — an external criterion is
+# noisy and the construct match across a bespoke ride and an external benchmark is imperfect.
+CRITERION_SPEARMAN_OK = 0.6
+
+
+def _bootstrap_corr_ci(
+    xs,
+    ys,
+    b: int = BOOTSTRAP_B,
+    alpha: float = BOOTSTRAP_ALPHA,
+    seed: int = BOOTSTRAP_SEED,
+) -> tuple[float, float]:
+    """Seeded percentile-bootstrap CI ``(lo, hi)`` for the SPEARMAN correlation of paired ``(xs, ys)``.
+
+    The same deterministic discipline as :func:`bootstrap_ci` (D-061), but the resampled statistic is
+    a rank *correlation over pairs* rather than a mean: draw ``b`` resamples of the paired points with
+    replacement, recompute Spearman each time, and read the percentile interval. Distribution-free and
+    fully reproducible (fixed RNG seed). Degenerate: fewer than 2 pairs ⇒ ``(0.0, 0.0)``.
+    """
+    xs, ys = list(xs), list(ys)
+    n = len(xs)
+    if n < 2:
+        return (0.0, 0.0)
+    rng = _random.Random(seed)
+    boot: list[float] = []
+    for _ in range(b):
+        idx = [rng.randrange(n) for _ in range(n)]
+        boot.append(spearman([xs[i] for i in idx], [ys[i] for i in idx]))
+    boot.sort()
+    return (_percentile(boot, alpha / 2.0), _percentile(boot, 1.0 - alpha / 2.0))
+
+
+@dataclass(frozen=True)
+class CriterionCohort:
+    """A shared cohort of agents, each carrying a Parkbench score AND an external, trusted measure.
+
+    The data contract criterion validity needs (docs/13 §B). ``points`` are
+    ``(agent_id, parkbench_score, external_measure)`` triples over the *same* agents. ``measure`` names
+    what the external number is (e.g. ``"HumanEval pass@1"``); ``source`` cites where it came from (a
+    URL/citation, or ``"PLACEHOLDER"``); ``axis`` is the radar axis the criterion is meant to validate
+    (or ``None``). ``is_evidence`` MUST be ``False`` for any synthetic/placeholder cohort — a
+    placeholder can demonstrate the machinery, but is never a validity claim.
+    """
+
+    measure: str
+    source: str
+    points: tuple[tuple[str, float, float], ...]
+    axis: str | None = None
+    is_evidence: bool = False
+
+    @property
+    def n(self) -> int:
+        return len(self.points)
+
+    @property
+    def agents(self) -> tuple[str, ...]:
+        return tuple(a for a, _, _ in self.points)
+
+    @property
+    def parkbench(self) -> list[float]:
+        return [p for _, p, _ in self.points]
+
+    @property
+    def external(self) -> list[float]:
+        return [e for _, _, e in self.points]
+
+
+@dataclass(frozen=True)
+class CriterionResult:
+    """The criterion-validity verdict for one cohort: Parkbench-vs-external rank correlation (docs/13)."""
+
+    cohort: CriterionCohort
+    spearman: float
+    pearson: float
+    kendall: float
+    ci_lo: float  # 95% seeded pair-bootstrap CI on the Spearman (percentile method, cf. D-061)
+    ci_hi: float
+
+    @property
+    def n(self) -> int:
+        return self.cohort.n
+
+    @property
+    def is_evidence(self) -> bool:
+        return self.cohort.is_evidence
+
+    @property
+    def passed(self) -> bool:
+        """REAL evidence *and* a moderate-or-better rank correlation. A placeholder never passes —
+        `is_evidence=False` gates the verdict regardless of how well the synthetic columns correlate."""
+        return self.is_evidence and self.spearman >= CRITERION_SPEARMAN_OK
+
+    def to_dict(self) -> dict:
+        return {
+            "measure": self.cohort.measure,
+            "source": self.cohort.source,
+            "axis": self.cohort.axis,
+            "is_evidence": self.is_evidence,
+            "n": self.n,
+            "spearman": round(self.spearman, 4),
+            "pearson": round(self.pearson, 4),
+            "kendall": round(self.kendall, 4),
+            "ci_lo": round(self.ci_lo, 4),
+            "ci_hi": round(self.ci_hi, 4),
+            "passed": self.passed,
+            "agents": list(self.cohort.agents),
+        }
+
+
+def criterion_validity(cohort: CriterionCohort) -> CriterionResult:
+    """Correlate a cohort's Parkbench scores against its external measure (docs/13 §B.3).
+
+    Reports Spearman (primary — rank agreement survives the scale mismatch between a Parkbench ``[0,1]``
+    score and an external benchmark number), Kendall (robust at small N with ties), and Pearson, plus a
+    seeded percentile-bootstrap CI on the Spearman. **This is the instrument, not a claim:** a cohort
+    with ``is_evidence=False`` (e.g. :data:`PLACEHOLDER_COHORT`) still computes correlations, but
+    ``passed`` stays ``False`` — see docs/13 for how to supply a real cohort.
+    """
+    xs, ys = cohort.parkbench, cohort.external
+    lo, hi = _bootstrap_corr_ci(xs, ys)
+    return CriterionResult(
+        cohort=cohort,
+        spearman=spearman(xs, ys),
+        pearson=pearson(xs, ys),
+        kendall=kendall_tau(xs, ys),
+        ci_lo=lo,
+        ci_hi=hi,
+    )
+
+
+# A SYNTHETIC cohort: demonstrates the shape a real cohort must take and lets the machinery be tested.
+# Its "external" column is the ε-ladder's KNOWN ability p — which is internal by construction, NOT an
+# external measure — so it is flagged `is_evidence=False` and can never `pass`. A real cohort replaces
+# these rows with real agents' Parkbench scores paired with their published external-benchmark numbers.
+PLACEHOLDER_COHORT = CriterionCohort(
+    measure="synthetic known-ability p (NOT a real external measure)",
+    source="PLACEHOLDER - see docs/13-external-validity-plan.md B.4; demonstrates the machinery only",
+    axis=None,
+    is_evidence=False,
+    points=(
+        ("mix-0.00", 0.10, 0.00),
+        ("mix-0.25", 0.34, 0.25),
+        ("mix-0.50", 0.55, 0.50),
+        ("mix-0.75", 0.79, 0.75),
+        ("mix-1.00", 1.00, 1.00),
+    ),
+)
+
+# The documented swap-in path for a REAL cohort (docs/13 B.4).
+CRITERION_TEMPLATE = """How to build a REAL criterion cohort (docs/13-external-validity-plan.md, B.4):
+  1. Pick an axis with a strong external analog — coding <-> HumanEval/MBPP pass@1 is the cleanest.
+  2. Score real agents (the `llm` connector, D-030, plus any BYO agents) on the Parkbench ride:
+     `parkbench coding --agent llm` -> the ride's normalized [0,1] score.
+  3. Pair each agent with its published external number for the SAME model (cite the source).
+  4. cohort = CriterionCohort(measure="HumanEval pass@1", source="<citation/URL>", axis="coding",
+         is_evidence=True, points=((model_id, parkbench_score, humaneval_score), ...))
+  5. criterion_validity(cohort) -> Spearman + bootstrap CI + a real `passed` verdict.
+Honest caveats (docs/13 B.5): needs a one-time ONLINE step (real-agent runs); public external
+benchmarks are contaminated (in model training sets); N is small; only the coding axis has a
+strong construct match — the other axes lean on weak general-ability proxies or human ratings.
+"""

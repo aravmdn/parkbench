@@ -649,3 +649,68 @@ def test_report_builds_and_serializes():
     assert "input ablation" in text
     assert "structural capability ladder" in text
     assert "item hygiene" in text
+
+
+# --- criterion validity scaffold (external, offline) — docs/13 ------------------------------------
+
+
+def test_criterion_validity_perfect_and_inverse_monotone():
+    """The correlation machinery on hand-built cohorts: monotone => +1, anti-monotone => -1."""
+    perfect = V.CriterionCohort(
+        measure="HumanEval pass@1",
+        source="test",
+        axis="coding",
+        is_evidence=True,
+        points=(("a", 0.10, 0.0), ("b", 0.40, 0.3), ("c", 0.70, 0.6), ("d", 0.95, 1.0)),
+    )
+    r = V.criterion_validity(perfect)
+    assert r.spearman == 1.0 and r.kendall == 1.0
+    assert r.n == 4 and r.is_evidence
+    assert r.passed  # real evidence + rho >= CRITERION_SPEARMAN_OK
+    assert r.cohort.agents == ("a", "b", "c", "d")
+
+    inverse = V.CriterionCohort(
+        measure="HumanEval pass@1",
+        source="test",
+        axis="coding",
+        is_evidence=True,
+        points=(("a", 0.10, 1.0), ("b", 0.40, 0.6), ("c", 0.70, 0.3), ("d", 0.95, 0.0)),
+    )
+    ri = V.criterion_validity(inverse)
+    assert ri.spearman == -1.0
+    assert not ri.passed  # anti-correlated => below the threshold
+
+
+def test_placeholder_cohort_is_never_treated_as_evidence():
+    """The synthetic placeholder exercises the machinery but must never count as a validity claim,
+    even though its columns correlate perfectly by construction."""
+    assert V.PLACEHOLDER_COHORT.is_evidence is False
+    r = V.criterion_validity(V.PLACEHOLDER_COHORT)
+    assert r.spearman >= 0.9  # the synthetic columns do correlate…
+    assert r.passed is False  # …but is_evidence=False gates the verdict
+    d = r.to_dict()
+    assert d["is_evidence"] is False and d["passed"] is False
+    assert "PLACEHOLDER" in d["source"]
+
+
+def test_criterion_bootstrap_ci_is_deterministic_and_bounded():
+    """Seeded pair-bootstrap on a rank correlation: reproducible, in [-1, 1], n<2 degenerate."""
+    xs = [0.1, 0.3, 0.5, 0.7, 0.9]
+    ys = [0.0, 0.4, 0.5, 0.6, 1.0]
+    a = V._bootstrap_corr_ci(xs, ys)
+    assert a == V._bootstrap_corr_ci(xs, ys)  # deterministic (D-020 discipline)
+    lo, hi = a
+    assert -1.0 <= lo <= hi <= 1.0
+    assert V._bootstrap_corr_ci([0.5], [0.5]) == (0.0, 0.0)  # n<2 degenerate
+
+
+def test_criterion_result_serializes():
+    r = V.criterion_validity(V.PLACEHOLDER_COHORT)
+    d = r.to_dict()
+    expected = {
+        "measure", "source", "axis", "is_evidence", "n", "spearman",
+        "pearson", "kendall", "ci_lo", "ci_hi", "passed", "agents",
+    }
+    assert expected <= set(d)
+    assert d["n"] == V.PLACEHOLDER_COHORT.n
+    assert d["agents"] == list(V.PLACEHOLDER_COHORT.agents)
