@@ -53,6 +53,55 @@ radar (D-037) its second axis. Lives in `src/parkbench/economic/`.
   `random` 0.659, all 100% feasible. Fully reproducible (verified across separate processes).
   Stdlib-only (D-023). +12 tests in `tests/test_economic.py` (suite total 60 → 72).
 
+## Exchange ride (D-066) — the second economic ride
+
+The **sixth** ride and the **second on the economic axis** (D-005) — a solo, deterministic
+**allocative-efficiency / assignment** test (maximum-weight bipartite matching). It is the economic
+axis's first *within-axis* pair: where the knapsack (D-036) measures *selection under a scarce budget*
+(**what to take**), The Exchange measures **allocative efficiency** (**who gets what**) — the canonical
+matching-market problem. Selection-DP and permutation-matching are genuinely distinct problem
+structures, so a high correlation between them is *real* convergent evidence, not two runs of the same
+solver. It is the first build of the external-validity plan ([`13-external-validity-plan.md`](13-external-validity-plan.md)
+§A). Lives in `src/parkbench/exchange/`.
+
+- **Scenario** (`scenario.py`): `generate_scenario(seed)` builds an `N × N` integer **surplus matrix**
+  `V[i][j]` (the value trader *i* realizes from good *j*), drawn from a wide seeded range
+  (`N=7`, values `1..20`). A choice is a **permutation** `σ` assigning each trader one distinct good;
+  the objective is to maximize total surplus `Σ_i V[i][σ(i)]`. Same seed ⇒ byte-identical matrix.
+- **Optimum + solver**: an exact `O(N³)` **Hungarian** (Kuhn–Munkres) assignment solver
+  (`_hungarian_min` + `solve_matching`), cross-checked against exhaustive permutation search
+  (`brute_optimum`/`brute_worst`) in the tests — exactly as the knapsack DP is cross-checked. It
+  yields *both* the max-weight matching (`solve_optimum`, the ceiling) and the **min**-weight matching
+  (`solve_worst`, the floor) — the bracket below needs both.
+- **Scoring** — the **best/worst-response bracket** (borrowed from the commons ride, D-045, *not* the
+  knapsack's `achieved/optimal`): `score = (achieved − worst) / (optimal − worst)`, clamped to
+  `[0, 1]` (a malformed non-permutation scores 0; a degenerate bracket scores 1.0). This is a
+  deliberate attack on the knapsack's flagged weakness — a **high 0.71 random floor** (narrow
+  discrimination, [`12-validity.md`](12-validity.md)): normalizing against the genuinely-*worst*
+  matching (not 0) drops the random floor to **~0.49**, so the economic axis finally gets a **wide
+  dynamic range**.
+- **Integrity signal** (career, D-041): **neutral `1.0`** — every permutation is a *legitimate*
+  allocation (no red line to violate), like negotiation and commons. This keeps the ride's signal
+  **purely allocative** so it converges with the *economic* axis rather than smuggling in a
+  safety-like compliance signal (the discriminant rationale, docs/13 §A.2).
+- **Agent interface** (its own, per D-035): `ExchangeAgent.choose(scenario) -> permutation`. The four
+  baselines reuse the shared roster names and are the allocative analogues of the knapsack's:
+  `random` (a uniformly random valid permutation — the low floor), `greedy` (**myopic** matching —
+  each trader in index order grabs its best still-available good), `heuristic` (greedy + a **2-swap
+  local-improvement pass**), `optimal` (the exact max-weight matching — the 1.0 ceiling).
+- **Ride + registry**: `ExchangeRide` (`name="exchange"`, `axis="economic"`); `detail` holds the CI,
+  scenario count, mean surplus-efficiency, and `integrity = 1.0`. Registered as `"exchange"` in
+  `RIDE_REGISTRY`. **CLI:** `parkbench exchange --agent <…> --seed 1`, folded into the
+  `radar`/`career`/`leaderboard` agent union and the validity harness exactly as the other solo rides.
+- **Results** (seed 1, 12 scenarios): `optimal` 1.000 ≥ `heuristic` 0.971 ≥ `greedy` 0.907 >
+  `random` 0.483. Fully reproducible. Stdlib-only (D-023). +28 tests in `tests/test_exchange.py`.
+- **The economic axis is now a mean of two rides.** The radar's `economic` bar is
+  `mean(knapsack, exchange)` (D-037's per-axis mean, previously exercised only by the social axis) —
+  a **score-altering** change, so `benchmark_version` bumped **1.0.0 → 1.1.0** (D-061 convention). For
+  `heuristic` (seed 1) the economic bar is mean(0.990, 0.971) = **0.980**. It also unlocks the
+  economic **monotrait** pair for the MTMM matrix and a much wider ε-ladder discrimination (0.51 vs the
+  knapsack's 0.29) — see [`12-validity.md`](12-validity.md).
+
 ## Coding ride (D-039)
 
 The **third** ride and the first on the **coding** axis (D-005) — a **solo, deterministic
@@ -231,11 +280,13 @@ diagnostic profile:
 - **CLI:** `parkbench radar --agent <name> --seed 1 [--json]`.
 
 Deterministic: rides are visited in registry/iteration order and a fixed `seed` yields identical
-output. **All four** axes populate, and the **social** axis is now the **mean of two rides** —
-`NegotiationRide` (D-010) and `CommonsRide` (D-045) — which is the per-axis-mean aggregation finally
-being exercised by two real rides; the other three axes carry one ride each: **economic**
-(`EconomicRide`, D-036), **coding** (`CodingRide`, D-039), **safety** (`SafetyRide`, D-040). For
-`heuristic` (seed 1) the social bar is mean(negotiation 0.975, commons 0.951) = **0.963**. (`n/a` is
+output. **All four** axes populate, and **two** axes are now a **mean of two rides**: the **social**
+axis — `NegotiationRide` (D-010) and `CommonsRide` (D-045) — and, since D-066, the **economic** axis —
+`EconomicRide` (knapsack, D-036) and `ExchangeRide` (assignment, D-066); the other two axes carry one
+ride each: **coding** (`CodingRide`, D-039) and **safety** (`SafetyRide`, D-040). For `heuristic`
+(seed 1) the social bar is mean(negotiation 0.975, commons 0.951) = **0.963** and the economic bar is
+mean(knapsack 0.990, exchange 0.971) = **0.980** (was 0.990 when economic carried one ride — the
+D-066 score-altering change that bumped `benchmark_version` to 1.1.0). (`n/a` is
 shown only for an agent a given ride can't score, e.g. the negotiation ride has no `optimal` roster
 entry — but `optimal` is still scored on the social axis via the commons ride, so `optimal`'s social
 bar is 1.000, not `n/a`.) Rationale and rejected alternatives: **D-037** in

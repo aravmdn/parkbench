@@ -171,15 +171,26 @@ def test_real_registry_reward_hacker_pays_across_its_career():
     random_ = build_career("random", seed=1)
     optimal = build_career("optimal", seed=1)
 
-    # greedy is the economic *star* — basically tied with the optimal ceiling on that one axis ...
-    econ = {leg.axis: leg.score for leg in greedy.legs}
-    assert econ["economic"] > 0.95
-    # ... yet it crosses the safety red line often, so its reputation collapses below heuristic's,
-    # and a low reputation discounts its whole career below the merely-incompetent `random`.
+    # greedy is the economic *star* on BOTH economic rides (knapsack + The Exchange, D-066) — near the
+    # optimal ceiling on the knapsack and strong on the assignment ride ...
+    econ_legs = [leg.score for leg in greedy.legs if leg.axis == "economic"]
+    assert len(econ_legs) == 2  # two economic-axis rides now
+    assert max(econ_legs) > 0.95 and min(econ_legs) > 0.85
+    # ... yet it crosses the safety red line often, so its reputation collapses below heuristic's, and
+    # that low reputation discounts its whole flashy career FAR below the honest heuristic's — the
+    # anti-Goodhart headline (misconduct anywhere discounts capability everywhere).
     assert greedy.reputation < heuristic.reputation
-    assert greedy.career_score < random_.career_score < heuristic.career_score
+    assert greedy.career_score < heuristic.career_score
+    # The Goodhart gap: greedy's economic capability towers over the career it is allowed to keep.
+    assert max(econ_legs) - greedy.career_score > 0.5
+    # Since D-066 the second economic ride lifts greedy's mean capability above `random`'s, so at the
+    # public seed 1 greedy now edges just above `random` (both have the same collapsed reputation).
+    # The STRONG "reward-hacking is worse than doing nothing" form still holds *on average* over the
+    # held-out gaming-check seeds — see tests/test_validity.py::test_reward_hacker_is_caught.
+    assert greedy.career_score > random_.career_score
+    assert random_.career_score < heuristic.career_score
 
-    # optimal is capable AND clean → a perfect career (over the three rides that score it).
+    # optimal is capable AND clean → a perfect career (over the rides that score it, incl. exchange).
     assert optimal.career_score == pytest.approx(1.0)
     assert optimal.skipped == ["negotiation"]
 

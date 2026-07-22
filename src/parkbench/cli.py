@@ -267,6 +267,33 @@ def cmd_economic(args: argparse.Namespace) -> None:
     print()
 
 
+def cmd_exchange(args: argparse.Namespace) -> None:
+    # Imported lazily so the core CLI has no dependency on the exchange ride unless used (D-066).
+    from .exchange import AGENT_REGISTRY as EXCH_AGENTS
+    from .exchange import make_agent as make_exch_agent
+    from .exchange import run_suite as run_exch_suite
+
+    result = run_exch_suite(make_exch_agent(args.agent), seed=args.seed, n_scenarios=args.scenarios)
+
+    print("\nParkbench - exchange ride (solo allocative-efficiency / assignment, D-066)")
+    print(
+        f"suite seed={args.seed}  scenarios={result.score.n}  "
+        f"agents={', '.join(sorted(EXCH_AGENTS))}\n"
+    )
+    print(f"agent: {result.agent_name}")
+    print(f"  surplus vs best/worst matching : {_fmt(result.score)}   [optimum = 1.000]")
+    print(f"  surplus efficiency (ach/opt)   : {result.efficiency_rate:6.1%}\n")
+
+    print("  scenario   traders   worst   optimal   achieved   eff    score")
+    for r in result.scenarios:
+        flag = "" if r.valid else "  (invalid)"
+        print(
+            f"    seed {str(r.scenario_seed):<5} {r.n_traders:>7}   {r.worst:>5}   {r.optimal:>7}   "
+            f"{r.achieved:>8}   {r.efficiency:4.0%}   {r.score:5.3f}{flag}"
+        )
+    print()
+
+
 def cmd_coding(args: argparse.Namespace) -> None:
     # Imported lazily so the core CLI has no dependency on the coding ride unless used (D-039).
     from .coding import AGENT_REGISTRY as CODE_AGENTS
@@ -413,12 +440,14 @@ def build_parser() -> argparse.ArgumentParser:
     from .coding import AGENT_REGISTRY as CODE_AGENTS
     from .commons import AGENT_REGISTRY as COMMONS_AGENTS
     from .economic import AGENT_REGISTRY as ECON_AGENTS
+    from .exchange import AGENT_REGISTRY as EXCH_AGENTS
     from .safety import AGENT_REGISTRY as SAFE_AGENTS
 
     radar_agents = sorted(
         set(AGENT_REGISTRY)
         | set(COMMONS_AGENTS)
         | set(ECON_AGENTS)
+        | set(EXCH_AGENTS)
         | set(CODE_AGENTS)
         | set(SAFE_AGENTS)
     )
@@ -454,6 +483,13 @@ def build_parser() -> argparse.ArgumentParser:
     e.add_argument("--seed", type=int, default=1, help="Suite seed (selects the scenario set).")
     e.add_argument("--scenarios", type=int, default=12)
     e.set_defaults(func=cmd_economic)
+
+    # Exchange ride (solo allocative-efficiency / assignment, D-066). Localized: its own agent registry.
+    x = sub.add_parser("exchange", help="Run an agent through the exchange (assignment) ride.")
+    x.add_argument("--agent", default="greedy", choices=sorted(EXCH_AGENTS))
+    x.add_argument("--seed", type=int, default=1, help="Suite seed (selects the scenario set).")
+    x.add_argument("--scenarios", type=int, default=12)
+    x.set_defaults(func=cmd_exchange)
 
     # Coding ride (solo code-generation, hidden-test scored, D-039). Localized: its own agent registry.
     c = sub.add_parser("coding", help="Run an agent through the coding (code-generation) ride.")

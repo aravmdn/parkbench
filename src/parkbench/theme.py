@@ -65,6 +65,12 @@ ATTRACTIONS: dict[str, Attraction] = {
         "Pack the most value before the budget runs out.",
         "/\\_",
     ),
+    "exchange": Attraction(
+        "exchange",
+        "The Exchange",
+        "Match every trader to the good they value most - the whole market's surplus rides on it.",
+        "<=>",
+    ),
     "coding": Attraction(
         "coding",
         "The Code Foundry",

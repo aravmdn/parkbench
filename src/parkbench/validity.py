@@ -154,6 +154,25 @@ def _ablate_economic(scenario):
     )
 
 
+def _ablate_exchange(scenario):
+    """Blank an assignment instance: every surplus becomes the uninformative constant ``1``.
+
+    Structure kept: the trader/good count (``N``) and the seed (an opaque id the reference agents
+    only ever use as a cache key). Content blanked: the whole surplus matrix. A blindfolded agent
+    sees an all-equal market where every allocation ties, so its `optimal` solver returns an
+    arbitrary permutation — scored against the *real* matrix it lands at the identity floor and
+    collapses. (The constant-matrix degenerate bracket only affects the *observation*; the real
+    scoring instance is untouched, so the check is well-defined — docs/13 §A.4.)
+    """
+    from .exchange.scenario import ExchangeScenario
+
+    n = scenario.n
+    return ExchangeScenario(
+        surplus=tuple(tuple(1 for _ in range(n)) for _ in range(n)),
+        seed=scenario.seed,
+    )
+
+
 def _ablate_safety(scenario):
     """Blank a safety scenario: every action becomes reward 1 / category safe; injections dropped.
 
@@ -291,6 +310,41 @@ class _HorizonEconomicAgent:
         return solve_optimum(sub)[1]  # prefix indices == original indices
 
 
+class _HorizonExchangeAgent:
+    """Bounded optimization horizon: the exact matching over only the first ``⌈k·N⌉`` traders/goods.
+
+    A truncated-horizon allocator: it computes the exact max-weight matching of the *top-left*
+    ``m = ⌈k·N⌉`` sub-market (traders ``0..m-1`` to goods ``0..m-1``) and leaves every trader beyond
+    the horizon on its identity good ``i``. Because fixing more tail traders is a *subset* constraint,
+    the feasible assignment sets **nest** as ``k`` grows (F_m ⊆ F_{m+1}), so the achievable surplus is
+    monotone non-decreasing in ``k`` on every instance; ``k=1`` optimizes the whole market — exactly
+    the ride's `optimal`. Deterministic — there is no coin anywhere (mirrors `_HorizonEconomicAgent`).
+    """
+
+    def __init__(self, k: float) -> None:
+        self._k = k
+        self.name = f"horizon-{k:.2f}"
+
+    def reset(self, seed: int = 0) -> None:  # stateless; the dial is the only parameter
+        pass
+
+    def choose(self, scenario):
+        from .exchange.scenario import ExchangeScenario, solve_matching
+
+        n = scenario.n
+        m = math.ceil(self._k * n)
+        assignment = list(range(n))  # tail traders keep their identity good
+        if m > 0:
+            sub = ExchangeScenario(
+                surplus=tuple(tuple(scenario.surplus[i][j] for j in range(m)) for i in range(m)),
+                seed=scenario.seed,
+            )
+            head = solve_matching(sub, maximize=True)[1]  # exact over the top-left m x m sub-market
+            for i in range(m):
+                assignment[i] = head[i]
+        return tuple(assignment)
+
+
 class _HorizonSafetyAgent:
     """Bounded deliberation horizon: verifies the rule carefully on only the first ``⌈k·R⌉`` rounds.
 
@@ -366,6 +420,7 @@ def _ride_specs() -> dict[str, _RideSpec]:
     """Build the spec table lazily so importing this module stays cheap and side-effect free."""
     from .commons import agents as commons_agents, suite as commons_suite
     from .economic import agents as economic_agents, suite as economic_suite
+    from .exchange import agents as exchange_agents, suite as exchange_suite
     from .safety import agents as safety_agents, suite as safety_suite
 
     specs = {
@@ -375,6 +430,13 @@ def _ride_specs() -> dict[str, _RideSpec]:
             economic_suite.DEFAULT_N_SCENARIOS, ablate=_ablate_economic,
             structural=_HorizonEconomicAgent,
             structural_mechanism="deliberation horizon (DP over first k*N items)",
+        ),
+        "exchange": _RideSpec(
+            "exchange", "economic", "choose", exchange_suite.run_suite,
+            exchange_agents.OptimalAgent, exchange_agents.RandomAgent,
+            exchange_suite.DEFAULT_N_SCENARIOS, ablate=_ablate_exchange,
+            structural=_HorizonExchangeAgent,
+            structural_mechanism="optimization horizon (exact matching over first k*N traders)",
         ),
         "safety": _RideSpec(
             "safety", "safety", "choose", safety_suite.run_suite,
@@ -801,12 +863,19 @@ def gaming_check(seeds) -> GamingResult:
 # axes carrying only one ride each, the *only* true within-axis pair we can test today is social, and
 # N is tiny. The harness is deliberately honest about that (see docs/12-validity.md).
 
-# Scorable on every ride incl. negotiation (which has no `optimal`); the shared MTMM roster.
-CONVERGENT_ROSTER = ("random", "greedy", "heuristic")
-# The two rides that share the social axis — the one within-axis (monotrait) pair available today.
+# The MTMM roster. Widened to N=4 (D-066): every *solo* ride ships an `optimal`, so a pair of solo
+# rides — including the new economic monotrait pair economic×exchange — correlates over all four
+# baselines, sharpening a rank correlation that at N=3 could only take {0, ±0.5, ±1}. Pairs that
+# include the **negotiation** ride (which has no `optimal`, see agents.make_agent) gracefully drop
+# `optimal` and fall back to N=3 — the code already correlates each pair over its own shared subset
+# (docs/13 §A.5). The social convergent pair (negotiation×commons) therefore stays N=3.
+CONVERGENT_ROSTER = ("random", "greedy", "heuristic", "optimal")
+# The within-axis (monotrait) ride pairs — one per axis that carries two rides today (D-045/D-066).
 SOCIAL_PAIR = ("negotiation", "commons")
+ECONOMIC_PAIR = ("economic", "exchange")
+MONOTRAIT_PAIRS = (SOCIAL_PAIR, ECONOMIC_PAIR)
 # Fast rides in the matrix (coding is opt-in: it spawns a subprocess per task).
-CONVERGENT_RIDES = ("negotiation", "commons", "economic", "safety")
+CONVERGENT_RIDES = ("negotiation", "commons", "economic", "exchange", "safety")
 
 
 def _pair_key(a: str, b: str) -> str:
@@ -864,47 +933,109 @@ class ConvergentValidity:
         """Different-axis ride pairs and their correlation (should be lower — discriminant)."""
         return [(a, b, self.corr(a, b)) for a, b in self._pairs() if self.axes[a] != self.axes[b]]
 
+    # --- generalized Campbell-Fiske machinery (per within-axis pair, docs/13 §A.5) ----------------
+
+    def _has_pair(self, pair) -> bool:
+        return pair[0] in self.rides and pair[1] in self.rides
+
+    def _present_monotrait_pairs(self) -> list[tuple[str, str]]:
+        """The within-axis (monotrait) ride pairs whose *both* rides are in the matrix today."""
+        return [p for p in MONOTRAIT_PAIRS if self._has_pair(p)]
+
+    def _convergent_for(self, pair) -> float:
+        """The convergent (same-axis) Spearman for one monotrait pair; 0.0 if the pair is absent."""
+        return self.corr(*pair) if self._has_pair(pair) else 0.0
+
+    def _heterotrait_for(self, pair) -> list[tuple[str, str, float]]:
+        """Cross-axis correlations sharing a ride with ``pair`` — its Campbell-Fiske row/column.
+
+        These are the values the pair's convergent correlation must beat to claim discriminant
+        validity. A high heterotrait pair *elsewhere* in the matrix (sharing neither ride) is not part
+        of this comparison — it is the visible signature of a single-ride axis, not a refutation.
+        """
+        members = set(pair)
+        return [
+            (a, b, self.corr(a, b))
+            for a, b in self._pairs()
+            if self.axes[a] != self.axes[b] and (a in members or b in members)
+        ]
+
+    def discriminant_for(self, pair) -> tuple[float, float, bool]:
+        """``(convergent_rho, max_heterotrait, ok)`` for one monotrait pair (Campbell-Fiske).
+
+        ``ok`` iff both rides are present, the pair has heterotrait entries, and the convergent
+        correlation *strictly* exceeds the largest heterotrait value in its own row/column.
+        """
+        conv = self._convergent_for(pair)
+        het = [c for *_, c in self._heterotrait_for(pair)]
+        max_het = max(het) if het else 0.0
+        ok = bool(self._has_pair(pair) and het and conv > max_het)
+        return conv, max_het, ok
+
+    @property
+    def monotrait_discriminant(self) -> list[tuple[str, str, float, float, bool]]:
+        """Per present within-axis pair: ``(rideA, rideB, convergent, max_heterotrait, ok)``."""
+        out: list[tuple[str, str, float, float, bool]] = []
+        for pair in self._present_monotrait_pairs():
+            conv, max_het, ok = self.discriminant_for(pair)
+            out.append((pair[0], pair[1], conv, max_het, ok))
+        return out
+
+    @property
+    def all_discriminant_ok(self) -> bool:
+        """The generalized reading (docs/13 §A.5): *every* within-axis pair present in the matrix
+        clears the heterotrait entries in its own row/column. Requires at least one such pair."""
+        pairs = self._present_monotrait_pairs()
+        return bool(pairs) and all(self.discriminant_for(p)[2] for p in pairs)
+
+    # --- social pair (the established D-057 headline; kept as thin wrappers) -----------------------
+
     @property
     def has_social_pair(self) -> bool:
-        a, b = SOCIAL_PAIR
-        return a in self.rides and b in self.rides
+        return self._has_pair(SOCIAL_PAIR)
 
     @property
     def social_convergent(self) -> float:
         """The convergent value: Spearman between the two social rides (0.0 if the pair is absent)."""
-        if not self.has_social_pair:
-            return 0.0
-        return self.corr(*SOCIAL_PAIR)
+        return self._convergent_for(SOCIAL_PAIR)
 
     @property
     def social_heterotrait(self) -> list[tuple[str, str, float]]:
-        """Cross-axis correlations sharing a ride with the social pair (Campbell-Fiske row/column).
-
-        These are the values the social convergent correlation must beat to claim discriminant
-        validity — the heterotrait entries in negotiation's and commons's own row and column. (A
-        high heterotrait pair *elsewhere* in the matrix, e.g. economic×safety, is not part of this
-        comparison; it is the visible signature of the single-ride-axis limitation, not a refutation.)
-        """
-        soc = set(SOCIAL_PAIR)
-        return [
-            (a, b, self.corr(a, b))
-            for a, b in self._pairs()
-            if self.axes[a] != self.axes[b] and (a in soc or b in soc)
-        ]
+        """Cross-axis correlations sharing a ride with the social pair (its row/column)."""
+        return self._heterotrait_for(SOCIAL_PAIR)
 
     @property
     def max_social_heterotrait(self) -> float:
-        vals = [c for *_, c in self.social_heterotrait]
-        return max(vals) if vals else 0.0
+        return self.discriminant_for(SOCIAL_PAIR)[1]
 
     @property
     def discriminant_ok(self) -> bool:
-        """Campbell-Fiske: the social monotrait correlation exceeds every heterotrait value in its
-        own row/column. True ⇒ negotiation & commons agree with each other *more* than either agrees
-        with a different-axis ride, i.e. the social axis is a distinct construct over this roster."""
-        return self.has_social_pair and bool(self.social_heterotrait) and (
-            self.social_convergent > self.max_social_heterotrait
-        )
+        """Campbell-Fiske for the **social** pair (the D-057 headline, kept for continuity): the
+        social monotrait correlation exceeds every heterotrait value in its own row/column ⇒ the
+        social axis is a distinct construct over this roster. Every monotrait pair's verdict lives in
+        :attr:`monotrait_discriminant` / :attr:`all_discriminant_ok` (docs/13 §A.5)."""
+        return self.discriminant_for(SOCIAL_PAIR)[2]
+
+    # --- economic pair (the monotrait pair unlocked by The Exchange, D-066) -----------------------
+
+    @property
+    def has_economic_pair(self) -> bool:
+        return self._has_pair(ECONOMIC_PAIR)
+
+    @property
+    def economic_convergent(self) -> float:
+        """The convergent value: Spearman between the two economic rides (0.0 if the pair is absent)."""
+        return self._convergent_for(ECONOMIC_PAIR)
+
+    @property
+    def max_economic_heterotrait(self) -> float:
+        return self.discriminant_for(ECONOMIC_PAIR)[1]
+
+    @property
+    def economic_discriminant_ok(self) -> bool:
+        """Campbell-Fiske for the **economic** pair: knapsack & exchange agree with each other more
+        than either agrees with a different-axis ride ⇒ the economic axis is a distinct construct."""
+        return self.discriminant_for(ECONOMIC_PAIR)[2]
 
     def to_dict(self) -> dict:
         return {
@@ -914,6 +1045,21 @@ class ConvergentValidity:
             "social_convergent": round(self.social_convergent, 4),
             "max_social_heterotrait": round(self.max_social_heterotrait, 4),
             "discriminant_ok": self.discriminant_ok,
+            "economic_convergent": round(self.economic_convergent, 4),
+            "max_economic_heterotrait": round(self.max_economic_heterotrait, 4),
+            "economic_discriminant_ok": self.economic_discriminant_ok,
+            "all_discriminant_ok": self.all_discriminant_ok,
+            "monotrait_discriminant": [
+                {
+                    "a": a,
+                    "b": b,
+                    "axis": self.axes[a],
+                    "convergent": round(conv, 4),
+                    "max_heterotrait": round(max_het, 4),
+                    "ok": ok,
+                }
+                for a, b, conv, max_het, ok in self.monotrait_discriminant
+            ],
             "rides": [{"ride": r, "axis": self.axes[r]} for r in self.rides],
             "scores": {
                 r: {a: round(self.scores[r][a], 4) for a in self.scores[r]} for r in self.rides
@@ -1414,6 +1560,10 @@ class ValidityReport:
             "mean_spearman": round(self.mean_spearman, 4),
             "gaming_resistant": bool(self.gaming and self.gaming.caught),
             "discriminant_ok": bool(self.convergent and self.convergent.discriminant_ok),
+            "all_discriminant_ok": bool(self.convergent and self.convergent.all_discriminant_ok),
+            "economic_discriminant_ok": bool(
+                self.convergent and self.convergent.economic_discriminant_ok
+            ),
             "ablation_ok": self.ablation_ok,
             "structural_ok": self.structural_ok,
             "hygiene_ok": self.hygiene_ok,
@@ -1441,7 +1591,7 @@ def build_validity_report(
     ps = rung_values(rungs)
     seeds = eval_seeds(n_seeds, seed_base)
 
-    keys = ["economic", "safety", "commons"]
+    keys = ["economic", "exchange", "safety", "commons"]
     if include_coding and "coding" in specs:
         keys.append("coding")
 
@@ -1575,19 +1725,24 @@ def render_validity_report(report: ValidityReport) -> str:
             cells = "".join(f"{c.scores[r].get(a, float('nan')):>10.3f}" for a in c.agents)
             lines.append(f"    {r:<12} {c.axes[r]:<8}{cells}")
         lines.append("")
-        lines.append("    ride pair correlations (Spearman rho over the roster):")
+        lines.append("    ride pair correlations (Spearman rho over each pair's shared roster):")
         for a, b, rho in c.monotrait:
             lines.append(f"      {a:<12} x {b:<12} rho={rho:+.3f}   SAME-AXIS (convergent)")
         for a, b, rho in c.heterotrait:
             lines.append(f"      {a:<12} x {b:<12} rho={rho:+.3f}   cross-axis")
-        dv = "PASS" if c.discriminant_ok else "FAIL"
+        # Per within-axis (monotrait) pair: does its convergent correlation clear its own row/column?
+        # Since D-066 there are two — social (D-057) and the economic pair unlocked by The Exchange.
+        for a, b, conv, max_het, ok in c.monotrait_discriminant:
+            axis = c.axes[a]
+            dv = "PASS" if ok else "FAIL"
+            lines.append(
+                f"    -> {axis} convergent rho={conv:+.3f} vs. max {axis} cross-axis rho={max_het:+.3f}"
+                f"  => discriminant {dv}"
+            )
         lines.append(
-            f"    -> social convergent rho={c.social_convergent:+.3f} vs. max social cross-axis "
-            f"rho={c.max_social_heterotrait:+.3f}  => discriminant {dv}"
-        )
-        lines.append(
-            "       (N is small + 3 of 4 axes have one ride each, so the only within-axis pair is "
-            "social — a down-payment, not proof; see docs/12-validity.md)"
+            f"       overall discriminant (every within-axis pair distinct): "
+            f"{'PASS' if c.all_discriminant_ok else 'FAIL'}  "
+            f"(economic now has a monotrait pair too, D-066; safety still single-ride)"
         )
 
     if report.ablations:

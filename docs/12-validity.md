@@ -201,6 +201,55 @@ The vision-completing version needs either a **second ride per non-social axis**
 real monotrait pair) or correlation against an **external** trusted benchmark / real task outcome
 (criterion validity). Both are larger efforts than this offline first cut.
 
+### Update (D-066): the economic axis gets its second ride — a monotrait pair, and an honest finding
+
+The Exchange ride ([`07-multi-ride.md`](07-multi-ride.md)) is the first of those "second ride per axis"
+items to land, and it changes the MTMM matrix in two ways:
+
+1. **A second monotrait pair.** `economic × exchange` is now a within-axis pair, so the discriminant
+   verdict is generalized from "the social pair clears its row/column" to a **per-pair** Campbell-Fiske
+   reading over *every* present monotrait pair (`monotrait_discriminant` / `all_discriminant_ok`, with
+   the social `discriminant_ok` kept as the D-057 headline).
+2. **The roster widened to N = 4.** Both economic rides (and safety) ship an `optimal`, so every
+   *solo*-ride pair now correlates over `{random, greedy, heuristic, optimal}`; pairs that include the
+   `optimal`-less negotiation ride gracefully fall back to N = 3 (each pair uses its own shared subset).
+
+**Result (held-out seeds 4000–4007, N = 4 where possible):**
+
+```
+ride         axis          random    greedy heuristic   optimal
+negotiation  social         0.881     0.105     0.983       n/a
+commons      social         0.504     0.458     0.951     1.000
+economic     economic       0.713     0.986     0.994     1.000
+exchange     economic       0.489     0.929     0.985     1.000
+safety       safety         0.324     0.333     0.667     1.000
+
+economic  x exchange   rho=+1.000   SAME-AXIS (convergent)   <- the NEW economic monotrait pair
+negotiation x commons  rho=+1.000   SAME-AXIS (convergent)
+-> social  convergent rho=+1.000 vs. max social  cross-axis rho=+0.800  => discriminant PASS
+-> economic convergent rho=+1.000 vs. max economic cross-axis rho=+1.000 => discriminant FAIL
+   overall (every within-axis pair distinct): FAIL
+```
+
+- **Convergent, strongly.** The two economic rides — a **selection DP** (knapsack) and a
+  **permutation-matching** (assignment), genuinely different problem structures — rank the roster
+  *identically* (ρ = +1.00). That is real convergent evidence that they measure the *same* construct,
+  not an artifact of running one solver twice.
+- **Discriminant: an honest FAIL for economic-vs-safety.** `economic × safety` **and**
+  `exchange × safety` both still sit at ρ = +1.00, so the economic monotrait correlation does **not**
+  strictly exceed its row/column and the economic discriminant fails. This is exactly the outcome docs
+  [13 §A.5](13-external-validity-plan.md) flagged as *informative either way*: over these four
+  deterministic baselines `greedy` is a near-tie with `random` on safety (0.333 vs 0.324, greedy just
+  *above*), so its economic-star rank does **not** flip on the safety axis — the two axes genuinely
+  co-vary over this roster. Separating them needs a **richer agent roster** (a real BYO cohort with an
+  agent that is economically strong yet clearly safety-violating below random), which the criterion
+  cohort (docs/13 §B) starts to supply. The **social** discriminant still **passes** (its convergent
+  +1.00 clears its now-N=4 max cross-axis +0.80), so the D-057 headline is intact.
+
+So the second economic ride delivered its *convergent* payoff cleanly and turned the previously
+*untestable* `economic × safety` distinctness into a **measured, honestly-negative** result — a strictly
+more informative matrix than the D-057 single-axis cut.
+
 ## Input ablation — the shortcut detector (D-058)
 
 The ladder proves each ride's score **rises with known ability**. The complementary question — the
@@ -429,23 +478,29 @@ The stamp is applied at the CLI emission point, so run logs and viewer fixtures 
 ```
 ride        axis       verdict          rho   mono   floor  ceil   disc    lin   res  rel
 economic    economic   VALID            1.00  1.00  0.706  1.000  0.294   0.99   4/5  0.99
+exchange    economic   VALID            1.00  1.00  0.494  1.000  0.506   0.99   5/5  0.99
 safety      safety     VALID            1.00  1.00  0.303  1.000  0.697   1.00   4/5  0.99
 commons     social     VALID            1.00  1.00  0.483  1.000  0.517   1.00   4/5  0.99
 overall: ALL RIDES DISCRIMINATIVE   mean rho = 1.000
 
-gaming: greedy CAUGHT (even below random) — economic 0.985 but career 0.148, Goodhart gap 0.836
+gaming: greedy CAUGHT (below random on the held-out seeds) — economic 0.988 but career 0.174,
+        Goodhart gap 0.814
 ```
 
-(Since D-061 the `res` column is computed from the bootstrap CIs: **commons rose 3/5 → 4/5** — near
-the ceiling the percentile intervals are asymmetric and tighter than the old normal ±1.96·σ/√n, so
-one more adjacent commons pair separates. Economic and safety stay 4/5, and every other number in
-the table is unchanged, as expected for a CI-only swap.)
+(Since D-061 the `res` column is computed from the bootstrap CIs. **The Exchange (D-066) directly
+repairs the economic axis's flagged narrow range**: its best/worst-response bracket gives `random` a
+**0.49 floor** (vs the knapsack's 0.71), so its discrimination is **0.506** — the widest of any fast
+ride — and it resolves **all 5/5** adjacent rungs. The economic axis is now `mean(economic, exchange)`,
+so the two rides sit side by side above. The `gaming` line's `below random` still holds on the held-out
+eval seeds; at the *public* seed 1 the second economic ride lifts `greedy`'s mean capability just above
+`random`'s, so the seed-1 leaderboard now reads optimal > heuristic > greedy > random — `greedy` is
+still **caught** far below the honest `heuristic`, its Goodhart gap intact.)
 
-All three pure-Python rides genuinely track known ability (ρ = 1.00, perfectly monotone, ceiling
-reached) and resolve 3–4 of 5 rungs. The harness is also **honest about weakness**: the **economic
-ride has a high random floor (0.71)**, so its discrimination is only 0.29 — a *narrow dynamic range*
-that a naming-based claim would have hidden. It passes the threshold but is the ride most in need of a
-harder tier. The `coding` ride is real but subprocess-graded (slow), so it is **opt-in** (`--coding`).
+All four pure-Python rides genuinely track known ability (ρ = 1.00, perfectly monotone, ceiling
+reached). The **knapsack economic ride still has a high random floor (0.71)** — that is inherent to its
+`achieved/optimal` scoring — but the axis is no longer *only* that narrow ride: **The Exchange gives
+the economic axis a wide-range (0.506) second ride**, the concrete fix docs/12 called for. The `coding`
+ride is real but subprocess-graded (slow), so it is **opt-in** (`--coding`).
 
 ---
 

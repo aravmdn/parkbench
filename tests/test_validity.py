@@ -572,30 +572,43 @@ def test_discriminant_fails_when_a_social_cross_axis_pair_ties_the_monotrait():
     assert cv.discriminant_ok is False  # 1.0 > 1.0 is false — no strict separation
 
 
-def test_negotiation_has_no_optimal_so_shared_roster_is_three():
-    """The reason N=3: negotiation's roster has no `optimal`, so it is dropped from the shared set —
-    while commons (also social) *does* score optimal. Documents the structural limitation."""
+def test_negotiation_pairs_drop_optimal_while_solo_pairs_keep_it():
+    """The MTMM roster widened to N=4 (D-066): every *solo* ride ships an `optimal`, so solo-ride
+    pairs (incl. the new economic monotrait pair) correlate over 4 baselines. The negotiation ride
+    has no `optimal`, so pairs including it gracefully fall back to N=3 — the code correlates each
+    pair over its own shared subset (docs/13 A.5)."""
     from parkbench.rides import RIDE_REGISTRY
 
     seeds = V.eval_seeds(2)
-    roster = ("random", "greedy", "heuristic", "optimal")
+    roster = V.CONVERGENT_ROSTER
     neg = V._ride_agent_means(RIDE_REGISTRY["negotiation"], roster, seeds)
     com = V._ride_agent_means(RIDE_REGISTRY["commons"], roster, seeds)
     assert "optimal" not in neg  # negotiation cannot score `optimal`
     assert "optimal" in com  # commons can
-    assert set(V.CONVERGENT_ROSTER) == {"random", "greedy", "heuristic"}
+    assert set(V.CONVERGENT_ROSTER) == {"random", "greedy", "heuristic", "optimal"}
 
 
 def test_convergent_and_discriminant_on_held_out_seeds():
-    """The real matrix on held-out eval seeds: the two social rides converge, and that convergence
-    exceeds every social-vs-other-axis correlation (discriminant). Stable at >= 8 seeds."""
+    """The real matrix on held-out eval seeds. The two social rides converge and clear their own
+    row/column (social discriminant PASS — the D-057 headline, still holding at the widened N=4
+    roster). Since D-066 the two ECONOMIC rides also converge (economic x exchange), giving the
+    economic axis its first within-axis pair — but economic x safety does NOT yet drop below it over
+    these deterministic baselines (greedy is a near-tie with random on safety here), so the economic
+    discriminant honestly FAILS: exactly the outcome docs/13 A.5 named as informative either way."""
     cv = V.build_convergent_validity(n_seeds=8)
-    assert cv.agents == ("random", "greedy", "heuristic")
+    assert cv.agents == ("random", "greedy", "heuristic", "optimal")
+    # social: convergent and distinct (clears every heterotrait value in its row/column).
     assert cv.social_convergent >= 0.9  # negotiation & commons rank the roster near-identically
-    # Every heterotrait value in the social row/column is strictly below the social convergent value.
     for a, b, rho in cv.social_heterotrait:
         assert cv.social_convergent > rho, (a, b, rho)
     assert cv.discriminant_ok is True
+    # economic: the new monotrait pair converges strongly (both economic rides rank the roster alike).
+    assert cv.has_economic_pair
+    assert cv.economic_convergent >= 0.9
+    assert ("economic", "exchange") in [(a, b) for a, b, _ in cv.monotrait]
+    # ...but it does not yet separate from safety over these baselines (an honest, published finding).
+    assert cv.economic_discriminant_ok is False
+    assert cv.all_discriminant_ok is False
 
 
 def test_convergent_is_deterministic():
@@ -615,29 +628,41 @@ def test_report_builds_and_serializes():
     d = report.to_dict()
     assert d["all_valid"] is True
     assert d["gaming_resistant"] is True
-    assert {r["ride"] for r in d["rides"]} == {"economic", "safety", "commons"}
-    # The convergent/discriminant block is present and passes on the default (>= 8) seed count.
+    assert {r["ride"] for r in d["rides"]} == {"economic", "exchange", "safety", "commons"}
+    # The convergent/discriminant block is present. The SOCIAL discriminant passes (D-057 headline);
+    # the generalized verdict over every within-axis pair does NOT, because the new economic pair
+    # (D-066) converges but does not yet separate from safety (docs/13 A.5).
     assert report.convergent is not None
     assert d["discriminant_ok"] is True
+    assert d["all_discriminant_ok"] is False
+    assert d["economic_discriminant_ok"] is False
     cd = d["convergent"]
     assert cd["social_convergent"] >= 0.9
     assert cd["discriminant_ok"] is True
-    assert {r["ride"] for r in cd["rides"]} == {"negotiation", "commons", "economic", "safety"}
-    assert len(cd["matrix"]) == 6  # 4 rides -> C(4,2) = 6 pairs
+    assert cd["economic_convergent"] >= 0.9  # the two economic rides converge (the new monotrait pair)
+    assert cd["all_discriminant_ok"] is False
+    assert {r["ride"] for r in cd["rides"]} == {
+        "negotiation", "commons", "economic", "exchange", "safety"
+    }
+    assert len(cd["matrix"]) == 10  # 5 rides -> C(5,2) = 10 pairs
+    # The two present within-axis pairs are surfaced (social + the new economic pair, D-066).
+    assert {(m["a"], m["b"]) for m in cd["monotrait_discriminant"]} == {
+        ("negotiation", "commons"), ("economic", "exchange")
+    }
     # The input-ablation block (D-058) is present and every fast ride collapses when blindfolded.
     assert report.ablation_ok
     assert d["ablation_ok"] is True
-    assert {a["ride"] for a in d["ablation"]} == {"economic", "safety", "commons"}
+    assert {a["ride"] for a in d["ablation"]} == {"economic", "exchange", "safety", "commons"}
     assert all(a["collapsed"] for a in d["ablation"])
     # The structural capability ladder (D-059) is present and every fast ride tracks its dial.
     assert report.structural_ok
     assert d["structural_ok"] is True
-    assert {s["ride"] for s in d["structural"]} == {"economic", "safety", "commons"}
+    assert {s["ride"] for s in d["structural"]} == {"economic", "exchange", "safety", "commons"}
     assert all(s["ok"] and s["spearman"] >= V.STRUCTURAL_SPEARMAN_OK for s in d["structural"])
     # The item-hygiene block (D-060) is present: consistent suites, no flagged item retained.
     assert report.hygiene_ok
     assert d["hygiene_ok"] is True
-    assert {h["ride"] for h in d["hygiene"]} == {"economic", "safety", "commons"}
+    assert {h["ride"] for h in d["hygiene"]} == {"economic", "exchange", "safety", "commons"}
     for h in d["hygiene"]:
         assert h["alpha_ok"] and h["alpha"] >= V.ALPHA_OK
         assert h["flagged"] == [] and h["n_items"] == len(h["retained"])

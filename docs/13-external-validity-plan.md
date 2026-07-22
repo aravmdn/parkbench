@@ -22,7 +22,19 @@ down-payment landed alongside it (the criterion-harness scaffold, §B.4).
 
 ---
 
-## A · A second ride on the economic axis (build this first)
+## A · A second ride on the economic axis (build this first) — ✅ BUILT (D-066)
+
+> **Status: BUILT (D-066).** "The Exchange" shipped as `src/parkbench/exchange/` (registry key
+> `"exchange"`, CLI `parkbench exchange`) — see [`07-multi-ride.md`](07-multi-ride.md) and
+> [`12-validity.md`](12-validity.md). The design below is preserved as written; the *as-built* notes
+> and results are called out inline (⟶ **Built:**). The one naming refinement: the draft's working name
+> `"market"` shipped as **`"exchange"`** / `parkbench exchange` (the ride still sits in the economic
+> land "Market Midway"). The criterion-validity half (§B) remains **planned** (needs a one-time online
+> real-agent step). Headline results: the ride is **VALID** (ρ = 1.00, floor **0.49**, discrimination
+> **0.506** — the widest of any fast ride, resolving **5/5** rungs), the economic **monotrait** pair
+> `economic × exchange` **converges at ρ = +1.00**, and the economic-vs-safety discriminant is an
+> **honest FAIL** (both stay +1.00 over the deterministic baselines) — the informative-either-way
+> outcome §A.5 predicted.
 
 ### A.1 Why economic, ahead of coding and safety
 
@@ -185,6 +197,19 @@ an **economic discriminant PASS**. If it does *not* drop, that is itself an hone
 (the two axes really do co-vary over these baselines, and need a richer agent roster to separate) —
 either way the matrix becomes more informative.
 
+> ⟶ **Built (D-066) — the second outcome came true, and it is the honest one.** Over the N=4 roster
+> the economic monotrait `economic × exchange` converges at **ρ = +1.00** (strong convergent evidence).
+> But `economic × safety` **and** `exchange × safety` both **stayed at +1.00**, so the economic
+> discriminant is an **honest FAIL**. The reason the hypothesized rank-flip did not materialize: on the
+> held-out seeds `greedy`'s safety score (0.333) is a hair *above* `random`'s (0.324), so `greedy` is
+> the *second*-worst — not the worst — on safety, and its economic-star rank does not invert. Economic
+> and safety genuinely co-vary over these four deterministic baselines; distinguishing them needs a
+> **richer agent roster** (§B's criterion cohort). Both changes in §A.5 landed: the discriminant verdict
+> is generalized to *every* monotrait pair (`monotrait_discriminant` / `all_discriminant_ok`), and the
+> roster widened to N=4 (negotiation-including pairs drop `optimal` gracefully). The **social**
+> discriminant still passes (convergent +1.00 vs max cross-axis +0.80). Full matrix in
+> [`12-validity.md`](12-validity.md) (§ "Update (D-066)").
+
 ### A.6 Honest risks
 
 - **Small-N coarseness persists.** Even at N=4 a rank correlation is granular; treat the economic
@@ -299,9 +324,9 @@ Effort is in "laps" (one focused, verifiable session ≈ one lap), matching the 
 
 | # | Task | Effort | Offline? | Unlocks / why |
 |---|---|---|---|---|
-| **1** | **Second economic ride "The Exchange" (§A)** | **1–2 laps** | **Fully** | The economic monotrait pair (2/4 axes tested); widens the flagged narrow economic range; all deterministic/stdlib. **Highest leverage per risk.** |
-| 2 | Generalize the MTMM discriminant to **every** monotrait pair + widen the solo-ride roster to N=4 (§A.5) | 0.5 lap | Fully | Sharpens the economic discriminant test; small harness change enabled by #1. |
-| 3 | **Criterion-harness scaffold** (§B.4) | 0.5 lap | Fully | The correlation instrument + placeholder + swap-in path. **Landed this lap.** |
+| **1** | **Second economic ride "The Exchange" (§A)** — ✅ **BUILT (D-066)** | **1–2 laps** | **Fully** | Delivered the economic monotrait pair (2/4 axes now tested); the bracket score dropped the random floor 0.71→**0.49** (disc **0.506**, the widest fast ride), directly repairing the flagged narrow range; all deterministic/stdlib. |
+| 2 | Generalize the MTMM discriminant to **every** monotrait pair + widen the solo-ride roster to N=4 (§A.5) — ✅ **done with #1 (D-066)** | 0.5 lap | Fully | Landed alongside The Exchange: `monotrait_discriminant` / `all_discriminant_ok` + the N=4 roster. Verdict: economic converges but does not yet separate from safety (honest FAIL). |
+| 3 | **Criterion-harness scaffold** (§B.4) — ✅ landed (D-064) | 0.5 lap | Fully | The correlation instrument + placeholder + swap-in path. |
 | 4 | **Real coding criterion cohort** (coding ↔ HumanEval/MBPP) | 1–2 laps | **No** (needs real-agent runs) | The first *strong-construct* external evidence, on the one axis with a clean external analog. |
 | 5 | Second **safety** ride, then second **coding** ride | ~1–2 laps each | Fully (safety) / partly (coding is slow) | Extends monotrait coverage to all four axes → the full MTMM matrix. |
 | 6 | Harder economic difficulty tier + **saturation monitor** (roadmap #6) | ~1 lap | Fully | Re-hardens the axis once agents reach the ceiling; ties to the narrow-range finding. |
@@ -323,12 +348,15 @@ strong-construct external analog.
 ## D · What this plan does **not** claim
 
 - It does **not** claim criterion validity is achieved — only that the instrument to measure it now
-  exists and the data it needs is named.
-- It does **not** claim the second economic ride *will* break `economic × safety = +1.00`; that is a
-  hypothesis the ride is designed to test, and either outcome is informative.
-- The second ride is **design-only** in this doc (building a full ride — scenario, solver, four agents,
-  suite, structural/ablation hooks, tests, registry wiring — is a 1–2 lap task, not a scaffold); only
-  the criterion harness was small and self-contained enough to land as this lap's code down-payment.
+  exists and the data it needs is named. (Still true after D-066: §B remains planned.)
+- It did **not** claim the second economic ride *would* break `economic × safety = +1.00` — and
+  ⟶ **as built (D-066), it did not**: the honest, measured outcome is that economic and safety still
+  co-vary over the deterministic baselines (economic discriminant FAIL), while the economic *convergent*
+  pair lands cleanly at +1.00. Either outcome was informative; this is the informative negative.
+- The second ride is **no longer design-only** — ⟶ **built (D-066)** as `src/parkbench/exchange/`
+  (scenario + Hungarian solver, four baselines, bracket-scored suite, structural/ablation hooks, MTMM
+  wiring, 28 tests). What remains design-only here is the **criterion cohort** (§B), which needs the
+  one-time online real-agent step.
 
 ---
 
