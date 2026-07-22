@@ -113,7 +113,31 @@ def cmd_analyze(args: argparse.Namespace) -> None:
     print(f"  Pareto outcomes   : {len(an.pareto)}\n")
 
 
+def _serve_profiles(args: argparse.Namespace) -> None:
+    # Read-only diagnostic-profile endpoint (chunk-4 serve-profiles-endpoint): serves the verbatim
+    # radar/career/leaderboard --json on demand. Presentation-only (D-012) — reuses the existing
+    # producers, no scoring logic here. Imported lazily so the core CLI carries no HTTP dependency.
+    from .profiles_server import ProfilesServer
+
+    server = ProfilesServer(host=args.host, port=args.port, default_seed=args.seed).start()
+    print("\nParkbench - read-only profiles server (serve --profiles)")
+    print(f"listening on {server.base_url}  (default seed={args.seed})")
+    print("  GET /radar?agent=<name>[&seed=N]   GET /career?agent=<name>[&seed=N]")
+    print("  GET /leaderboard[?seed=N]          GET /health")
+    print("\nserving radar/career/leaderboard JSON (Ctrl+C to stop)...\n")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nstopped.\n")
+    finally:
+        server.stop()
+
+
 def cmd_serve(args: argparse.Namespace) -> None:
+    if getattr(args, "profiles", False):
+        # --profiles => the read-only radar/career/leaderboard HTTP endpoint, not the negotiation wire.
+        _serve_profiles(args)
+        return
     # Imported lazily so the core CLI has no dependency on the HTTP slice unless used.
     from .server import ParkServer
 
@@ -406,6 +430,11 @@ def build_parser() -> argparse.ArgumentParser:
                    dest="local_agent",
                    help="Drive the run in-process with a built-in agent over HTTP (for testing).")
     s.add_argument("--no-log", action="store_true", help="Do not write a run log.")
+    s.add_argument(
+        "--profiles", action="store_true",
+        help="Serve a read-only radar/career/leaderboard JSON endpoint instead of the negotiation "
+             "wire (--seed sets the default seed; other run flags are ignored).",
+    )
     s.set_defaults(func=cmd_serve)
 
     # Each ride owns its own roster (D-035); the radar can profile any agent any ride can score, so

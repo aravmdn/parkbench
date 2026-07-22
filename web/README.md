@@ -30,6 +30,23 @@ so a stale fixture can't ship unnoticed. Comparison tolerates last-digit float-r
 platforms, and files are written with canonical LF newlines. (`viewer/sample-run.json` is a run *log*,
 not CLI `--json`, so it is intentionally left out; `viewer/park.html` loads no JSON.)
 
+### Live data instead of fixtures (`serve --profiles`)
+
+The committed fixtures are the **offline** data path. For **fresh** data without a regenerate-and-commit
+step, run the read-only profiles endpoint (a stdlib `http.server`, presentation-only — it serves the
+same producers' JSON the CLI does, with the `benchmark_version` stamp, and never computes a score):
+
+```sh
+parkbench serve --profiles --port 8080   # GET /radar?agent=… /career?agent=… /leaderboard /health
+```
+
+Every response is the **verbatim** `parkbench <cmd> --json` output (byte-parity is pinned by
+`tests/test_serve_profiles.py`), so it is a drop-in for the fixture files: `fetch('…/radar?agent=heuristic')`
+gives the same JSON as `import`ing `src/fixtures/radar-heuristic.json`. Responses set
+`Access-Control-Allow-Origin: *` so the Vite dev server (a different port) can fetch cross-origin. Wiring
+the world to fetch this endpoint (with the fixtures as the fallback when the server is down) is the
+follow-up `web-fetch-profiles` task — see `../autoloop/backlog.md` and `../docs/06-v1-architecture.md`.
+
 ## Stack
 
 - **[Kaplay](https://kaplayjs.com/)** — the maintained Kaboom.js fork; pixel sprites, animation frames,

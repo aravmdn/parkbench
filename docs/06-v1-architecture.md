@@ -268,6 +268,36 @@ is untouched, so the viewer/nudge slices are unaffected).
 - `client.drive_agent(base_url, agent)` is the small in-process adapter that serves any existing
   `Agent` over the wire — both the reference BYO example and the test harness.
 
+## Read-only profiles endpoint (`serve --profiles`)
+
+The **live-data** counterpart to the static `export-profiles` fixture flow (D-062): where the
+exporter *writes* the spectator fixtures to disk, `parkbench serve --profiles`
+(`src/parkbench/profiles_server.py`) *serves them fresh on demand*, so the `web/` world (and the
+`viewer/` pages) can `fetch` a profile instead of importing a build-time fixture. It resolves the
+"live read-only profiles endpoint" open question ([`04-open-questions.md`](04-open-questions.md)) —
+the other half of the `live-profiles` task.
+
+- **Stdlib only** (a `BaseHTTPRequestHandler` under `ThreadingHTTPServer`, no new dependency, upholds
+  D-023) and **presentation-only** (D-012): it reuses the exact same producers the CLI does
+  (`radar.build_radar` / `career.build_career` / `career.build_leaderboard`) and the same
+  `benchmark_version` stamp (D-061) — **no scoring logic lives here**. A byte-parity test pins the
+  served JSON to the CLI's `--json` output.
+- **Read-only** — GET only; every route returns `application/json`:
+
+  | Route | Returns |
+  |---|---|
+  | `GET /radar?agent=<name>&seed=<int>` | the `radar --json` payload for that agent (`agent` defaults to `heuristic`, `seed` to the server default). |
+  | `GET /career?agent=<name>&seed=<int>` | the `career --json` payload for that agent. |
+  | `GET /leaderboard?seed=<int>` | the `leaderboard --json` ranking (default roster). |
+  | `GET /health` | `{"status":"ok","service":"parkbench-profiles","benchmark_version":"…","routes":[…]}`. |
+
+  An unknown route is `404`, an unknown `agent` or bad `seed` is `400`, and any non-GET method is
+  `405`. Responses carry `Access-Control-Allow-Origin: *` so the Vite-served `web/` app can `fetch`
+  cross-origin (safe: the surface is read-only and exposes only public benchmark scores).
+- `tests/test_serve_profiles.py` spins the server up in-process on an ephemeral port (`port=0`) and
+  asserts the served JSON **equals the CLI producer's JSON** for `radar`/`career`/`leaderboard`, plus
+  the `404`/`400`/`405`/health/CORS behaviours. No external network.
+
 ## Replay viewer (D-028)
 
 `viewer/index.html` is a single static file — no build step, no dependencies, opens directly via
@@ -287,6 +317,7 @@ parkbench run --agent greedy --seed 1       # compare a weaker strategy
 parkbench analyze --seed 1                  # inspect one scenario's optimum
 parkbench serve --port 8080                 # host a run over HTTP for an external BYO agent (side A)
 parkbench serve --port 0 --local-agent heuristic   # self-drive a built-in agent over HTTP (demo/test)
+parkbench serve --profiles --port 8080      # read-only radar/career/leaderboard JSON endpoint (spectator)
 
 # Nudge controls (D-029) — these runs are off-record and excluded from canonical scores:
 parkbench run --agent heuristic --swap-persona tough            # face only the tough persona
