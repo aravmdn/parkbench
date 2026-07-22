@@ -129,6 +129,54 @@ adds/touches engine code (then Tier A too, stdlib-only + tested + baselines byte
 > `serve --profiles` endpoint (so the world reads fresh data, not committed fixtures), a BYO-over-the-wire
 > connector rendering a *live* third-party run, and richer per-land art. That refill is itself a task.
 
+## Now (visual world — chunk 4: live data + richer world)
+
+Decomposed 2026-07-22 from `docs/11-visual-world.md` "Next" (the chunk-3 closing note) + the deferred
+"live read-only profiles endpoint" open question in `docs/04-open-questions.md` + `docs/03-roadmap.md`
+#4/#5. Same rules: pull from the top; each is one-session-sized; Tier B unless it adds/touches engine
+code (then Tier A too, stdlib-only + tested + baselines byte-identical). `serve-profiles-endpoint` is
+the base the next two build on, so keep it first.
+
+- [x] `serve-profiles-endpoint` — Deliver the deferred **read-only** live-data endpoint: a stdlib
+  `http.server` subclass behind `parkbench serve --profiles` that returns the SAME JSON the CLI emits
+  for `radar` / `career` / `leaderboard` (reuse the existing producers — `build_radar` /
+  `build_career` / `build_leaderboard` — no scoring logic; presentation-only, D-012), with sensible
+  routes (`/radar?agent=…`, `/career?agent=…`, `/leaderboard`, `/health`), JSON content-type, the
+  `benchmark_version` stamp (D-061), and 404 on unknown routes. **Done when:** the endpoint serves the
+  three profile kinds + `/health`, `pytest` has a new `tests/test_serve_profiles.py` proving the served
+  JSON equals the CLI producer's JSON for ≥2 agents + the leaderboard and that an unknown route 404s,
+  the whole suite stays green, and the path is documented in `docs/06`/`web/README.md` (Tier A; no
+  ride/scoring/fixture changes — purely additive). ✅ built + verified in worktree branch
+  `worktree-agent-a298f2036f67e2181` (`src/parkbench/profiles_server.py` + `serve --profiles`;
+  `/radar`·`/career`·`/leaderboard`·`/health`, 404/400/405, CORS; +10 tests; docs updated). Final
+  landing on `main` + the decision-log entry are the integrator's step (see the lap report).
+- [ ] `web-fetch-profiles` — Wire the `web/` app to **`fetch` a profile from `serve-profiles-endpoint`
+  instead of importing a build-time fixture**: when the endpoint is reachable (configurable base URL,
+  e.g. `?profiles=http://127.0.0.1:8080`), the stats screen / Hall of Fame render live JSON; otherwise
+  fall back to the committed `src/fixtures/*.json` so the offline world still works. Keep the front-end
+  presentation-only (it only reads JSON). **Done when:** with `parkbench serve --profiles` running the
+  world renders live radar/leaderboard data (verified by a headless load + screenshot), the fixture
+  fallback still boots with the server down, the build is clean with no console errors, `web/README.md`
+  documents the live-vs-fixture switch, and a screenshot is committed to `autoloop/shots/<ts>/`
+  (Tier B; no engine code — consumes the endpoint from the prior task).
+- [ ] `byo-live-connector` — Render a **live** third-party (BYO) run in the world rather than a
+  hand-authored fixture: drive a BYO agent through the negotiation wire per `docs/09-byo-protocol.md`
+  (reuse `parkbench serve` + `client.drive_agent`, or a small in-process helper), capture the resulting
+  profile JSON, and surface it as the `acme-bot`-style "BYO"-chipped trainer's data (replacing the
+  static `radar-byo.json` stand-in when a live run is available). **Done when:** a BYO agent's *live*
+  completed-run JSON (not a committed fixture) drives the BYO trainer's stats screen, the flow is
+  documented, any engine-side helper is stdlib-only + tested with `pytest` green + baselines
+  byte-identical, the build is clean, and a screenshot is committed (Tier A+B).
+- [ ] `richer-land-art` — Upgrade the four lands' placeholder art beyond flat accent tints: per-land
+  tilesets/props that make Society Square / Market Midway / Maker's Workshop / Safety Gauntlet visually
+  distinct (procedural + original/CC0-by-construction — extend `pixels.js`, no ripped assets, per the
+  art policy in `docs/11`). **Done when:** each land is recognizably themed (distinct ground/props, not
+  just a tint), the build is clean with no console errors, and before/after screenshots are committed to
+  `autoloop/shots/<ts>/` (Tier B; no engine code).
+
+> **Chunk 4 first task landed** (`serve-profiles-endpoint`, pending integration). **Next up:**
+> `web-fetch-profiles` (needs the endpoint), then `byo-live-connector`, then `richer-land-art`.
+
 ## Now (trust track — validity, roadmap #6)
 
 The validity harness landed (D-055, `parkbench validity`, [`../docs/12-validity.md`](../docs/12-validity.md)):

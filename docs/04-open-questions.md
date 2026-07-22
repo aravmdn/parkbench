@@ -52,12 +52,18 @@ below (D-027–D-030)._
   hardening (roadmap #5); and continued vigilance as new ride types arrive._
 - **A live, read-only profiles endpoint for the spectator surfaces.** The `live-profiles` task shipped
   its **static-export** half (D-062, `parkbench export-profiles` — one command regenerates every
-  `web/`+`viewer/` fixture from the versioned CLI, so nothing is hand-copied). What stays open is the
-  other half: a small **read-only** HTTP endpoint (a `parkbench serve --profiles`-style stdlib
-  `http.server` that returns `radar`/`career`/`leaderboard` JSON on demand) so the world can render
-  *fresh* data without a regenerate-and-commit step, and the `web/` app can `fetch` instead of import a
-  build-time fixture. Deferred as larger than one session and not required for a working offline world.
-  When picked up, keep it presentation-only (D-012): serve existing producers' JSON, no scoring logic.
+  `web/`+`viewer/` fixture from the versioned CLI, so nothing is hand-copied). The other half — a small
+  **read-only** HTTP endpoint that returns `radar`/`career`/`leaderboard` JSON on demand — is now
+  **delivered** as the chunk-4 `serve-profiles-endpoint` task: **`parkbench serve --profiles`**
+  (`src/parkbench/profiles_server.py`), a stdlib `http.server` subclass that serves the *verbatim* CLI
+  producers' JSON (`build_radar`/`build_career`/`build_leaderboard`, same `benchmark_version` stamp) on
+  `/radar?agent=…`, `/career?agent=…`, `/leaderboard`, and `/health` (404 unknown route, 400 bad
+  agent/seed, 405 non-GET), covered by `tests/test_serve_profiles.py` (served JSON == CLI JSON).
+  Presentation-only (D-012): serves existing producers' JSON, no scoring logic. *(Decision-log entry
+  assigned on integration; documented in [`06-v1-architecture.md`](06-v1-architecture.md) and
+  `web/README.md`.)* What still remains is only the **consuming** side — the `web/` app `fetch`ing this
+  endpoint instead of importing a build-time fixture (the chunk-4 `web-fetch-profiles` task); the
+  offline fixture path stays as the fallback.
 
 ## Resolved
 
