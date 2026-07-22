@@ -112,16 +112,23 @@ adds/touches engine code (then Tier A too, stdlib-only + tested + baselines byte
   +16 → 239 tests). Ranking consolidated into `career.build_leaderboard()`. Comparison is
   float-repr-tolerant (12 dp) + LF-canonical ⇒ portable across Windows/Linux. Baselines byte-identical;
   documented in `web/README.md`. Live HTTP endpoint (option a) deferred to `docs/04-open-questions.md`.
-- [ ] `byo-trainer` — Let a **BYO agent** (per the documented wire protocol, `docs/09-byo-protocol.md`)
+- [x] `byo-trainer` — Let a **BYO agent** (per the documented wire protocol, `docs/09-byo-protocol.md`)
   appear as a trainer in the world: given a BYO agent's identity + a completed run's JSON (fixture or
   live per `live-profiles`), render it as an additional palette-swapped trainer alongside the baselines,
   labeled distinctly (e.g. a "BYO" tag) so spectators can tell a third-party agent from the built-in
   baselines. **Done when:** at least one non-baseline agent identity renders as a trainer with correct
   labeling, reachable/enterable like the others, build clean, screenshot committed (Tier B; no engine
-  code — consumes existing run/identity JSON per D-038).
+  code — consumes existing run/identity JSON per D-038). ✅ landed (D-063) — `acme-bot` renders as a
+  "BYO"-chipped teal/orange trainer alongside the four baselines; Tab/walk-up selects it → `S` stats
+  screen shows its D-038 identity (not on the leaderboard); `radar-byo.json` stand-in kept outside
+  `export-profiles`' manifest. Integration fixed one guard (`test_export.py` now excludes non-CLI
+  `"byo"`-marked fixtures). Presentation-only; `web/` build clean (21 modules). On branch
+  `integration/parallel-laps-2026-07-22`, pending land to `main`.
 
-> When this chunk lands, close it out here the way chunk 2 was closed, and decompose chunk 4 from
-> whatever's left in `docs/11-visual-world.md` "Next" at that time.
+> **Chunk 3 COMPLETE** (`multi-trainers` · `fixture-provenance` · `live-profiles` · `byo-trainer`).
+> **Next:** decompose **chunk 4** from `docs/11-visual-world.md` "Next" — the deferred live/served
+> `serve --profiles` endpoint (so the world reads fresh data, not committed fixtures), a BYO-over-the-wire
+> connector rendering a *live* third-party run, and richer per-land art. That refill is itself a task.
 
 ## Now (trust track — validity, roadmap #6)
 

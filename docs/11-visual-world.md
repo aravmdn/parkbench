@@ -89,6 +89,13 @@ D-061's `benchmark_version`, and surface it in the `web/` scenes + `viewer/` pag
 fixture JSON), and `byo-trainer` (a third-party BYO agent rendered as a labeled trainer). Pull tasks
 from the top of the backlog; keep this doc updated as the chunk lands.
 
-**Chunk 3 progress:** `multi-trainers` + `fixture-provenance` landed (2026-07-13→15); `live-profiles`
-landed 2026-07-22 as the **static-export flow** (D-062, `parkbench export-profiles` — the live HTTP
-endpoint variant is deferred to `docs/04-open-questions.md`). Remaining: `byo-trainer`.
+**Chunk 3 COMPLETE (2026-07-22).** `multi-trainers` + `fixture-provenance` landed (2026-07-13→15);
+`live-profiles` landed 2026-07-22 as the **static-export flow** (D-062, `parkbench export-profiles` —
+the live HTTP endpoint variant is deferred to `docs/04-open-questions.md`); and `byo-trainer` landed
+2026-07-22 (**D-063**) — a third-party BYO agent (`acme-bot`) renders as a "BYO"-chipped, palette-swapped
+trainer alongside the four baselines, selectable (Tab / walk-up) and driving the `S` stats screen, which
+surfaces its D-038 identity where a baseline shows reputation + badges. Presentation-only (D-012); its
+`radar-byo.json` stand-in sits outside `export-profiles`' manifest (a BYO run is not an engine baseline).
+**Next:** decompose **chunk 4** from this doc's "Next" — live/served profiles (the deferred
+`serve --profiles` endpoint), richer per-land art, and a BYO-over-the-wire connector that renders a
+*live* third-party run rather than a fixture.

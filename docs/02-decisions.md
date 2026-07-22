@@ -1306,3 +1306,72 @@ deliberate trade — a hypothetical real score change below 1e-12 would be misse
 is rounded to 6 dp upstream, so none can be that small. Extends D-061 (versioning), D-044/D-046
 (viewers), and the D-038 identity in the fixtures; delivers the visual-world chunk-3 `live-profiles`
 task (option b).
+
+### D-063 · 2026-07-22 · `byo-trainer` — a third-party BYO agent renders as a labeled trainer (completes visual-world chunk 3)
+
+A bring-your-own (third-party) agent now appears in the `web/` park as an additional palette-swapped
+trainer (`acme-bot`, teal cap / orange shirt) alongside the four baselines, marked with a **"BYO"**
+chip above an accent-tinted name tag so spectators can tell a third-party agent from the built-in
+baselines. It is **selectable** (Tab / walk-up) and drives the `S` stats screen, which — where a
+baseline shows reputation + earned/cracked gym badges — surfaces the BYO agent's **D-038
+`AgentIdentity`** (`acme-bot · v0.3.1 · #7d3f9a2c1e05`) plus a plain note that a BYO agent is **not**
+on the official leaderboard. Its radar + identity come from a hand-authored
+`web/src/fixtures/radar-byo.json` (a stand-in for a completed BYO run's JSON, carrying a top-level
+`"byo": true` marker). Presentation-only (D-012): no scoring in `web/`, **no engine/Python code
+changed**; `web/` build clean (21 modules).
+**Provenance interaction (found + fixed on integration):** the BYO fixture is deliberately **outside**
+`export-profiles`' `FIXTURE_MANIFEST` (a BYO run is not an engine baseline, so nothing regenerates it),
+which keeps `export-profiles --check` green — but `test_export.py`'s *manifest-coverage* guard asserts
+the manifest lists **exactly** the on-disk `web/src/fixtures/*.json`, so the un-manifested file tripped
+it. Resolved by excluding **non-CLI fixtures by their `"byo"` marker** (the same principle that already
+excludes `sample-run.json`, a run log) — robust to future BYO fixtures rather than a hardcoded name.
+Completes visual-world **chunk 3** (`multi-trainers` · `fixture-provenance` · `live-profiles` ·
+`byo-trainer`). Builds on D-038 (identity), D-046/D-044 (radar/badges), D-062 (the export guard).
+
+### D-064 · 2026-07-22 · External-validity plan (new Draft doc 13) + a criterion-harness scaffold
+
+Scoped the **external** half of the trust track (roadmap #6) — the part `docs/12-validity.md` marks
+as still *argued, not proven* — in new **`docs/13-external-validity-plan.md`** (Draft; indexed in
+`docs/README.md`). Two recommendations, with honest limits:
+1. **Give the ECONOMIC axis the next second-per-axis ride first.** It is the weakest-measured axis
+   (ε-ladder random floor **0.706**, discrimination only **0.294** — flagged in D-055/`12` as most in
+   need of a harder tier) *and* the least-distinct (`economic × safety = +1.00` in the MTMM matrix,
+   the visible signature of the single-ride-axis limitation). The proposal — **"The Exchange,"** a
+   solo, exactly-solvable **allocative-efficiency / assignment (max-weight matching)** ride — is a
+   genuinely different economic construct from the knapsack (matching vs. selection, so convergence
+   would be real evidence), uses a **best/worst-response bracket** score (like commons) to lower the
+   random floor, and unlocks the first **economic monotrait pair** for a Campbell–Fiske discriminant
+   test. Fully offline / deterministic / stdlib.
+2. **Criterion validity has an honest offline boundary.** A meaningful criterion cohort needs real
+   agents scored on *both* Parkbench and a trusted external benchmark, so it **cannot be produced
+   purely offline** — it needs a one-time online real-agent step (or curated published numbers). Only
+   **coding ↔ HumanEval/MBPP** is a strong-construct, partly-offline match.
+**Down-payment (Tier A, purely additive):** a **criterion-harness scaffold** in `validity.py`
+(`CriterionCohort` / `CriterionResult` / `criterion_validity()` / a seeded pair-bootstrap Spearman CI
+`_bootstrap_corr_ci()`), plus a synthetic `PLACEHOLDER_COHORT` flagged `is_evidence=False` that can
+**never** `pass`, and a `CRITERION_TEMPLATE` documenting the real-cohort swap-in. Deliberately **not**
+wired into `build_validity_report`, so `parkbench validity` output and every seed-1 fixture stay
+**byte-identical**. +4 tests. Continues the D-055/D-057 trust track.
+
+### D-065 · 2026-07-22 · Free-model roster — many free LLM agents through **one** OpenRouter key
+
+Clarifies and exploits a fact that reframes "get more free agents": a **single** OpenRouter API key
+unlocks **every** model, including all `:free` ones — so more free agents = more free **models**, not
+more keys (extra keys grant no extra access and share the same per-account limits). Compiled a curated
+shortlist from the **live public catalog** (`GET https://openrouter.ai/api/v1/models`, no auth; 342
+models / **17 free** on 2026-07-22) and registered the general-purpose, JSON-capable ones as selectable
+**`llm:<model-id>`** agents (`FREE_MODELS` in `agents/llm.py`; a factory registry + `llm:` selector in
+`agents/__init__.py`, auto-flowing into the `--agent` choices for `run`/`radar`/`career`). `LLMAgent`
+gained a `model` param (pins a variant to one model; else resolves `$OPENROUTER_MODEL` →
+`DEFAULT_MODEL` exactly as before). Variants reuse all existing machinery: **keyless ⇒ heuristic
+fallback** (so they run + are tested offline), model id folded into the D-038 identity hash, key never
+in it. Music/guardrail/auto-router `:free` entries deliberately excluded. Stdlib-only (no SDK, per
+D-030); purely additive — no ride/scoring code touched, seed-1 baselines byte-identical; +7 tests.
+Docs: `06-v1-architecture.md`. Extends D-030 (the LLM reference agent). *(The individual commit
+`b78a46e` carries a stale "(D-063)" in its subject; this log is authoritative — the decision is D-065.)*
+
+> **Integration note (2026-07-22):** D-063/D-064/D-065 were built as three parallel fan-out laps in
+> isolated worktrees (files fully disjoint), octopus-merged onto `integration/parallel-laps-2026-07-22`,
+> and verified together: **250 tests pass**, `export-profiles --check` exit 0 (all 8 fixtures ok), and
+> `web/` build clean (21 modules). The `test_export.py` fix above was the one real defect the combined
+> run surfaced that per-branch verification had missed.

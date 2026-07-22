@@ -31,6 +31,24 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # --------------------------------------------------------------------------------------------------
 
 
+def _is_non_cli_fixture(p: Path) -> bool:
+    """Fixtures that are deliberately NOT produced by the CLI --json exporters, so they are
+    excluded from the manifest-coverage guard:
+
+    - ``sample-run.json`` is a run *log*, not CLI --json output.
+    - BYO stand-in fixtures (a top-level ``"byo"`` marker) represent a third-party agent's
+      completed run, not an engine baseline, so they live outside ``export-profiles``' manifest
+      (D-063). The marker — not the filename — is what makes a fixture non-CLI.
+    """
+    if p.name == "sample-run.json":
+        return True
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return False
+    return isinstance(data, dict) and bool(data.get("byo"))
+
+
 def test_manifest_covers_the_committed_web_and_viewer_fixtures():
     """The manifest lists exactly the committed CLI-json fixtures under web/ and viewer/."""
     listed = {spec.path.replace("\\", "/") for spec in FIXTURE_MANIFEST}
@@ -38,8 +56,7 @@ def test_manifest_covers_the_committed_web_and_viewer_fixtures():
         p.relative_to(REPO_ROOT).as_posix()
         for p in list((REPO_ROOT / "web" / "src" / "fixtures").glob("*.json"))
         + list((REPO_ROOT / "viewer").glob("sample-*.json"))
-        # sample-run.json is a run *log*, not CLI --json output, so it is deliberately not exported.
-        if p.name != "sample-run.json"
+        if not _is_non_cli_fixture(p)
     }
     assert listed == on_disk
 

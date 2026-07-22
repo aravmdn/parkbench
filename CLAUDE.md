@@ -44,6 +44,52 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 
 ## Current status (2026-07-22)
 
+**Three parallel fan-out laps integrated + verified together (D-063 · D-064 · D-065).** In one owner
+session, three fresh worker sub-agents ran **simultaneously** in isolated worktrees (fully disjoint file
+sets), were octopus-merged onto branch **`integration/parallel-laps-2026-07-22`**, and verified as a
+combined tree: **250 passing tests** (+11 from 239), `parkbench export-profiles --check` all 8 fixtures
+`ok` (exit 0), `web/` build clean (21 modules). Public seed-1 baselines **byte-identical** (all three
+laps purely additive — no ride/scoring code touched).
+
+- **D-063 `byo-trainer` — completes visual-world chunk 3.** A third-party BYO agent (`acme-bot`) renders
+  in the `web/` park as a **"BYO"**-chipped, palette-swapped trainer alongside the four baselines;
+  selectable (Tab / walk-up), drives the `S` stats screen (which surfaces its **D-038 identity** where a
+  baseline shows reputation + gym badges), from a hand-authored `radar-byo.json` stand-in kept **outside**
+  `export-profiles`' manifest (a BYO run is not an engine baseline). Presentation-only (D-012); no engine
+  code. *Integration caught + fixed the one real defect per-branch verification missed:* the un-manifested
+  BYO fixture tripped `test_export.py`'s manifest-coverage guard — resolved by excluding non-CLI fixtures
+  by their `"byo"` marker (same principle as the existing `sample-run.json` exclusion). **Visual-world
+  chunk 3 is complete** (`multi-trainers` · `fixture-provenance` · `live-profiles` · `byo-trainer`); next
+  is chunk 4.
+
+- **D-064 external-validity plan + criterion scaffold (trust track, roadmap #6).** New Draft
+  `docs/13-external-validity-plan.md` scopes validity's *external* half: recommends giving the **economic
+  axis a second ride first** (weakest-measured — random floor 0.71, disc 0.29 — and least-distinct:
+  `economic × safety = +1.00`) via a solo exactly-solvable **assignment/matching ride ("The Exchange")**
+  to unlock the first economic monotrait pair; and documents the honest boundary that true **criterion
+  validity needs a one-time online real-agent step** (only coding↔HumanEval is a strong partly-offline
+  match). Landed a Tier-A **criterion-harness scaffold** in `validity.py` (`criterion_validity()` + a
+  synthetic `PLACEHOLDER_COHORT` flagged `is_evidence=False` so it can never falsely pass), deliberately
+  **not** wired into the main report ⇒ `parkbench validity` output byte-identical.
+
+- **D-065 free-model roster — many free LLM agents through *one* key.** A single OpenRouter key unlocks
+  every `:free` model, so "more free agents" = more free **models**, not more keys. From the live public
+  catalog (`GET /api/v1/models`, no auth; 342 models / 17 free on 2026-07-22) a curated set of
+  general-purpose, JSON-capable free models is registered as selectable **`llm:<model-id>`** agents
+  (`FREE_MODELS` in `agents/llm.py`); `LLMAgent` gained a `model` param; variants reuse the keyless
+  heuristic fallback (run + tested offline) and fold the model into the D-038 identity hash (never the
+  key). Stdlib-only (D-030). To score them *live*, put one `OPENROUTER_API_KEY` in the gitignored `.env`.
+
+**Landing state:** integrated + verified on branch `integration/parallel-laps-2026-07-22` (off `main` @
+D-062); **not yet merged to `main` or pushed** — awaiting the owner's landing decision (see
+`autoloop/HANDOFF.md`). Verify: `pytest` (250, ~6 min — needs `uv pip install -e ".[dev]"`, else the
+coding-ride sandbox spuriously fails) · `parkbench export-profiles --check` (8 `ok`) · `cd web && npm run
+build`. Decisions: **D-063, D-064, D-065**.
+
+---
+
+## Prior status (2026-07-22) — chunk 3 `live-profiles` (D-062)
+
 **Visual world — chunk 3 `live-profiles` landed (D-062): one-command fixture provenance.** After a
 `git pull`/merge (PR #16's Jul 9–16 daily-lap chain was rebased into `origin/main` and is now on
 `main`), this lap shipped **`parkbench export-profiles`** [`--check`] — a new stdlib CLI command

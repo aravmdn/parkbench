@@ -10,34 +10,44 @@
 **Updated:** 2026-07-22
 **Loop state:** IDLE
 
-**Active task:** — (none)
+**Active task:** — (none; three parallel fan-out laps integrated + verified, awaiting land)
 **Acceptance criteria:** —
-**Task branch:** `autoloop/task-live-profiles` → `main` (this lap ran in a normal owner session after a
-`git pull`/merge; PR #16's daily-lap chain was already merged upstream into `main`)
-**Tree state:** clean · on `main`
-**Last durable commit:** (see `git log -1`)
+**Task branch:** `integration/parallel-laps-2026-07-22` (off `main` @ D-062) — an octopus-merge of the
+three fan-out worktree branches `autoloop/task-byo-trainer` (49c0cc0) + `worktree-agent-af080d7b70967b48b`
+(2bfe5bd) + `worktree-agent-a8002d1af62f49e6e` (b78a46e), plus a docs/decision-log consolidation commit.
+**Not on `main`; not pushed.**
+**Tree state:** clean · on `integration/parallel-laps-2026-07-22`
+**Last durable commit:** the consolidation commit on that branch (see `git log -1`)
 
-**Last landed (2026-07-22):** **`live-profiles`** (visual-world chunk 3, D-062) — `parkbench
-export-profiles` [`--check`] (new `src/parkbench/export.py`) regenerates all 8 `web/`+`viewer/`
-spectator fixtures verbatim from the versioned CLI in one command (chose the static-export option (b);
-the live HTTP endpoint option (a) is deferred to `docs/04-open-questions.md`). `--check` exits 1 on
-drift (standing provenance guard, `tests/test_export.py`, **239 passing tests**, +16). Ranking logic
-consolidated into `career.build_leaderboard()`. Comparison is float-repr-tolerant (12 dp) + LF-canonical
-⇒ portable across Windows/Linux. Baselines byte-identical; Tier-B shots in
-`autoloop/shots/2026-07-22-1456/`. Before this: the Jul 9–16 chain (PR #16, now on `main`) drained the
-trust track (D-058→D-061) and started chunk 3 (`multi-trainers`, `fixture-provenance`). Per-lap:
-[`log.md`](log.md); narrative: root `CLAUDE.md`.
+**Last integrated (2026-07-22):** **three parallel laps** run simultaneously as fresh worker sub-agents
+in isolated worktrees (fully disjoint files), then merged + verified *together*:
+- **D-063 `byo-trainer`** (Tier B, `web/`) — a BYO agent (`acme-bot`) renders as a "BYO"-chipped
+  palette-swapped trainer; Tab/walk-up selects it → `S` stats screen shows its D-038 identity.
+  `radar-byo.json` stand-in kept outside `export-profiles`' manifest. **Completes visual-world chunk 3.**
+- **D-064 external-validity plan + criterion scaffold** (Tier A) — new Draft `docs/13-external-validity-plan.md`
+  (recommends a second **economic** ride "The Exchange" next; criterion validity needs a one-time online
+  step) + a not-yet-wired `criterion_validity()` scaffold in `validity.py`.
+- **D-065 free-model roster** (Tier A) — curated free OpenRouter models registered as `llm:<model-id>`
+  agents through the one key (`FREE_MODELS` in `agents/llm.py`); keyless heuristic fallback ⇒ tested offline.
+Combined verification: **250 passing tests**, `export-profiles --check` 8 `ok` (exit 0), `web/` build
+clean; seed-1 baselines byte-identical. Integration fixed the one real defect per-branch checks missed
+(`test_export.py` manifest-coverage vs. the un-manifested BYO fixture). Prior lap: `live-profiles` (D-062,
+now the "Prior status" block in `CLAUDE.md`). Per-lap: [`log.md`](log.md); narrative: root `CLAUDE.md`.
 
 **Loop / active driver (D-056):** the owner-activated local `/loop` driver remains the standing
 mechanism (`autoloop/LOCAL_DRIVER_PROMPT.md`). The **cloud-cron routine (D-054) stays DESIGNED +
 UNARMED**.
 
-**NEXT ACTION:** Loop is IDLE. The next unchecked backlog task is **`byo-trainer`** (visual-world
-chunk 3, Tier B, no engine code): render a BYO agent (per `docs/09-byo-protocol.md`) as an additional
-palette-swapped, distinctly-labeled trainer alongside the baselines, from a completed run's identity
-JSON (D-038). When chunk 3 closes, decompose chunk 4 from `docs/11-visual-world.md` "Next". The trust
-track's remaining *external* work (criterion validity, a second ride per non-social axis, harder
-difficulty tiers) + the deferred live `serve --profiles` endpoint are parked in `docs/12-validity.md`
-/ `docs/04-open-questions.md`.
+**NEXT ACTION:** **Owner decision** — land branch `integration/parallel-laps-2026-07-22` to `main`
+(fast-forward or `--no-ff` merge, then optionally push to `origin`). It is fully verified (250 tests,
+`export-profiles --check` 8 `ok`, `web/` build clean). After landing: move the three backlog/log records
+to `log.md`, and decompose **chunk 4** from `docs/11-visual-world.md` "Next" (deferred live/served
+`serve --profiles` endpoint; a BYO-over-the-wire *live* connector; richer per-land art). The trust
+track's remaining *external* work is captured in `docs/13-external-validity-plan.md` (build "The Exchange"
+economic ride first). Tier-B screenshot of the BYO trainer in the park is still to be captured (build is
+green; the shot was deferred at integration).
 
-**Blockers / needs-owner:** none. `main` reflects reality (this lap committed + pushed).
+**Blockers / needs-owner:**
+1. Landing decision above (nothing false is on `main`; it still reads D-062 until landed).
+2. Optional: to score the D-065 `llm:<model-id>` agents **live**, add one `OPENROUTER_API_KEY` to the
+   gitignored `.env` (the owner creates the key; the roster works offline via heuristic fallback without it).
