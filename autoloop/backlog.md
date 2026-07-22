@@ -122,8 +122,7 @@ adds/touches engine code (then Tier A too, stdlib-only + tested + baselines byte
   "BYO"-chipped teal/orange trainer alongside the four baselines; Tab/walk-up selects it → `S` stats
   screen shows its D-038 identity (not on the leaderboard); `radar-byo.json` stand-in kept outside
   `export-profiles`' manifest. Integration fixed one guard (`test_export.py` now excludes non-CLI
-  `"byo"`-marked fixtures). Presentation-only; `web/` build clean (21 modules). On branch
-  `integration/parallel-laps-2026-07-22`, pending land to `main`.
+  `"byo"`-marked fixtures). Presentation-only; `web/` build clean (21 modules). Landed on `main` (D-063).
 
 > **Chunk 3 COMPLETE** (`multi-trainers` · `fixture-provenance` · `live-profiles` · `byo-trainer`).
 > **Next:** decompose **chunk 4** from `docs/11-visual-world.md` "Next" — the deferred live/served

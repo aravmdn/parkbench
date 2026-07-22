@@ -12,12 +12,12 @@
 
 **Active task:** — (none; three parallel fan-out laps integrated + verified, awaiting land)
 **Acceptance criteria:** —
-**Task branch:** `integration/parallel-laps-2026-07-22` (off `main` @ D-062) — an octopus-merge of the
-three fan-out worktree branches `autoloop/task-byo-trainer` (49c0cc0) + `worktree-agent-af080d7b70967b48b`
-(2bfe5bd) + `worktree-agent-a8002d1af62f49e6e` (b78a46e), plus a docs/decision-log consolidation commit.
-**Not on `main`; not pushed.**
-**Tree state:** clean · on `integration/parallel-laps-2026-07-22`
-**Last durable commit:** the consolidation commit on that branch (see `git log -1`)
+**Task branch:** the three fan-out laps were octopus-merged onto `integration/parallel-laps-2026-07-22`
+(worktree branches `autoloop/task-byo-trainer` 49c0cc0 + `worktree-agent-af080d7b70967b48b` 2bfe5bd +
+`worktree-agent-a8002d1af62f49e6e` b78a46e, plus a consolidation commit), then **fast-forwarded into
+`main` and pushed to `origin`.**
+**Tree state:** clean · on `main`
+**Last durable commit:** `git log -1` (the parallel-laps consolidation, now on `main`)
 
 **Last integrated (2026-07-22):** **three parallel laps** run simultaneously as fresh worker sub-agents
 in isolated worktrees (fully disjoint files), then merged + verified *together*:
@@ -38,16 +38,16 @@ now the "Prior status" block in `CLAUDE.md`). Per-lap: [`log.md`](log.md); narra
 mechanism (`autoloop/LOCAL_DRIVER_PROMPT.md`). The **cloud-cron routine (D-054) stays DESIGNED +
 UNARMED**.
 
-**NEXT ACTION:** **Owner decision** — land branch `integration/parallel-laps-2026-07-22` to `main`
-(fast-forward or `--no-ff` merge, then optionally push to `origin`). It is fully verified (250 tests,
-`export-profiles --check` 8 `ok`, `web/` build clean). After landing: move the three backlog/log records
-to `log.md`, and decompose **chunk 4** from `docs/11-visual-world.md` "Next" (deferred live/served
-`serve --profiles` endpoint; a BYO-over-the-wire *live* connector; richer per-land art). The trust
-track's remaining *external* work is captured in `docs/13-external-validity-plan.md` (build "The Exchange"
-economic ride first). Tier-B screenshot of the BYO trainer in the park is still to be captured (build is
-green; the shot was deferred at integration).
+**NEXT ACTION:** Loop is IDLE; the three parallel laps (D-063/064/065) are **landed on `main` + pushed**.
+Next real work, either thread:
+- **Visual world** — decompose **chunk 4** from `docs/11-visual-world.md` "Next" into `autoloop/backlog.md`
+  (the deferred live/served `serve --profiles` endpoint so the world reads *fresh* data not fixtures; a
+  BYO-over-the-wire *live* connector; richer per-land art). That refill is itself a task.
+- **Trust track** — build the **economic 2nd ride "The Exchange"** (assignment/matching) per
+  `docs/13-external-validity-plan.md`, unlocking the first economic monotrait pair in the MTMM matrix.
+Loose end: the Tier-B screenshot of the BYO trainer is still uncaptured (build is green; live
+canvas-capture was flaky against Kaplay's render loop) — recapture opportunistically.
 
-**Blockers / needs-owner:**
-1. Landing decision above (nothing false is on `main`; it still reads D-062 until landed).
-2. Optional: to score the D-065 `llm:<model-id>` agents **live**, add one `OPENROUTER_API_KEY` to the
-   gitignored `.env` (the owner creates the key; the roster works offline via heuristic fallback without it).
+**Blockers / needs-owner:** none. `main` reflects reality (landed + pushed). Optional: the D-065
+`llm:<model-id>` agents run **live** only if `.env`'s `OPENROUTER_API_KEY` is valid — present as of
+2026-07-22 (not validity-checked); the roster otherwise runs offline via the heuristic fallback.

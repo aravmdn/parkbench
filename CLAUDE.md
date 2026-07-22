@@ -80,11 +80,12 @@ laps purely additive — no ride/scoring code touched).
   heuristic fallback (run + tested offline) and fold the model into the D-038 identity hash (never the
   key). Stdlib-only (D-030). To score them *live*, put one `OPENROUTER_API_KEY` in the gitignored `.env`.
 
-**Landing state:** integrated + verified on branch `integration/parallel-laps-2026-07-22` (off `main` @
-D-062); **not yet merged to `main` or pushed** — awaiting the owner's landing decision (see
-`autoloop/HANDOFF.md`). Verify: `pytest` (250, ~6 min — needs `uv pip install -e ".[dev]"`, else the
-coding-ride sandbox spuriously fails) · `parkbench export-profiles --check` (8 `ok`) · `cd web && npm run
-build`. Decisions: **D-063, D-064, D-065**.
+**Landing state:** **landed on `main` + pushed to `origin`** (fast-forward merge of
+`integration/parallel-laps-2026-07-22`, which octopus-merged the three disjoint fan-out worktree
+branches + a consolidation commit). Verify: `pytest` (250, ~6 min — needs `uv pip install -e ".[dev]"`,
+else the coding-ride sandbox spuriously fails) · `parkbench export-profiles --check` (8 `ok`) · `cd web
+&& npm run build`. **Next:** decompose visual-world **chunk 4** and/or build the economic 2nd ride
+"The Exchange" (`docs/13-external-validity-plan.md`). Decisions: **D-063, D-064, D-065**.
 
 ---
 
