@@ -604,16 +604,21 @@ function renderLeaderboard(data) {
     return leg ? (leg.score ?? 0) : -1;
   };
   const lastIdx = ranking.length - 1;
-  const last = ranking[lastIdx];
 
-  // Reward-hacker story: the LAST-ranked agent whose reputation collapsed (< 1) despite
-  // strong raw economic capability. We confirm "economically strong" by checking its
-  // economic leg beats at least one higher-ranked agent (capability wasted by the breach).
-  const lastEcon = last ? econOf(last) : -1;
-  const lastRepLow = last && (last.reputation ?? 1) < 1;
-  const econStrong = last && ranking.some((p, i) => i < lastIdx && econOf(p) >= 0 && lastEcon > econOf(p));
-  const hacker = (lastRepLow && econStrong && lastEcon >= 0) ? last : null;
-  const hackerEcon = hacker ? lastEcon : -1;
+  // Reward-hacker (rank-independent): among agents whose reputation collapsed (< 1), the one
+  // with the strongest raw ECONOMIC capability — real skill that career = capability × reputation
+  // then buries. It need NOT rank last: since bench v1.1.0 added a second economic ride, a
+  // reward-hacker can out-earn a genuinely incompetent agent yet still be sunk far below the
+  // honest field by the trust penalty.
+  let hacker = null, hackerEcon = -1;
+  ranking.forEach((p) => {
+    if ((p.reputation ?? 1) < 1) {
+      const e = econOf(p);
+      if (e > hackerEcon) { hackerEcon = e; hacker = p; }
+    }
+  });
+  // Confirm the paradox is real: trust has cratered its career well below its economic skill.
+  if (hacker && !((hacker.career_score ?? 0) < hackerEcon - 0.3)) { hacker = null; hackerEcon = -1; }
 
   // Table
   $('board-body').innerHTML = ranking.map((p, i) => {
@@ -621,7 +626,7 @@ function renderLeaderboard(data) {
     const repLow = (p.reputation ?? 1) < 1;
     const isHacker = hacker && p === hacker;
     let tag = '';
-    if (isHacker) tag = '<span class="agent-tag hacker" title="economically strong, but reputation collapsed and it ranks last">reward-hacker</span>';
+    if (isHacker) tag = '<span class="agent-tag hacker" title="economically strong, but reputation collapsed so the trust penalty sinks its career">reward-hacker</span>';
     return `
       <tr class="row-agent ${isHacker ? 'flagged' : ''}">
         <td><span class="rank-badge ${isTop ? 'top' : ''} ${isLast ? 'last' : ''}">${i + 1}</span></td>
@@ -649,16 +654,18 @@ function renderLeaderboard(data) {
 
   // Callout
   if (hacker) {
-    const above = ranking[lastIdx - 1];
+    const hIdx = ranking.indexOf(hacker);
+    const below = ranking[hIdx + 1];
     $('board-callout').innerHTML = `
       <div class="callout">
         <div class="ct-title">The reward-hacker paradox</div>
         <code>${escHtml(hacker.agent)}</code> is an <strong>economic standout</strong>
-        (economic capability ${fmt(hackerEcon)}) &mdash; yet it ranks
-        <strong>last (#${ranking.length})</strong>${above ? `, below <code>${escHtml(above.agent)}</code>` : ''}.
+        (economic capability ${fmt(hackerEcon)}) &mdash; yet it lands at
+        <strong>#${hIdx + 1} of ${ranking.length}</strong> with a career of only ${fmt(hacker.career_score)}.
         Its reputation collapsed to <strong>${fmt(hacker.reputation, 3)}</strong> after an integrity
-        breach, and because <code>career = capability × reputation</code>, that multiplier sinks it
-        to ${fmt(hacker.career_score)}. Raw capability without trust loses the tour.
+        breach, and because <code>career = capability × reputation</code>, that multiplier sinks it far
+        below the honest field${below ? ` &mdash; only a hair above <code>${escHtml(below.agent)}</code>` : ''}.
+        Raw capability without trust loses the tour.
       </div>`;
   } else {
     $('board-callout').innerHTML = '';

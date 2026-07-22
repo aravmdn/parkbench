@@ -174,7 +174,7 @@ the base the next two build on, so keep it first.
   just a tint), the build is clean with no console errors, and before/after screenshots are committed to
   `autoloop/shots/<ts>/` (Tier B; no engine code).
 
-> **Chunk 4 first task landed** (`serve-profiles-endpoint`, pending integration). **Next up:**
+> **Chunk 4 first task landed on `main`** (`serve-profiles-endpoint`, D-067). **Next up:**
 > `web-fetch-profiles` (needs the endpoint), then `byo-live-connector`, then `richer-land-art`.
 
 ## Now (trust track — validity, roadmap #6)
@@ -183,6 +183,22 @@ The validity harness landed (D-055, `parkbench validity`, [`../docs/12-validity.
 each ride is proven to discriminate **known** ability + resist the **known** reward-hacker. What's left
 is the deeper construct-validity evidence. Pull from the top; each is one-session-sized; engine work is
 Tier A (stdlib-only, keep `pytest` green + baselines byte-identical).
+
+- [x] `exchange-2nd-economic-ride` — Give the economic axis a **second ride** ("The Exchange",
+  assignment/matching) per [`../docs/13-external-validity-plan.md`](../docs/13-external-validity-plan.md)
+  §A, unlocking the first non-social **monotrait pair**. ✅ landed (D-066) — VALID (ε-ladder floor
+  0.71→0.49, disc 0.29→0.51, 5/5 rungs); economic axis now `mean(knapsack, exchange)`; **bench →
+  1.1.0**, all 8 fixtures regenerated. Honest finding: `economic × exchange` converges (ρ+1.00) but
+  `economic × safety` stays +1.00 ⇒ economic **discriminant FAIL** (needs a richer BYO roster; social
+  still PASSes). Seed-1 leaderboard reorders (greedy no longer last — still caught below heuristic;
+  `below_random` holds on held-out seeds); `viewer/profiles.html` callout fixed. 280 tests.
+- [ ] `second-ride-safety-or-coding` — Repeat the "2nd ride per axis" move for **safety** and/or
+  **coding** so those axes get real monotrait pairs too (and a chance to break their +1.00 cross-axis
+  ties with economic). **Done when:** the new ride is VALID and appears in the MTMM matrix (Tier A).
+- [ ] `criterion-cohort` — Fill the `criterion_validity()` scaffold (D-064) with a real cohort — needs a
+  **one-time online** step scoring real agents on Parkbench **and** an external benchmark (coding↔HumanEval
+  is the strongest partly-offline match). **Done when:** a non-placeholder cohort reports a correlation +
+  CI, and a test guards it (Tier A + one online data-collection step).
 
 - [x] `convergent-validity` — Show the ride scores correlate with a measure already trusted. Offline
   first cut: correlate the two **social** rides (negotiation, commons) across a shared agent set + a

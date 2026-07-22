@@ -1375,3 +1375,69 @@ Docs: `06-v1-architecture.md`. Extends D-030 (the LLM reference agent). *(The in
 > and verified together: **250 tests pass**, `export-profiles --check` exit 0 (all 8 fixtures ok), and
 > `web/` build clean (21 modules). The `test_export.py` fix above was the one real defect the combined
 > run surfaced that per-branch verification had missed.
+
+### D-066 · 2026-07-22 · "The Exchange" — second economic ride (assignment / max-weight matching); **benchmark → 1.1.0**
+
+The first build of `docs/13-external-validity-plan.md` §A: a solo, exactly-solvable
+**allocative-efficiency / assignment** ride (`src/parkbench/exchange/`) gives the **economic** axis a
+**second ride**, so the radar's economic axis is now `mean(knapsack, exchange)` — the first real
+**monotrait pair** on a non-social axis. Each seeded instance is an `N×N` (N=7) integer surplus matrix;
+a play is a permutation (an assignment), the objective is max total surplus, and the exact optimum/worst
+come from an `O(N³)` **Hungarian** solver (brute-force-checked in tests). Scoring is the **best/worst
+bracket** `(achieved − worst)/(optimal − worst)` (like commons, not the knapsack's `achieved/optimal`),
+deliberately chosen to **repair the flagged narrow economic range**: the ε-ladder floor drops
+**0.71 → 0.49**, discrimination rises **0.29 → 0.51**, and it resolves **5/5** rungs (VALID, ρ 1.00;
+structural + ablation + item-hygiene all pass). Integrity signal neutral 1.0. Ships the shared
+`random/greedy/heuristic/optimal` baselines and a `parkbench exchange` CLI subcommand mirroring
+`economic`.
+
+**This is a SCORE-ALTERING change** (the first since v1.0.0): per the D-061 convention,
+`parkbench.BENCHMARK_VERSION` is bumped **1.0.0 → 1.1.0** (minor = score-altering re-tune), and **all 8
+committed fixtures were regenerated** (`export-profiles --check` → 8 `ok`). Seed-1 consequences, recorded
+honestly:
+
+- **Leaderboard reorders:** `optimal 1.000 > heuristic 0.580 > greedy 0.174 > random 0.155`. Because the
+  new ride is one where the reward-hacker `greedy` is genuinely strong, **greedy is no longer dead-last
+  at public seed 1** — it now edges the incompetent `random`. The anti-gaming thesis is **intact**:
+  `greedy` is still caught far below the honest `heuristic` (Goodhart gap ~0.81, reputation still
+  collapsed to 0.333), and the validity harness's **`below_random` gaming check still passes on the
+  held-out eval seeds** (a standing test). What changed is only the seed-1 *anecdote*, not the guarantee.
+- **MTMM:** the two economic rides **converge** (`economic × exchange` ρ = +1.00 — real convergent
+  evidence, since selection-DP and permutation-matching are genuinely different structures), but
+  `economic × safety` and `exchange × safety` **also stay +1.00**, so the economic axis does **not** yet
+  separate from safety ⇒ **economic discriminant FAIL** — the "informative either way" outcome
+  `docs/13` §A.5 predicted (on the held-out seeds `greedy`'s safety score sits a hair above `random`'s,
+  so its economic-star rank doesn't invert). The **social** discriminant still **PASSes** (D-057 intact).
+  The harness was generalized: `monotrait_discriminant` / `all_discriminant_ok` per pair, roster widened
+  to N=4, `discriminant_ok` kept as the social headline.
+- **Viewer fix (shipped with this landing):** `viewer/profiles.html` identified the reward-hacker by
+  **last place**; that heuristic is now wrong, so it was changed to detect by the real signature —
+  **collapsed reputation + strongest economic capability, rank-independent** — so the "reward-hacker
+  paradox" callout correctly flags `greedy` at #3 instead of vanishing (or pointing at `random`). The
+  web Hall of Fame / stats screen already keyed off reputation/integrity, not rank, so they were correct.
+
+Docs: `07-multi-ride.md` (new ride + two-ride economic axis), `12-validity.md` (results + MTMM update),
+`13-external-validity-plan.md` (marked BUILT; criterion validity §B still planned). **270 tests** (+20).
+
+### D-067 · 2026-07-22 · `parkbench serve --profiles` — a read-only live profiles endpoint (visual-world chunk 4, task 1)
+
+Delivers the **deferred live read-only profiles endpoint** parked in `docs/04-open-questions.md` (the
+other half of D-062's `live-profiles`, whose static-export option (b) shipped as D-062; this is option
+(a)). New `src/parkbench/profiles_server.py` — a stdlib `http.server` subclass (`ProfilesServer` /
+`ProfilesHandler`) that serves the **verbatim** `radar`/`career`/`leaderboard --json` from the existing
+producers (`build_radar` / `build_career` / `build_leaderboard`), carrying the `benchmark_version` stamp:
+`GET /radar?agent=&seed=`, `/career?agent=&seed=`, `/leaderboard?seed=`, `/health`; unknown route → 404,
+bad agent/seed → 400, non-GET → 405, `Access-Control-Allow-Origin: *` for the `web/` app to `fetch`.
+**Presentation-only (D-012):** it reuses the scoring producers, adds no scoring logic — a regression test
+(`tests/test_serve_profiles.py`, +10) pins the served bytes to the CLI's own `--json` output. Purely
+additive: committed fixtures byte-identical to their (v1.1.0) values, seed-1 scoring untouched by this
+change. Also decomposed **visual-world chunk 4** into the backlog (`serve-profiles-endpoint` ✓ ·
+`web-fetch-profiles` · `byo-live-connector` · `richer-land-art`). Docs: `06-v1-architecture.md`,
+`web/README.md`, `04-open-questions.md` (endpoint now delivered; the `web/` fetch-consumption half
+remains as `web-fetch-profiles`).
+
+> **Integration note (2026-07-22, batch 2):** D-066 (score-altering) + D-067 (additive) were built as two
+> parallel fan-out laps, merged onto `integration/parallel-laps-2-2026-07-22` (only `cli.py` overlapped —
+> auto-merged, disjoint regions), the viewer callout fixed, and verified together: **280 tests pass**,
+> `export-profiles --check` exit 0 (8 fixtures at v1.1.0), `web/` build clean (21 modules). Landed to
+> `main` after an explicit owner decision (the change moves public scores + a flagship demo).

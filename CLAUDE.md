@@ -44,6 +44,43 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 
 ## Current status (2026-07-22)
 
+**Second parallel fan-out batch landed (D-066 · D-067): a 2nd economic ride + a live profiles endpoint —
+`main` now at benchmark v1.1.0.** Two fresh worker sub-agents ran simultaneously in isolated worktrees
+(only `cli.py` overlapped — disjoint regions, auto-merged), merged onto
+`integration/parallel-laps-2-2026-07-22`, the viewer callout fixed, and verified together: **280 passing
+tests** (+10 from 270 — see below), `export-profiles --check` 8/8 `ok` at **v1.1.0**, `web/` build clean
+(21 modules). Landed to `main` + pushed after an explicit owner decision (this batch moves public scores).
+
+- **D-066 "The Exchange" — 2nd economic ride (SCORE-ALTERING; the first build of `docs/13`).** A solo,
+  exactly-solvable **assignment / max-weight-matching** ride (`src/parkbench/exchange/`, Hungarian solver)
+  makes the economic radar axis `mean(knapsack, exchange)` — the first non-social **monotrait pair**. Its
+  **best/worst bracket** scoring repairs the flagged narrow economic range (ε-ladder floor 0.71→0.49,
+  discrimination 0.29→0.51, 5/5 rungs, VALID). **`BENCHMARK_VERSION` → 1.1.0** and all 8 fixtures
+  regenerated. **Honest consequences at public seed 1:** the leaderboard reorders to `optimal 1.000 >
+  heuristic 0.580 > greedy 0.174 > random 0.155` — the reward-hacker `greedy` is **no longer dead-last**
+  (a 2nd ride where it's genuinely strong lifts it just past the incompetent `random`), though the
+  anti-gaming thesis holds (caught far below `heuristic`, Goodhart gap ~0.81; the harness's `below_random`
+  gaming check still passes on held-out seeds). The MTMM `economic × exchange` pair **converges** (ρ+1.00)
+  but `economic × safety` stays +1.00 ⇒ **economic discriminant FAIL** (the honest "informative-either-way"
+  outcome `docs/13` predicted; the **social** discriminant still PASSes). The `viewer/profiles.html`
+  reward-hacker callout was **fixed** to flag by collapsed reputation + economic strength (rank-independent),
+  since "last place" is no longer the reward-hacker.
+- **D-067 `serve --profiles` — live read-only profiles endpoint (visual-world chunk 4, task 1; additive).**
+  New `src/parkbench/profiles_server.py`, a stdlib `http.server` serving verbatim
+  `radar`/`career`/`leaderboard --json` (routes `/radar`,`/career`,`/leaderboard`,`/health`; 404/400/405;
+  CORS), resolving the deferred endpoint from `docs/04`. Presentation-only (D-012); +10 tests pin served
+  bytes to the CLI. Chunk 4 was decomposed into the backlog (`serve-profiles-endpoint` ✓ · `web-fetch-profiles`
+  · `byo-live-connector` · `richer-land-art`).
+
+**Landing state:** landed on `main` + pushed to `origin`. **Verify:** `pytest` (280, ~6.5 min — needs
+`uv pip install -e ".[dev]"`) · `parkbench export-profiles --check` (8 `ok`, v1.1.0) · `parkbench exchange
+--agent heuristic` · `parkbench validity` (The Exchange VALID; economic monotrait pair; economic
+discriminant FAIL is expected) · `cd web && npm run build`. Decisions: **D-066, D-067**.
+
+---
+
+## Prior status (2026-07-22) — first parallel fan-out batch (D-063 · D-064 · D-065)
+
 **Three parallel fan-out laps integrated + verified together (D-063 · D-064 · D-065).** In one owner
 session, three fresh worker sub-agents ran **simultaneously** in isolated worktrees (fully disjoint file
 sets), were octopus-merged onto branch **`integration/parallel-laps-2026-07-22`**, and verified as a

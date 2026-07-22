@@ -10,43 +10,45 @@
 **Updated:** 2026-07-22
 **Loop state:** IDLE
 
-**Active task:** — (none; three parallel fan-out laps integrated + verified, awaiting land)
+**Active task:** — (none; second parallel fan-out batch landed)
 **Acceptance criteria:** —
-**Task branch:** the three fan-out laps were octopus-merged onto `integration/parallel-laps-2026-07-22`
-(worktree branches `autoloop/task-byo-trainer` 49c0cc0 + `worktree-agent-af080d7b70967b48b` 2bfe5bd +
-`worktree-agent-a8002d1af62f49e6e` b78a46e, plus a consolidation commit), then **fast-forwarded into
-`main` and pushed to `origin`.**
+**Task branch:** D-066 + D-067 were merged onto `integration/parallel-laps-2-2026-07-22` (worktree
+branches `worktree-agent-a298f2036f67e2181` serve af58744 + `worktree-agent-a2dff5aeac81e0b5c` exchange
+c77d4c5; only `cli.py` overlapped — auto-merged), the viewer callout fixed, then **merged into `main` and
+pushed to `origin`.**
 **Tree state:** clean · on `main`
-**Last durable commit:** `git log -1` (the parallel-laps consolidation, now on `main`)
+**Last durable commit:** `git log -1` (the batch-2 consolidation, now on `main`)
 
-**Last integrated (2026-07-22):** **three parallel laps** run simultaneously as fresh worker sub-agents
-in isolated worktrees (fully disjoint files), then merged + verified *together*:
-- **D-063 `byo-trainer`** (Tier B, `web/`) — a BYO agent (`acme-bot`) renders as a "BYO"-chipped
-  palette-swapped trainer; Tab/walk-up selects it → `S` stats screen shows its D-038 identity.
-  `radar-byo.json` stand-in kept outside `export-profiles`' manifest. **Completes visual-world chunk 3.**
-- **D-064 external-validity plan + criterion scaffold** (Tier A) — new Draft `docs/13-external-validity-plan.md`
-  (recommends a second **economic** ride "The Exchange" next; criterion validity needs a one-time online
-  step) + a not-yet-wired `criterion_validity()` scaffold in `validity.py`.
-- **D-065 free-model roster** (Tier A) — curated free OpenRouter models registered as `llm:<model-id>`
-  agents through the one key (`FREE_MODELS` in `agents/llm.py`); keyless heuristic fallback ⇒ tested offline.
-Combined verification: **250 passing tests**, `export-profiles --check` 8 `ok` (exit 0), `web/` build
-clean; seed-1 baselines byte-identical. Integration fixed the one real defect per-branch checks missed
-(`test_export.py` manifest-coverage vs. the un-manifested BYO fixture). Prior lap: `live-profiles` (D-062,
-now the "Prior status" block in `CLAUDE.md`). Per-lap: [`log.md`](log.md); narrative: root `CLAUDE.md`.
+**Last integrated (2026-07-22, batch 2):** two parallel laps, merged + verified *together*, **bench →
+v1.1.0**:
+- **D-066 "The Exchange"** (Tier A, SCORE-ALTERING) — a 2nd economic ride (assignment / Hungarian solver,
+  best/worst bracket) makes the economic radar axis `mean(knapsack, exchange)`; repairs the narrow
+  economic range (ε-ladder floor 0.71→0.49, disc 0.29→0.51, VALID). `BENCHMARK_VERSION` 1.0.0→1.1.0, all
+  8 fixtures regenerated. **Seed-1 leaderboard reorders** (`optimal > heuristic > greedy > random`): the
+  reward-hacker `greedy` is no longer dead-last (still caught below `heuristic`; `below_random` holds on
+  held-out seeds). MTMM: economic monotrait pair converges (ρ+1.00) but economic-vs-safety discriminant
+  **FAILs** (expected; social still PASSes). `viewer/profiles.html` reward-hacker callout fixed to detect
+  by collapsed reputation + economic strength (rank-independent).
+- **D-067 `serve --profiles`** (Tier A, additive) — stdlib read-only HTTP endpoint
+  (`src/parkbench/profiles_server.py`) serving verbatim radar/career/leaderboard `--json`; resolves the
+  deferred `docs/04` endpoint. Chunk 4 decomposed into the backlog.
+Combined verification: **280 passing tests**, `export-profiles --check` 8 `ok` at v1.1.0, `web/` build
+clean. Prior batch: D-063/064/065 (now the first "Prior status" block in `CLAUDE.md`). Per-lap:
+[`log.md`](log.md); narrative: root `CLAUDE.md`.
 
 **Loop / active driver (D-056):** the owner-activated local `/loop` driver remains the standing
 mechanism (`autoloop/LOCAL_DRIVER_PROMPT.md`). The **cloud-cron routine (D-054) stays DESIGNED +
 UNARMED**.
 
-**NEXT ACTION:** Loop is IDLE; the three parallel laps (D-063/064/065) are **landed on `main` + pushed**.
-Next real work, either thread:
-- **Visual world** — decompose **chunk 4** from `docs/11-visual-world.md` "Next" into `autoloop/backlog.md`
-  (the deferred live/served `serve --profiles` endpoint so the world reads *fresh* data not fixtures; a
-  BYO-over-the-wire *live* connector; richer per-land art). That refill is itself a task.
-- **Trust track** — build the **economic 2nd ride "The Exchange"** (assignment/matching) per
-  `docs/13-external-validity-plan.md`, unlocking the first economic monotrait pair in the MTMM matrix.
-Loose end: the Tier-B screenshot of the BYO trainer is still uncaptured (build is green; live
-canvas-capture was flaky against Kaplay's render loop) — recapture opportunistically.
+**NEXT ACTION:** Loop is IDLE; D-066/067 are **landed on `main` + pushed**. Open chunk-4 backlog tasks
+(pull from the top): **`web-fetch-profiles`** (wire the `web/` app to `fetch` from the new
+`serve --profiles` endpoint, fixtures as offline fallback) · **`byo-live-connector`** (render a *live*
+BYO run over the `docs/09` wire as the BYO trainer's data) · **`richer-land-art`**. Trust-track next:
+per `docs/13`, either give **safety/coding** a 2nd ride too (so their axes get monotrait pairs) or start
+the **criterion-validity** cohort (needs a one-time online real-agent step). Loose ends: (a) the
+economic-vs-safety **discriminant FAIL** (D-066) wants a richer BYO agent roster to resolve — tracked in
+`docs/13`; (b) the Tier-B screenshot of the BYO trainer is still uncaptured (Kaplay canvas-capture was
+flaky).
 
 **Blockers / needs-owner:** none. `main` reflects reality (landed + pushed). Optional: the D-065
 `llm:<model-id>` agents run **live** only if `.env`'s `OPENROUTER_API_KEY` is valid — present as of
