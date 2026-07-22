@@ -8,17 +8,24 @@ import radarHeuristic from "./fixtures/radar-heuristic.json";
 import radarGreedy from "./fixtures/radar-greedy.json";
 import radarOptimal from "./fixtures/radar-optimal.json";
 import radarRandom from "./fixtures/radar-random.json";
+import radarByo from "./fixtures/radar-byo.json";
 import leaderboard from "./fixtures/leaderboard.json";
 import { LANDS, ATTRACTIONS, PALETTE } from "./theme.js";
 import { WORLD_W, WORLD_H } from "./world.js";
 
+// `acme-bot` is a bring-your-own (third-party) agent: its radar + D-038 identity come from a
+// completed run's JSON (not the engine's baseline roster), so it renders alongside the baselines but
+// is marked BYO wherever it appears. See docs/09-byo-protocol.md.
 export const RADARS = {
   heuristic: radarHeuristic,
   greedy: radarGreedy,
   optimal: radarOptimal,
   random: radarRandom,
+  "acme-bot": radarByo,
 };
-export const AGENT_ORDER = ["heuristic", "greedy", "optimal", "random"];
+export const AGENT_ORDER = ["heuristic", "greedy", "optimal", "random", "acme-bot"];
+
+const BYO_HEX = "#e08a3c"; // orange — the BYO accent, matching the trainer's chip
 
 // Canonical axis order (matches LANDS + the engine's axis order): social, economic, coding, safety.
 const AXES = LANDS.map((l, i) => ({
@@ -188,8 +195,45 @@ function drawBadges(k, agent) {
   });
 }
 
+// A BYO agent has no career leg on the official leaderboard, so where a baseline shows its reputation
+// + gym badges, a BYO shows its D-038 identity (name · version · config_hash — read straight from the
+// run's JSON) and a plain note that it isn't ranked. Presentation only (D-012).
+function drawByoIdentity(k, identity) {
+  const id = identity || {};
+  const parts = ["BYO AGENT"];
+  if (id.version) parts.push("v" + id.version);
+  if (id.config_hash) parts.push("#" + id.config_hash);
+  k.drawText({
+    text: parts.join(" · "),
+    pos: k.vec2(CX, 52),
+    size: 9,
+    anchor: "center",
+    font: "monospace",
+    color: k.Color.fromHex(BYO_HEX),
+  });
+
+  k.drawLine({ p1: k.vec2(16, 232), p2: k.vec2(WORLD_W - 16, 232), width: 1, color: k.Color.fromHex(PALETTE.mid) });
+  k.drawText({
+    text: "GYM BADGES",
+    pos: k.vec2(CX, 240),
+    size: 7,
+    anchor: "center",
+    font: "monospace",
+    color: k.Color.fromHex(PALETTE.mid),
+  });
+  k.drawText({
+    text: "bring-your-own agent — not on the official leaderboard",
+    pos: k.vec2(CX, 260),
+    size: 7,
+    anchor: "center",
+    font: "monospace",
+    color: k.Color.fromHex(PALETTE.mid),
+  });
+}
+
 function drawStats(k, agent) {
   const data = RADARS[agent];
+  const byo = !!data.byo;
   k.drawRect({ pos: k.vec2(0, 0), width: WORLD_W, height: WORLD_H, color: k.Color.fromHex(PALETTE.ink) });
 
   k.drawText({
@@ -198,11 +242,11 @@ function drawStats(k, agent) {
     size: 20,
     anchor: "center",
     font: "monospace",
-    color: k.Color.fromHex(PALETTE.paper),
+    color: k.Color.fromHex(byo ? BYO_HEX : PALETTE.paper),
   });
   k.drawText({
     text:
-      "SKILL PROFILE · seed " +
+      (byo ? "BYO SKILL PROFILE · seed " : "SKILL PROFILE · seed ") +
       data.seed +
       (data.benchmark_version ? " · bench v" + data.benchmark_version : ""),
     pos: k.vec2(CX, 40),
@@ -213,7 +257,8 @@ function drawStats(k, agent) {
   });
 
   drawRadarShape(k, data);
-  drawBadges(k, agent);
+  if (byo) drawByoIdentity(k, data.identity);
+  else drawBadges(k, agent);
 
   k.drawText({
     text: "← → cycle agent    S / Esc  back to park",

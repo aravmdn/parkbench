@@ -20,11 +20,15 @@ import { registerHallOfFameScene } from "./halloffame.js";
 const PLAYER_AGENT = "heuristic";
 
 // The NPC roster: each baseline gets its own beat of the park to patrol (kept on the crossroads
-// paths, clear of the gyms / pond / entrance sign) and its own pace, so the park reads alive.
+// paths, clear of the gyms / pond / entrance sign) and its own pace, so the park reads alive. The
+// last entry is a **BYO** (bring-your-own) agent — a third-party trainer (`byo: true`) rendered from a
+// completed run's JSON alongside the baselines but marked with a "BYO" chip so spectators can tell it
+// apart (docs/09-byo-protocol.md). It patrols the upper path arm.
 const NPC_TRAINERS = [
   { agent: "random", x: 36, y: 138, speed: 38, route: [[36, 138], [120, 138], [120, 152], [36, 152]] },
   { agent: "greedy", x: 268, y: 152, speed: 44, route: [[268, 152], [184, 152], [184, 138], [268, 138]] },
   { agent: "optimal", x: 152, y: 175, speed: 50, route: [[152, 175], [152, 230], [168, 230], [168, 175]] },
+  { agent: "acme-bot", byo: true, x: 160, y: 64, speed: 42, route: [[152, 64], [152, 112], [168, 112], [168, 64]] },
 ];
 
 // How close (px) the player must walk to an NPC trainer to select it for the stats screen.
