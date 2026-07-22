@@ -29,6 +29,7 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
 | 10 | [`10-autoloop.md`](10-autoloop.md) | Charter for the autonomous **build** loop (D-049/D-051) — local fresh-worker-per-lap, work queue, the two verification tiers, guardrails, push-to-main rules, kill switch. | Living |
 | 11 | [`11-visual-world.md`](11-visual-world.md) | The Pokémon-style visual spectator world (D-050) — the metaphor↔engine mapping, the engine↔front-end JSON split, the Kaplay stack, the art policy. | Draft |
 | 12 | [`12-validity.md`](12-validity.md) | The validity harness (D-055) — proving each ride *measures capability* via a known-ability ladder + resists gaming; metrics, thresholds, results, and the honest remaining gaps. | Living |
+| 13 | [`13-external-validity-plan.md`](13-external-validity-plan.md) | Plan for the *external* half of the trust track — a second economic ride (unlocking an economic monotrait pair) + criterion validity against an external measure; prioritized sequence + the criterion-harness scaffold. | Draft |
 
 ### Reference
 

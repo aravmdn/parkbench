@@ -42,6 +42,35 @@ from .heuristic import HeuristicNegotiator
 # OPENROUTER_MODEL env var. Verified available + JSON-capable on 2026-05-30.
 DEFAULT_MODEL = "openai/gpt-oss-120b:free"
 
+# Curated roster of **free** OpenRouter models to expose as selectable agent variants (D-063).
+#
+# A SINGLE OpenRouter API key already grants access to *every* model, including all ":free" ones —
+# there is no need for multiple keys or accounts. "More free agents" therefore means registering
+# more free *models*, all reachable through the one key. Each id below is registered as an
+# `llm:<model-id>` agent (see ``parkbench.agents.AGENT_REGISTRY``); every variant reuses the exact
+# ``LLMAgent`` machinery and the same graceful heuristic fallback when no key/egress is available.
+#
+# Compiled from the LIVE public catalog (``GET https://openrouter.ai/api/v1/models``, no auth) on
+# 2026-07-22 — kept to general-purpose, JSON-capable instruct/chat models (the catalog's
+# music-generation, content-safety-guardrail, and auto-router ":free" entries are deliberately
+# excluded: they cannot play the negotiation ride). The catalog drifts over time, so an id here may
+# retire; that is harmless — the agent simply falls back to the heuristic (exactly as a keyless run
+# does). The note is a short human hint, not part of the agent's behaviour/identity.
+FREE_MODELS: dict[str, str] = {
+    "openai/gpt-oss-20b:free":
+        "GPT-OSS 20B — same family as the default gpt-oss-120b, smaller/faster; "
+        "strong strict-JSON adherence (131K ctx).",
+    "google/gemma-4-26b-a4b-it:free":
+        "Gemma 4 (sparse MoE, ~4B active) instruction-tuned; efficient general chat (262K ctx).",
+    "google/gemma-4-31b-it:free":
+        "Gemma 4 31B dense instruction-tuned; strong general reasoning (262K ctx).",
+    "nvidia/nemotron-3-super-120b-a12b:free":
+        "Nemotron 3 Super (120B, ~12B active) reasoning; capable mid-large (262K ctx).",
+    "nvidia/nemotron-3-ultra-550b-a55b:free":
+        "Nemotron 3 Ultra (550B, ~55B active) — open frontier reasoning, 1M ctx; the most "
+        "capable free option (larger/slower, may be more rate-limited).",
+}
+
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_TIMEOUT = 20.0  # seconds; a run must never hang on the network
 
@@ -113,11 +142,16 @@ class LLMAgent(Agent):
 
     name = "llm"
 
-    def __init__(self, provider: Optional[Provider] = None) -> None:
+    def __init__(self, provider: Optional[Provider] = None, model: Optional[str] = None) -> None:
         # If no provider is injected, construct an OpenRouter one from the environment.
         # That provider raises (and we fall back) when no key is configured, so the
         # 'llm' agent is always runnable even without credentials.
-        self.provider = provider if provider is not None else OpenRouterProvider()
+        #
+        # ``model`` pins this agent to a specific model id (used by the curated ``llm:<model-id>``
+        # free-model variants, D-063). When given it wins over $OPENROUTER_MODEL; when ``None`` the
+        # provider resolves $OPENROUTER_MODEL then ``DEFAULT_MODEL`` exactly as before. It is only
+        # consulted for a self-built provider — an injected provider already fixes its own model.
+        self.provider = provider if provider is not None else OpenRouterProvider(model=model)
         self._fallback = HeuristicNegotiator()
 
         # Fallback transparency: a run must never be silently mislabeled as a live LLM when it is

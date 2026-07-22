@@ -4,8 +4,11 @@
 // now walks the park at once: every instance gets its own palette-swapped sprite sheet (pixels.js
 // re-tints the same procedural drawing — original / CC0 by construction), its own patrol route +
 // speed, and a name tag. One trainer is the *player* (arrow-key control overrides its patrol; it is
-// the one that enters gyms); the rest wander as NPCs. `setSelected` highlights whichever trainer is
-// currently driving the S stats screen. Presentation only (D-012).
+// the one that enters gyms); the rest wander as NPCs. A **BYO** (bring-your-own) agent joins the same
+// way — an additional palette-swapped trainer that carries a "BYO" chip over its name tag so
+// spectators can tell a third-party agent from the built-in baselines (its identity + radar come from
+// a completed run's JSON, D-038). `setSelected` highlights whichever trainer is currently driving the
+// S stats screen. Presentation only (D-012).
 
 import { makeTrainer, TRAINER_COLS, TRAINER_ROWS } from "./pixels.js";
 import { WORLD_W, WORLD_H } from "./world.js";
@@ -20,6 +23,7 @@ export const AGENT_OUTFITS = {
   greedy: { cap: "#d9a441", shirt: "#a8752c" }, // gold — the Market Midway star (and reward-hacker)
   optimal: { cap: "#e6f0d6", shirt: "#8a5aa8" }, // white cap + violet — the champion
   random: { cap: "#52525a", shirt: "#8a8f98" }, // grey — the coin-flipper
+  "acme-bot": { cap: "#2f9e8f", shirt: "#e08a3c" }, // teal + orange — a BYO (bring-your-own) agent
 };
 
 // The classic patrol: out-and-back along each arm of the central crossroads.
@@ -35,6 +39,7 @@ const DEFAULT_ROUTE = [
 ];
 
 const SELECTED_HEX = "#f6de8a"; // lamp-glow gold for the selected trainer's tag
+const BYO_HEX = "#e08a3c"; // orange — marks a bring-your-own (third-party) trainer
 
 export function addTrainer(k, agent = "heuristic", opts = {}) {
   const {
@@ -43,6 +48,8 @@ export function addTrainer(k, agent = "heuristic", opts = {}) {
     route = DEFAULT_ROUTE,
     speed = SPEED,
     player = false,
+    byo = false,
+    label = agent,
   } = opts;
 
   k.loadSprite("trainer-" + agent, makeTrainer(AGENT_OUTFITS[agent]), {
@@ -71,20 +78,33 @@ export function addTrainer(k, agent = "heuristic", opts = {}) {
   let curName = "down-idle";
   t.play(curName);
 
-  // A small name tag showing which agent this trainer is; follows the sprite.
+  // A small name tag showing which agent this trainer is; follows the sprite. BYO trainers show the
+  // agent's own name (`label`) tinted the BYO accent so a third-party stands out from the baselines.
   const tag = k.add([
-    k.text(agent, { size: 6, font: "monospace" }),
+    k.text(label, { size: 6, font: "monospace" }),
     k.pos(startX, startY - 16),
     k.anchor("center"),
-    k.color(k.Color.fromHex(PALETTE.paper)),
+    k.color(k.Color.fromHex(byo ? BYO_HEX : PALETTE.paper)),
     k.outline(2, k.Color.fromHex(PALETTE.ink)),
     k.z(41),
   ]);
 
+  // A "BYO" chip riding above the name tag — the at-a-glance mark of a bring-your-own trainer.
+  const byoChip = byo
+    ? k.add([
+        k.text("BYO", { size: 6, font: "monospace" }),
+        k.pos(startX, startY - 24),
+        k.anchor("center"),
+        k.color(k.Color.fromHex(BYO_HEX)),
+        k.outline(2, k.Color.fromHex(PALETTE.ink)),
+        k.z(41),
+      ])
+    : null;
+
   // Highlight (or clear) this trainer as the one the stats screen will show.
   t.setSelected = (sel) => {
-    tag.text = (sel ? ">" : "") + agent;
-    tag.color = k.Color.fromHex(sel ? SELECTED_HEX : PALETTE.paper);
+    tag.text = (sel ? ">" : "") + label;
+    tag.color = k.Color.fromHex(sel ? SELECTED_HEX : byo ? BYO_HEX : PALETTE.paper);
   };
 
   const setAnim = (dir, moving) => {
@@ -112,6 +132,7 @@ export function addTrainer(k, agent = "heuristic", opts = {}) {
     if (t.paused) {
       setAnim(t.facing, false);
       tag.pos = k.vec2(t.pos.x, t.pos.y - 16);
+      if (byoChip) byoChip.pos = k.vec2(t.pos.x, t.pos.y - 24);
       return;
     }
 
@@ -141,6 +162,7 @@ export function addTrainer(k, agent = "heuristic", opts = {}) {
     t.pos.x = Math.max(10, Math.min(WORLD_W - 10, t.pos.x));
     t.pos.y = Math.max(24, Math.min(WORLD_H - 10, t.pos.y));
     tag.pos = k.vec2(t.pos.x, t.pos.y - 16);
+    if (byoChip) byoChip.pos = k.vec2(t.pos.x, t.pos.y - 24);
   });
 
   return t;
