@@ -133,6 +133,7 @@ shape, which varies under D-032). Off-record runs also get a `__off_record` dire
 | `heuristic` | test (good) | Time-based concession; concedes cheap issues first (logrolling). |
 | `tough` / `fair` / `cooperative` / `slippery` | house cast | Each gates acceptance with an explicit, time-relaxing **reservation floor** (tough highest → cooperative lowest; `slippery` adds RNG noise) layered over the shared `ConcederStrategy` proposal logic (D-031). |
 | `llm` | test (reference) | A real LLM negotiator via OpenRouter (D-030). Falls back to `heuristic` on any failure. |
+| `llm:<model-id>` | test (reference) | The same LLM agent pinned to a **specific free model** (D-063), e.g. `llm:openai/gpt-oss-20b:free`. A curated free-model roster is registered; any `llm:<free-model>` also works. All reachable through the **one** API key; keyless ⇒ heuristic fallback like `llm`. |
 
 ## The LLM reference agent (D-030)
 
@@ -174,15 +175,57 @@ the key. Run live agents where the provider host is reachable, or point `OPENROU
 `.env`** (auto-loaded, D-033) or the environment — never commit it, and it is deliberately excluded
 from the agent's identity hash (D-038).
 
+### The free-model roster — many agents, one key (D-063)
+
+A **single** OpenRouter API key already unlocks **every** model on the platform, including every
+`:free` one — there is no need for multiple keys or accounts. So "more free LLM agents" just means
+registering more free **models** as agent variants, all driven through that one key by the same
+`LLMAgent` machinery.
+
+Each curated free model is exposed as a selectable agent named `llm:<model-id>`:
+
+```bash
+parkbench run --agent llm:openai/gpt-oss-20b:free --seed 1
+parkbench run --agent llm:google/gemma-4-31b-it:free --seed 1
+parkbench radar --agent llm:nvidia/nemotron-3-ultra-550b-a55b:free   # negotiation-only; other rides skip
+```
+
+The curated roster lives in the `FREE_MODELS` dict in `src/parkbench/agents/llm.py` (model id → a
+short note), and `parkbench.agents.AGENT_REGISTRY` registers one `llm:<id>` variant per entry — so
+they appear in the `--agent` choices for `run`/`radar`/`career`. It was compiled from the **live
+public catalog** (`GET https://openrouter.ai/api/v1/models`, no auth; free = `pricing.prompt` and
+`pricing.completion` both `"0"`) on 2026-07-22, kept to general-purpose, JSON-capable instruct/chat
+models (the catalog's music-generation, content-safety-guardrail, and auto-router `:free` entries
+are excluded — they can't play the negotiation ride). The catalog drifts over time, so an id may
+retire; that is harmless — an unavailable model just falls back to the heuristic, exactly like a
+keyless run.
+
+Curated roster (2026-07-22):
+
+| Agent | Model | Note |
+|---|---|---|
+| `llm:openai/gpt-oss-20b:free` | GPT-OSS 20B | Same family as the default `gpt-oss-120b`, smaller/faster; strong strict-JSON adherence (131K ctx). |
+| `llm:google/gemma-4-26b-a4b-it:free` | Gemma 4 (MoE, ~4B active) | Efficient instruction-tuned general chat (262K ctx). |
+| `llm:google/gemma-4-31b-it:free` | Gemma 4 31B | Dense instruction-tuned; strong general reasoning (262K ctx). |
+| `llm:nvidia/nemotron-3-super-120b-a12b:free` | Nemotron 3 Super (120B, ~12B active) | Capable mid-large reasoning (262K ctx). |
+| `llm:nvidia/nemotron-3-ultra-550b-a55b:free` | Nemotron 3 Ultra (550B, ~55B active) | Open frontier reasoning, 1M ctx; most capable free option (larger/slower, may be more rate-limited). |
+
+Any free model works even if it is not curated: `--agent llm:<vendor>/<model>:free` (or the bare
+`llm` agent with `OPENROUTER_MODEL=<model>`) reaches it through the same key. A pinned `llm:<id>`
+variant **ignores** `OPENROUTER_MODEL` (the selector defines its identity); the bare `llm` agent
+still honours it. The model id is part of the agent's identity hash (D-038) — different models are
+different agents — but the key never is (it is a secret).
+
 ### Environment variables
 
 | Var | Required | Default | Purpose |
 |---|---|---|---|
-| `OPENROUTER_API_KEY` | for live LLM calls | — (absent ⇒ heuristic fallback) | OpenRouter API key. |
-| `OPENROUTER_MODEL` | no | `DEFAULT_MODEL` in `agents/llm.py` (a `:free` model id) | Override the model. |
+| `OPENROUTER_API_KEY` | for live LLM calls | — (absent ⇒ heuristic fallback) | OpenRouter API key. One key reaches every model, incl. all `:free` ones. |
+| `OPENROUTER_MODEL` | no | `DEFAULT_MODEL` in `agents/llm.py` (a `:free` model id) | Override the model for the bare `llm` agent (a pinned `llm:<id>` variant ignores it). |
 
-The default model is the `DEFAULT_MODEL` module constant in `src/parkbench/agents/llm.py`
-(a free model id ending in `:free`); change it there or via `OPENROUTER_MODEL`.
+The default model for the bare `llm` agent is the `DEFAULT_MODEL` module constant in
+`src/parkbench/agents/llm.py` (a free model id ending in `:free`); change it there or via
+`OPENROUTER_MODEL`, or pick a specific free model directly with `--agent llm:<model-id>` (D-063).
 
 The CLI **auto-loads a `.env`** from the working directory at startup (D-033), so dropping
 `OPENROUTER_API_KEY=…` (and optionally `OPENROUTER_MODEL=…`) in a local `.env` is enough — no manual
