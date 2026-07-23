@@ -42,7 +42,30 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 | `docs/05-glossary.md` | Shared vocabulary (ride, house cast, BYO agent, radar profile, …). |
 | `docs/06-v1-architecture.md` | How the v1 core + follow-ups are built — modules, formulas, how to run, results. |
 
-## Current status (2026-07-22)
+## Current status (2026-07-23)
+
+**Live LLM agent repaired (D-068): `--agent llm` now actually hits OpenRouter again.** The owner found
+that even with a valid key, `--agent llm` never made a live call — it silently printed heuristic numbers.
+Root-caused with a live catalog probe + a real negotiation-prompt call; **three compounding causes, all
+fixed (agent-only code — no ride/scoring/fixture change, so no `BENCHMARK_VERSION` bump and committed
+baselines stay byte-identical; benchmark stays v1.1.0):** (1) the default model `openai/gpt-oss-120b:free`
+had been **retired from OpenRouter's free tier** → repointed `DEFAULT_MODEL` to the instruction-tuned
+`google/gemma-4-26b-a4b-it:free` (verified to emit clean strict JSON); (2) `LLMAgent.act` fell back on any
+error but only *warned* for the keyless case → widened `_warn_keyless_once` → **`_warn_fallback_once`** so
+any silent degrade (dead id / 429 / parse) now prints one stderr notice (that widening surfaced cause 3
+instantly); (3) the `max_tokens=256` budget truncated *reasoning* models mid-chain-of-thought (empty
+`content`) → raised to `MOVE_MAX_TOKENS=1536` and curated `FREE_MODELS` honestly (dropped the pathological
+`gpt-oss-20b`; roster = `{gemma-4-31b, nemotron-3-super, nemotron-3-ultra}`). **End-to-end live check:** bare
+`LLMAgent()` over an 8-round match → `live_calls=8, fallback_calls=0, used_live_llm=True`. Two machine-local
+(gitignored) findings surfaced + reconciled: the `.env` also pinned the dead model via `OPENROUTER_MODEL`
+(overrides the code default — repointed to the working model); and an **OS-env `OPENROUTER_API_KEY`
+shadows the `.env` key** (the OS-env one is valid + in use; the `.env` one is never read) — left as-is,
+flagged for the owner. Verify: `parkbench run --agent llm --seed 1` (with a key in `.env` — hits live; no
+warning) · `pytest tests/test_llm_agent.py` (25). Decision: **D-068**.
+
+---
+
+## Prior status (2026-07-22) — second parallel fan-out batch (D-066 · D-067)
 
 **Second parallel fan-out batch landed (D-066 · D-067): a 2nd economic ride + a live profiles endpoint —
 `main` now at benchmark v1.1.0.** Two fresh worker sub-agents ran simultaneously in isolated worktrees

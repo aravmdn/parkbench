@@ -228,6 +228,32 @@ def test_no_key_warns_once_to_stderr(monkeypatch, capsys):
     assert capsys.readouterr().out == ""
 
 
+def test_key_present_live_failure_warns_once_with_distinct_message(monkeypatch, capsys):
+    """A self-built provider that HAS a key but whose live call fails (e.g. a retired model id or a
+    429 rate limit) warns exactly once — with the live-failure message, NOT the keyless one.
+
+    This is the transparency gap the D-068 fix closed: before it, only the keyless case warned, so a
+    dead default model id silently degraded every `--agent llm` run to the heuristic.
+    """
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+
+    def _boom(self, messages, **opts):
+        raise RuntimeError("simulated live failure (e.g. HTTP 404 retired model / 429)")
+
+    monkeypatch.setattr(OpenRouterProvider, "complete", _boom)
+    obs = _obs_for(seed=1)
+    agent = make_agent("llm")  # builds its OWN OpenRouterProvider, and a key IS present
+    agent.reset(0, 8)
+    agent.act(obs)
+    agent.act(obs)  # a second move must NOT warn again
+    err = capsys.readouterr().err
+    assert err.count("a live call to model") == 1
+    assert "OPENROUTER_API_KEY is not set" not in err  # not the keyless message
+    assert agent.used_live_llm is False
+    assert agent.fallback_calls == 2
+    assert capsys.readouterr().out == ""  # stdout/scores untouched
+
+
 def test_openrouter_provider_reads_env(monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     monkeypatch.setenv("OPENROUTER_MODEL", "some/model:free")

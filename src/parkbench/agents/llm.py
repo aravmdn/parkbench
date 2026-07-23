@@ -38,9 +38,18 @@ from ..protocol import Action, Observation, Offer
 from .base import Agent
 from .heuristic import HeuristicNegotiator
 
-# A free OpenRouter model id (ends in ":free"). Easily changed here or via the
-# OPENROUTER_MODEL env var. Verified available + JSON-capable on 2026-05-30.
-DEFAULT_MODEL = "openai/gpt-oss-120b:free"
+# A free OpenRouter model id (ends in ":free"). Easily changed here or via the OPENROUTER_MODEL env
+# var. The catalog drifts and ids retire, so a stale default silently degrades every bare
+# `--agent llm` run to the heuristic (the widened fallback warning in ``_warn_fallback_once`` now
+# surfaces that). The default MUST be an *instruction-tuned* model that emits the answer JSON
+# directly: a *reasoning* model spends the token budget on internal chain-of-thought and often
+# returns empty ``content`` (finish_reason "length") before it ever answers — so it silently falls
+# back (verified 2026-07-23: ``openai/gpt-oss-20b:free`` returns empty content even at 1200 tokens).
+# Re-verified against the LIVE catalog (``GET /api/v1/models``, no auth) + a real negotiation-prompt
+# call on 2026-07-23: gemma-4-26b returns clean strict JSON at the default budget, fast. The previous
+# default ``openai/gpt-oss-120b:free`` had been retired from the free tier — the original silent
+# fallback this fix (D-068) repairs.
+DEFAULT_MODEL = "google/gemma-4-26b-a4b-it:free"
 
 # Curated roster of **free** OpenRouter models to expose as selectable agent variants (D-063).
 #
@@ -56,19 +65,24 @@ DEFAULT_MODEL = "openai/gpt-oss-120b:free"
 # excluded: they cannot play the negotiation ride). The catalog drifts over time, so an id here may
 # retire; that is harmless — the agent simply falls back to the heuristic (exactly as a keyless run
 # does). The note is a short human hint, not part of the agent's behaviour/identity.
+#
+# The roster holds *alternatives to* ``DEFAULT_MODEL`` — the default (``google/gemma-4-26b-a4b-it``)
+# is deliberately not listed (it is always reachable as the bare ``llm`` agent, and still selectable
+# explicitly via the generic ``llm:<model-id>`` prefix). Reasoning models (the Nemotrons below) DO
+# return valid JSON, but only after a long chain-of-thought, so they need the larger ``max_tokens``
+# budget in ``act`` to reach the answer (verified 2026-07-23: both emit clean JSON at 1500 tokens,
+# empty at 256). ``openai/gpt-oss-20b:free`` is intentionally excluded — it reasons without bound and
+# returned empty content even at 1200 tokens (D-068).
 FREE_MODELS: dict[str, str] = {
-    "openai/gpt-oss-20b:free":
-        "GPT-OSS 20B — same family as the default gpt-oss-120b, smaller/faster; "
-        "strong strict-JSON adherence (131K ctx).",
-    "google/gemma-4-26b-a4b-it:free":
-        "Gemma 4 (sparse MoE, ~4B active) instruction-tuned; efficient general chat (262K ctx).",
     "google/gemma-4-31b-it:free":
-        "Gemma 4 31B dense instruction-tuned; strong general reasoning (262K ctx).",
+        "Gemma 4 31B dense instruction-tuned; strong general reasoning, emits JSON "
+        "directly (262K ctx).",
     "nvidia/nemotron-3-super-120b-a12b:free":
-        "Nemotron 3 Super (120B, ~12B active) reasoning; capable mid-large (262K ctx).",
+        "Nemotron 3 Super (120B, ~12B active) reasoning; capable mid-large — needs the "
+        "larger token budget to finish its chain-of-thought (262K ctx).",
     "nvidia/nemotron-3-ultra-550b-a55b:free":
         "Nemotron 3 Ultra (550B, ~55B active) — open frontier reasoning, 1M ctx; the most "
-        "capable free option (larger/slower, may be more rate-limited).",
+        "capable free option (larger/slower, more rate-limited; needs the larger token budget).",
 }
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -155,14 +169,15 @@ class LLMAgent(Agent):
         self._fallback = HeuristicNegotiator()
 
         # Fallback transparency: a run must never be silently mislabeled as a live LLM when it is
-        # actually the deterministic heuristic (no key / network / parse failure). We count live vs.
-        # fallen-back moves and, when we ourselves built a keyless provider, warn ONCE to stderr (never
-        # stdout — the run log/scores stay byte-identical). An injected provider is assumed intentional.
+        # actually the deterministic heuristic (no key / retired model id / rate limit / network /
+        # parse failure). We count live vs. fallen-back moves and, the first time *our own* provider
+        # falls back for ANY reason, warn ONCE to stderr (never stdout — the run log/scores stay
+        # byte-identical). An injected provider is assumed intentional (e.g. tests) and never warns.
         self.live_calls = 0
         self.fallback_calls = 0
         self._built_own_provider = provider is None
         self._no_key = self._built_own_provider and not getattr(self.provider, "api_key", "")
-        self._warned_no_key = False
+        self._warned_fallback = False
 
     @property
     def used_live_llm(self) -> bool:
@@ -276,34 +291,54 @@ class LLMAgent(Agent):
 
     # -- the agent move ------------------------------------------------------
 
+    # Token budget for one move. An instruction-tuned model answers in well under 256 tokens, but a
+    # *reasoning* model (e.g. the Nemotron variants) must first emit a long chain-of-thought and only
+    # then the answer JSON; too small a cap truncates it mid-thought (finish_reason "length", empty
+    # content) and forces a silent fallback. 1536 gives reasoning models room to reach the answer;
+    # instruction-tuned models stop early regardless, so it costs them nothing (D-068).
+    MOVE_MAX_TOKENS = 1536
+
     def act(self, obs: Observation) -> Action:
         try:
-            text = self.provider.complete(self.build_messages(obs), max_tokens=256)
+            text = self.provider.complete(self.build_messages(obs), max_tokens=self.MOVE_MAX_TOKENS)
             action = self.parse_action(text, obs)
             self.live_calls += 1
             return action
         except Exception:
-            # Any failure (no key, network, timeout, bad/parse, validation) -> a safe,
-            # deterministic move. Never raise: a run must not crash/hang.
+            # Any failure (no key, retired model id, rate limit, network, timeout, bad/parse,
+            # validation) -> a safe, deterministic move. Never raise: a run must not crash/hang.
             self.fallback_calls += 1
-            self._warn_keyless_once()
+            self._warn_fallback_once()
             return self._fallback.act(obs)
 
-    def _warn_keyless_once(self) -> None:
-        """Emit a single stderr notice when the 'llm' agent is running with no API key.
+    def _warn_fallback_once(self) -> None:
+        """Emit a single stderr notice the first time the 'llm' agent falls back from a live call.
 
-        Without this, a keyless ``parkbench run --agent llm`` prints heuristic numbers under the
-        ``llm`` label with no signal that it never called a model — a trust footgun. We warn once per
-        agent instance, only to **stderr** (stdout and the run log stay byte-identical), and only when
-        *we* built the keyless provider (an injected provider is assumed intentional, e.g. tests).
+        Without this, a fallback ``parkbench run --agent llm`` prints heuristic numbers under the
+        ``llm`` label with no signal that it never reached a model — a trust footgun. Common silent
+        causes: no API key, a **retired or misspelled model id** (OpenRouter 400/404 — the exact bug
+        the D-068 default repoint fixed), a free-tier **rate limit** (429), a network error/timeout,
+        or an unparseable reply. We warn once per agent instance, only to **stderr** (stdout and the
+        run log stay byte-identical), and only when *we* built the provider (an injected provider is
+        assumed intentional, e.g. tests). The message distinguishes the keyless case from a live
+        call that reached the API but failed, so the operator knows which to fix.
         """
-        if self._no_key and not self._warned_no_key:
-            self._warned_no_key = True
-            print(
+        if not self._built_own_provider or self._warned_fallback:
+            return
+        self._warned_fallback = True
+        if self._no_key:
+            msg = (
                 "[parkbench] llm agent: OPENROUTER_API_KEY is not set — falling back to the "
-                "deterministic heuristic. This run is NOT a live LLM; set the key for a real run.",
-                file=sys.stderr,
+                "deterministic heuristic. This run is NOT a live LLM; set the key for a real run."
             )
+        else:
+            model = getattr(self.provider, "model", "?")
+            msg = (
+                f"[parkbench] llm agent: a live call to model {model!r} failed (retired/misspelled "
+                "model id, rate limit, network error, or unparseable reply) — falling back to the "
+                "deterministic heuristic. This run is NOT a live LLM."
+            )
+        print(msg, file=sys.stderr)
 
 
 def _extract_json_object(text: str) -> dict:

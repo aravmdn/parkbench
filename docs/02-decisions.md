@@ -1441,3 +1441,58 @@ remains as `web-fetch-profiles`).
 > auto-merged, disjoint regions), the viewer callout fixed, and verified together: **280 tests pass**,
 > `export-profiles --check` exit 0 (8 fixtures at v1.1.0), `web/` build clean (21 modules). Landed to
 > `main` after an explicit owner decision (the change moves public scores + a flagship demo).
+
+### D-068 · 2026-07-23 · Fix the live LLM agent — retired default model + silent fallback + reasoning-model token budget
+
+**Symptom the owner hit:** even with a valid `OPENROUTER_API_KEY` in `.env`, `--agent llm` never made a
+live call — it silently printed heuristic numbers. Root-caused with a live probe (`GET /api/v1/models`,
+no auth) + a real negotiation-prompt call. **Three compounding causes, all now fixed (agent-only code —
+no ride/scoring/fixture change, so no `BENCHMARK_VERSION` bump and committed baselines stay
+byte-identical):**
+
+1. **The default model was retired.** `DEFAULT_MODEL` was `openai/gpt-oss-120b:free`, which OpenRouter
+   has since **dropped from the free tier** (live catalog on 2026-07-23: 342 models, 14 `:free`; the 120b
+   is gone). Every request for it errored → fallback. **Repointed the default to
+   `google/gemma-4-26b-a4b-it:free`** — an *instruction-tuned* model verified to return clean strict JSON
+   for the real negotiation prompt at the default budget. The `agents/base.py` identity is model-defined
+   (D-038), so the bare `llm` identity hash changes with the default — expected and correct (a different
+   model *is* a different agent). No committed fixture uses an `llm` identity, so nothing regenerates.
+
+2. **Fallback was invisible.** `LLMAgent.act` catches *every* exception and falls back, but the only
+   warning wired up was the **keyless** case — so a dead model id, a 429, a network error, or an
+   unparseable reply all degraded to the heuristic **silently** under the `llm` label (a trust footgun).
+   **Widened `_warn_keyless_once` → `_warn_fallback_once`:** it now warns once (stderr only — stdout/scores
+   stay byte-identical) on *any* self-built-provider fallback, with a message that distinguishes "no key"
+   from "a live call to model `X` failed". This widened warning is what surfaced cause 3 below instantly.
+   New test `test_key_present_live_failure_warns_once_with_distinct_message`; the injected-provider-silence
+   and keyless-warns-once tests still hold.
+
+3. **Reasoning models were truncated mid-thought.** The per-move budget was `max_tokens=256`. That is
+   plenty for an instruction-tuned model but a *reasoning* model (the Nemotron variants; `gpt-oss`) spends
+   the budget on internal chain-of-thought and returns **empty `content` / finish_reason "length"** before
+   it ever answers. **Raised the budget to `LLMAgent.MOVE_MAX_TOKENS = 1536`** (verified: both Nemotrons
+   emit clean JSON at ~1500 tokens, empty at 256; instruction-tuned models stop early regardless, so it
+   costs them nothing). **Curated `FREE_MODELS` honestly:** dropped `openai/gpt-oss-20b:free` (reasons
+   without bound — still empty at 1200 tokens) and, since the default itself must not appear in the
+   "alternatives" roster, removed the now-default gemma-4-26b; the roster is now
+   `{gemma-4-31b, nemotron-3-super, nemotron-3-ultra}` with notes stating the reasoning ones need the
+   larger budget. Any free model remains selectable via the generic `llm:<model-id>` prefix regardless.
+
+**End-to-end verification (this box, live):** bare `LLMAgent()` over one 8-round match →
+`live_calls=8, fallback_calls=0, used_live_llm=True`.
+
+**Two machine-local (gitignored, uncommitted) findings surfaced + reconciled during the fix — owner
+should be aware:**
+- The **`.env` also pinned the dead model** via `OPENROUTER_MODEL=openai/gpt-oss-120b:free`, which
+  *overrides* `DEFAULT_MODEL` — so the code fix alone would not have helped this box until the `.env` line
+  was repointed (done: → `google/gemma-4-26b-a4b-it:free`). Its comment still lists a couple of alternate
+  ids (`moonshotai/kimi-k2.6:free`, `z-ai/glm-4.5-air:free`) that may likewise be stale.
+- **Two different keys exist.** An `OPENROUTER_API_KEY` set in the **OS environment** (ending `…32e2`,
+  valid — it returned 200) **shadows** the key in `.env` (ending `…7381`, therefore never used/tested),
+  because `dotenv.load_dotenv` will not overwrite a var already in `os.environ`. Runs currently use the
+  OS-env key; if it is ever removed, runs fall through to the untested `.env` key. Left as-is (changing an
+  OS environment variable is the owner's call); flagged here so the precedence is not a future surprise.
+
+**Standing lesson:** OpenRouter's free `:free` catalog drifts and ids retire, so the default/roster must be
+re-checked against the live catalog periodically; the widened fallback warning now makes such rot **loud**
+instead of silent.
