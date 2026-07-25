@@ -2,7 +2,9 @@
 //
 // The world now has a tile overworld, four labeled lands, gym buildings, the full baseline roster
 // walking the park (one palette-swapped trainer per agent), and a stats screen wired to real
-// `parkbench radar --json` fixtures (press S — it shows whichever trainer is selected). The
+// `parkbench radar --json` data (press S — it shows whichever trainer is selected). That data comes
+// from `profiles.js`: **live** from a running `parkbench serve --profiles` endpoint when the page
+// asks for one (`?profiles=http://127.0.0.1:8080`), otherwise from the committed fixtures. The
 // front-end is presentation only — it never scores anything (D-012).
 
 import kaplay from "kaplay";
@@ -13,8 +15,9 @@ import { buildGyms } from "./buildings.js";
 import { buildProps } from "./props.js";
 import { addTrainer } from "./trainer.js";
 import { setupGymRuns } from "./gymrun.js";
-import { registerStatsScene, AGENT_ORDER } from "./radar.js";
+import { registerStatsScene } from "./radar.js";
 import { registerHallOfFameScene } from "./halloffame.js";
+import { AGENT_ORDER, SOURCE, loadProfiles } from "./profiles.js";
 
 // The player-controlled trainer (arrow keys + gym entry). The other baselines walk as NPCs.
 const PLAYER_AGENT = "heuristic";
@@ -90,13 +93,23 @@ k.scene("park", () => {
     k.z(101),
   ]);
 
-  // Selection: the trainer the stats screen will show. Highlights its name tag + the HUD.
+  // Selection: the trainer the stats screen will show. Highlights its name tag + the HUD. The HUD
+  // also carries a small, honest note on **where the numbers come from** — `data: fixture` until the
+  // profiles endpoint answers, `data: live` once it has (the fetch is async, so the world boots on
+  // fixtures and the tag flips when the payloads land). It rides inside the title plate because the
+  // park's greens swallow small text drawn straight onto the grass.
+  const hudText = () =>
+    "S: stats <" + selectedAgent + ">   H: hall   data: " + SOURCE.mode;
   const select = (agent) => {
     selectedAgent = agent;
     for (const t of roster) t.setSelected(t.agent === agent);
-    hud.text = "S: stats <" + agent + ">   H: hall";
+    hud.text = hudText();
   };
   select(selectedAgent);
+  k.onUpdate(() => {
+    const t = hudText();
+    if (hud.text !== t) hud.text = t;
+  });
 
   // Walking the player up to an NPC trainer selects that agent (sticky until re-selected).
   // Only while the user is actually steering — the idle auto-patrol crossing an NPC's beat
@@ -133,3 +146,20 @@ k.scene("park", () => {
 registerStatsScene(k);
 registerHallOfFameScene(k);
 k.go("park");
+
+// Resolve the data source *after* the world is on screen. `loadProfiles` never throws and never
+// blocks the first frame: with no `?profiles=` param it makes no request at all (offline default),
+// and when a live endpoint was asked for it probes with a short deadline, then swaps the live
+// payloads into the store — the scenes read them on the next frame. Failures silently keep fixtures.
+//
+// It is deliberately deferred past the first couple of frames: Kaplay's boot (procedural sprite
+// generation in `pixels.js`) blocks the main thread long enough on a slow/software-GL machine that a
+// probe started *during* it can hit its own deadline before the browser gets to resolve the reply —
+// i.e. a healthy endpoint would look unreachable. Starting after the world is drawn keeps the probe
+// deadline an honest measure of *the endpoint*, so it can stay short.
+const startProfiles = () => loadProfiles().catch(() => {});
+if (typeof requestAnimationFrame === "function") {
+  requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(startProfiles, 0)));
+} else {
+  startProfiles();
+}

@@ -1,10 +1,12 @@
 // halloffame.js — the Hall of Fame: the ranked leaderboard, drawn from real engine JSON.
 //
-// The fixture is verbatim `parkbench leaderboard --seed 1 --json` output. This scene *reads* the
-// ranking and draws it (career score = capability × reputation per agent) — it never computes a score
-// (D-012). Reachable from the overworld by pressing H.
+// The payload is verbatim `parkbench leaderboard --json` output, served **live** by a running
+// `parkbench serve --profiles` endpoint when the page asked for one and it is reachable, and read
+// from the committed fixture otherwise (see `profiles.js`); the footer prints which. This scene
+// *reads* the ranking and draws it (career score = capability × reputation per agent) — it never
+// computes a score (D-012). Reachable from the overworld by pressing H.
 
-import leaderboard from "./fixtures/leaderboard.json";
+import { getLeaderboard, leaderboardSource } from "./profiles.js";
 import { PALETTE } from "./theme.js";
 import { WORLD_W, WORLD_H } from "./world.js";
 
@@ -12,6 +14,9 @@ import { WORLD_W, WORLD_H } from "./world.js";
 const RANK_COLORS = ["#d9a441", "#b8c0c8", "#b07a44", "#7a8a6a"];
 
 function drawHallOfFame(k) {
+  // Re-read every frame: the live fetch swaps this payload in as soon as it lands.
+  const leaderboard = getLeaderboard();
+  const src = leaderboardSource();
   const ink = k.Color.fromHex(PALETTE.ink);
   const mid = k.Color.fromHex(PALETTE.mid);
   const light = k.Color.fromHex(PALETTE.light);
@@ -86,12 +91,23 @@ function drawHallOfFame(k) {
   k.drawText({
     text:
       "H / Esc  back to park" +
-      (leaderboard.benchmark_version ? "   ·   bench v" + leaderboard.benchmark_version : ""),
+      (leaderboard.benchmark_version ? "   ·   bench v" + leaderboard.benchmark_version : "") +
+      "   ·   " +
+      src,
     pos: k.vec2(WORLD_W / 2, WORLD_H - 14),
     size: 8,
     anchor: "center",
     font: "monospace",
     color: mid,
+  });
+  // Same honest source chip as the stats screen.
+  k.drawText({
+    text: src === "live" ? "● LIVE" : "○ FIXTURE",
+    pos: k.vec2(WORLD_W - 8, 8),
+    size: 7,
+    anchor: "topright",
+    font: "monospace",
+    color: k.Color.fromHex(src === "live" ? PALETTE.light : PALETTE.mid),
   });
 }
 

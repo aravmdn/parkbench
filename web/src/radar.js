@@ -1,29 +1,26 @@
 // radar.js — the stats screen: an agent's four-axis skill profile + its career badges, from real JSON.
 //
-// The radar fixtures are verbatim `parkbench radar --agent <a> --seed 1 --json`; the badge row reads
-// verbatim `parkbench leaderboard --seed 1 --json` (per-ride integrity + reputation). This screen only
-// *reads* those numbers and draws them (D-012) — it never computes a score. Reachable with S.
+// The numbers are verbatim `parkbench radar --agent <a> --json`; the badge row reads verbatim
+// `parkbench leaderboard --json` (per-ride integrity + reputation). Both come from `profiles.js`,
+// which serves them **live** from a running `parkbench serve --profiles` endpoint when the page asked
+// for one and it is reachable, and from the committed fixtures otherwise — the screen prints which
+// (the `live` / `fixture` tag beside the `bench vX.Y.Z` stamp). This screen only *reads* those numbers
+// and draws them (D-012) — it never computes a score. Reachable with S.
 
-import radarHeuristic from "./fixtures/radar-heuristic.json";
-import radarGreedy from "./fixtures/radar-greedy.json";
-import radarOptimal from "./fixtures/radar-optimal.json";
-import radarRandom from "./fixtures/radar-random.json";
-import radarByo from "./fixtures/radar-byo.json";
-import leaderboard from "./fixtures/leaderboard.json";
+import {
+  RADARS,
+  AGENT_ORDER,
+  getLeaderboard,
+  radarSource,
+  leaderboardSource,
+} from "./profiles.js";
 import { LANDS, ATTRACTIONS, PALETTE } from "./theme.js";
 import { WORLD_W, WORLD_H } from "./world.js";
 
 // `acme-bot` is a bring-your-own (third-party) agent: its radar + D-038 identity come from a
 // completed run's JSON (not the engine's baseline roster), so it renders alongside the baselines but
 // is marked BYO wherever it appears. See docs/09-byo-protocol.md.
-export const RADARS = {
-  heuristic: radarHeuristic,
-  greedy: radarGreedy,
-  optimal: radarOptimal,
-  random: radarRandom,
-  "acme-bot": radarByo,
-};
-export const AGENT_ORDER = ["heuristic", "greedy", "optimal", "random", "acme-bot"];
+export { RADARS, AGENT_ORDER };
 
 const BYO_HEX = "#e08a3c"; // orange — the BYO accent, matching the trainer's chip
 
@@ -50,16 +47,28 @@ const RIDE_SHORT = {
   coding: "COD",
   safety: "SAF",
 };
-const CAREER = Object.fromEntries(
-  leaderboard.ranking.map((r) => {
-    const integrityByRide = {};
-    for (const leg of r.legs) integrityByRide[leg.ride] = leg.integrity;
-    return [
-      r.agent,
-      { reputation: r.reputation, integrityByRide, skipped: new Set(r.skipped_rides || []) },
-    ];
-  }),
-);
+// Derived from whichever leaderboard payload is current (fixture or live), and re-derived only when
+// that payload is replaced — the live fetch swaps the object, so identity is the cache key.
+let careerCache = { from: null, byAgent: {} };
+function careerFor(agent) {
+  const lb = getLeaderboard();
+  if (careerCache.from !== lb) {
+    careerCache = {
+      from: lb,
+      byAgent: Object.fromEntries(
+        (lb.ranking || []).map((r) => {
+          const integrityByRide = {};
+          for (const leg of r.legs || []) integrityByRide[leg.ride] = leg.integrity;
+          return [
+            r.agent,
+            { reputation: r.reputation, integrityByRide, skipped: new Set(r.skipped_rides || []) },
+          ];
+        }),
+      ),
+    };
+  }
+  return careerCache.byAgent[agent];
+}
 
 const WARN = "#e05a5a"; // cracked-badge red
 
@@ -112,7 +121,7 @@ function drawRadarShape(k, data) {
 }
 
 function drawBadges(k, agent) {
-  const c = CAREER[agent];
+  const c = careerFor(agent);
   if (!c) return;
 
   // Reputation line — colour-coded by how intact the career is.
@@ -134,7 +143,7 @@ function drawBadges(k, agent) {
     color: k.Color.fromHex(PALETTE.mid),
   });
   k.drawText({
-    text: "GYM BADGES",
+    text: "GYM BADGES · " + leaderboardSource(),
     pos: k.vec2(CX, 240),
     size: 7,
     anchor: "center",
@@ -244,16 +253,29 @@ function drawStats(k, agent) {
     font: "monospace",
     color: k.Color.fromHex(byo ? BYO_HEX : PALETTE.paper),
   });
+  const src = radarSource(agent);
   k.drawText({
     text:
       (byo ? "BYO SKILL PROFILE · seed " : "SKILL PROFILE · seed ") +
       data.seed +
-      (data.benchmark_version ? " · bench v" + data.benchmark_version : ""),
+      (data.benchmark_version ? " · bench v" + data.benchmark_version : "") +
+      " · " +
+      src,
     pos: k.vec2(CX, 40),
     size: 8,
     anchor: "center",
     font: "monospace",
     color: k.Color.fromHex(PALETTE.light),
+  });
+  // Where these numbers came from, stated plainly: LIVE = fetched from a running
+  // `parkbench serve --profiles`; FIXTURE = the committed export (see profiles.js).
+  k.drawText({
+    text: src === "live" ? "● LIVE" : "○ FIXTURE",
+    pos: k.vec2(WORLD_W - 8, 8),
+    size: 7,
+    anchor: "topright",
+    font: "monospace",
+    color: k.Color.fromHex(src === "live" ? PALETTE.light : PALETTE.mid),
   });
 
   drawRadarShape(k, data);
