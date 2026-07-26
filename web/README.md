@@ -43,9 +43,42 @@ parkbench serve --profiles --port 8080   # GET /radar?agent=… /career?agent=�
 Every response is the **verbatim** `parkbench <cmd> --json` output (byte-parity is pinned by
 `tests/test_serve_profiles.py`), so it is a drop-in for the fixture files: `fetch('…/radar?agent=heuristic')`
 gives the same JSON as `import`ing `src/fixtures/radar-heuristic.json`. Responses set
-`Access-Control-Allow-Origin: *` so the Vite dev server (a different port) can fetch cross-origin. Wiring
-the world to fetch this endpoint (with the fixtures as the fallback when the server is down) is the
-follow-up `web-fetch-profiles` task — see `../autoloop/backlog.md` and `../docs/06-v1-architecture.md`.
+`Access-Control-Allow-Origin: *` so the Vite dev server (a different port) can fetch cross-origin.
+
+**The world reads that endpoint** (D-069, `src/profiles.js`). Point the page at it with a `?profiles=`
+query param:
+
+| URL | What the world uses |
+|---|---|
+| `/` (no param) | **fixtures only — no network request is ever made** (the offline default) |
+| `/?profiles=http://127.0.0.1:8080` | **live** JSON from that endpoint |
+| `/?profiles=1` (`on`/`live`/`auto`/`yes`) | live from the default base `http://127.0.0.1:8080` |
+| `/?profiles=0` (`off`/`fixture`) | fixtures only, explicitly |
+
+So the usual live loop is:
+
+```sh
+parkbench serve --profiles --port 8080          # terminal 1 (from the repo root)
+cd web && npm run dev                           # terminal 2
+# open http://localhost:5173/?profiles=http://127.0.0.1:8080
+```
+
+How it behaves:
+
+- **The world always boots on the fixtures first**, synchronously — live payloads are fetched after the
+  first frames and swapped in when they land, so nothing ever waits on the network. Reachability is a
+  **short `/health` probe** (2.5 s, `AbortController`); if it fails — server down, wrong port, wrong URL
+  — the world simply stays on the fixtures. No hang, no blank screen, no thrown error.
+- **The UI says which source it is showing**, next to the existing `bench vX.Y.Z` stamp: the stats
+  screen subtitle and the Hall of Fame footer end in `· live` or `· fixture` (plus a `● LIVE` /
+  `○ FIXTURE` chip in the corner), and the park HUD shows `data: live` / `data: fixture`. Tags are
+  **per payload**, so a partial upgrade can never lie about the rest.
+- The **BYO** trainer (`acme-bot`) always stays on its committed run fixture — it isn't part of the
+  engine's baseline roster, so there is nothing live to ask the endpoint for.
+- One honest wrinkle: if you *ask* for live data (`?profiles=…`) and the endpoint is **down**, the
+  browser logs its own `net::ERR_CONNECTION_REFUSED` line for the failed probe. That is the browser's
+  network log, not an app error (the app logs a single `console.info` saying it fell back). The plain
+  no-param load stays completely clean because it makes no request at all.
 
 ## Stack
 
@@ -76,6 +109,8 @@ A blank/placeholder Kaplay canvas should boot with **no console errors**.
   trainer gets a gold `>name` tag and is the agent the **S** stats screen opens on (the top-right HUD
   shows `S: stats [<agent>]`). **S** = stats/radar screen (← → cycles agents there too), **H** = Hall
   of Fame, and stepping the player into a **gym** plays that ride and reveals the real score.
+- **Where the numbers came from** is always on screen: the HUD's `data: live` / `data: fixture`, and
+  the matching tag on the stats screen + Hall of Fame (see the `serve --profiles` section above).
 
 ## Layout
 
@@ -84,6 +119,7 @@ web/
   index.html      # page shell; mounts the Kaplay canvas into #app
   src/
     main.js       # boots Kaplay, defines scenes, runs the world
+    profiles.js   # the data source: live `serve --profiles` JSON when asked for, fixtures otherwise
     theme.js      # front-end mirror of the engine's park skin (lands, rides, palette) — presentation only
   package.json
 ```

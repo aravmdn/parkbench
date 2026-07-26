@@ -1,0 +1,37 @@
+{
+  "label": "fixture",
+  "url": "http://localhost:4179/",
+  "console": [
+    {
+      "type": "info",
+      "text": "[parkbench] data source: fixture (committed fixtures - add ?profiles=http://127.0.0.1:8080 for live data)"
+    }
+  ],
+  "consoleErrors": [],
+  "consoleWarnings": [],
+  "pageErrors": [],
+  "requestFailures": [],
+  "profileRequests": [],
+  "shots": [
+    {
+      "name": "park",
+      "file": "C:\\projects\\theme park\\.claude\\worktrees\\agent-a249aee8c8c14ba4b\\autoloop\\shots\\2026-08-05-2020\\fixture-park.png",
+      "via": "canvas.toDataURL"
+    },
+    {
+      "name": "stats-heuristic",
+      "file": "C:\\projects\\theme park\\.claude\\worktrees\\agent-a249aee8c8c14ba4b\\autoloop\\shots\\2026-08-05-2020\\fixture-stats-heuristic.png",
+      "via": "canvas.toDataURL"
+    },
+    {
+      "name": "stats-greedy",
+      "file": "C:\\projects\\theme park\\.claude\\worktrees\\agent-a249aee8c8c14ba4b\\autoloop\\shots\\2026-08-05-2020\\fixture-stats-greedy.png",
+      "via": "canvas.toDataURL"
+    },
+    {
+      "name": "halloffame",
+      "file": "C:\\projects\\theme park\\.claude\\worktrees\\agent-a249aee8c8c14ba4b\\autoloop\\shots\\2026-08-05-2020\\fixture-halloffame.png",
+      "via": "canvas.toDataURL"
+    }
+  ]
+}

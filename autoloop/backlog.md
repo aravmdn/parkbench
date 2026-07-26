@@ -150,7 +150,7 @@ the base the next two build on, so keep it first.
   `worktree-agent-a298f2036f67e2181` (`src/parkbench/profiles_server.py` + `serve --profiles`;
   `/radar`·`/career`·`/leaderboard`·`/health`, 404/400/405, CORS; +10 tests; docs updated). Final
   landing on `main` + the decision-log entry are the integrator's step (see the lap report).
-- [ ] `web-fetch-profiles` — Wire the `web/` app to **`fetch` a profile from `serve-profiles-endpoint`
+- [x] `web-fetch-profiles` — Wire the `web/` app to **`fetch` a profile from `serve-profiles-endpoint`
   instead of importing a build-time fixture**: when the endpoint is reachable (configurable base URL,
   e.g. `?profiles=http://127.0.0.1:8080`), the stats screen / Hall of Fame render live JSON; otherwise
   fall back to the committed `src/fixtures/*.json` so the offline world still works. Keep the front-end
@@ -158,7 +158,11 @@ the base the next two build on, so keep it first.
   world renders live radar/leaderboard data (verified by a headless load + screenshot), the fixture
   fallback still boots with the server down, the build is clean with no console errors, `web/README.md`
   documents the live-vs-fixture switch, and a screenshot is committed to `autoloop/shots/<ts>/`
-  (Tier B; no engine code — consumes the endpoint from the prior task).
+  (Tier B; no engine code — consumes the endpoint from the prior task). ✅ landed (D-069) — `web/src/profiles.js`
+  resolves the data source from `?profiles=…` (live endpoint) and falls back to the
+  committed fixtures otherwise, with the source shown on screen per payload. Verified headless
+  with the endpoint up (5/5 payloads live, 0 console errors) and down (fixture fallback, world
+  still renders). Shots: `autoloop/shots/2026-08-05-2020/`.
 - [ ] `byo-live-connector` — Render a **live** third-party (BYO) run in the world rather than a
   hand-authored fixture: drive a BYO agent through the negotiation wire per `docs/09-byo-protocol.md`
   (reuse `parkbench serve` + `client.drive_agent`, or a small in-process helper), capture the resulting
@@ -173,7 +177,6 @@ the base the next two build on, so keep it first.
   art policy in `docs/11`). **Done when:** each land is recognizably themed (distinct ground/props, not
   just a tint), the build is clean with no console errors, and before/after screenshots are committed to
   `autoloop/shots/<ts>/` (Tier B; no engine code).
-
 > **Chunk 4 first task landed on `main`** (`serve-profiles-endpoint`, D-067). **Next up:**
 > `web-fetch-profiles` (needs the endpoint), then `byo-live-connector`, then `richer-land-art`.
 

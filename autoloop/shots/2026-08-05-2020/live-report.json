@@ -1,0 +1,44 @@
+{
+  "label": "live",
+  "url": "http://localhost:4179/?profiles=http%3A%2F%2F127.0.0.1%3A8099",
+  "console": [
+    {
+      "type": "info",
+      "text": "[parkbench] data source: live (5/5 payloads live from http://127.0.0.1:8099)"
+    }
+  ],
+  "consoleErrors": [],
+  "consoleWarnings": [],
+  "pageErrors": [],
+  "requestFailures": [],
+  "profileRequests": [
+    "200 http://127.0.0.1:8099/health",
+    "200 http://127.0.0.1:8099/radar?agent=greedy",
+    "200 http://127.0.0.1:8099/radar?agent=random",
+    "200 http://127.0.0.1:8099/radar?agent=heuristic",
+    "200 http://127.0.0.1:8099/radar?agent=optimal",
+    "200 http://127.0.0.1:8099/leaderboard"
+  ],
+  "shots": [
+    {
+      "name": "park",
+      "file": "C:\\projects\\theme park\\.claude\\worktrees\\agent-a249aee8c8c14ba4b\\autoloop\\shots\\2026-08-05-2020\\live-park.png",
+      "via": "canvas.toDataURL"
+    },
+    {
+      "name": "stats-heuristic",
+      "file": "C:\\projects\\theme park\\.claude\\worktrees\\agent-a249aee8c8c14ba4b\\autoloop\\shots\\2026-08-05-2020\\live-stats-heuristic.png",
+      "via": "canvas.toDataURL"
+    },
+    {
+      "name": "stats-greedy",
+      "file": "C:\\projects\\theme park\\.claude\\worktrees\\agent-a249aee8c8c14ba4b\\autoloop\\shots\\2026-08-05-2020\\live-stats-greedy.png",
+      "via": "canvas.toDataURL"
+    },
+    {
+      "name": "halloffame",
+      "file": "C:\\projects\\theme park\\.claude\\worktrees\\agent-a249aee8c8c14ba4b\\autoloop\\shots\\2026-08-05-2020\\live-halloffame.png",
+      "via": "canvas.toDataURL"
+    }
+  ]
+}

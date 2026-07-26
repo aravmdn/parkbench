@@ -36,11 +36,21 @@ The metaphor is a near 1:1 with the engine — that's why it's worth doing prope
 - **Front-end (new, its own app):** lives in **`web/`** as a **separate application** that **is allowed
   dependencies and a build step** (the stdlib-only rule is an *engine* rule; it does not bind the
   front-end). It consumes the engine's JSON and renders the world. No scoring logic ever lives here.
-- **Data flow:** engine → JSON → `web/` reads it. During development the loop can generate fixture JSON
-  (e.g. from the seeded baselines) into `web/` so the world has something to render offline. Those
-  fixtures are no longer hand-copied: **`parkbench export-profiles`** (D-062) regenerates every
-  `web/` + `viewer/` fixture from the versioned CLI in one command, and `parkbench export-profiles
-  --check` is a standing provenance guard that fails if any committed fixture drifts from the engine.
+- **Data flow:** engine → JSON → `web/` reads it. There are now **two** paths to the same bytes, and the
+  world uses whichever is available (D-069, `web/src/profiles.js`):
+  - **live** — `fetch`ed from a running **`parkbench serve --profiles`** endpoint (D-067) when the page
+    asks for one (`?profiles=http://127.0.0.1:8080`; `?profiles=1` uses that default base). The world
+    still boots on the fixtures and swaps live payloads in when they land, so nothing waits on the
+    network; a short `/health` probe (2.5 s, `AbortController`) decides reachability.
+  - **offline (default)** — the committed fixtures. With no `?profiles=` param the app makes **no
+    network request at all**, so a plain load can't depend on a server that probably isn't running.
+    Those fixtures are not hand-copied: **`parkbench export-profiles`** (D-062) regenerates every
+    `web/` + `viewer/` fixture from the versioned CLI in one command, and `parkbench export-profiles
+    --check` is a standing provenance guard that fails if any committed fixture drifts from the engine.
+
+  Because the endpoint serves the *verbatim* CLI JSON the exporter writes, the two are drop-in
+  equivalents — and the world **says which one it is showing** (`· live` / `· fixture` beside the
+  `bench vX.Y.Z` stamp, per payload), so a spectator is never guessing at provenance.
 
 ## Stack
 
@@ -99,3 +109,12 @@ surfaces its D-038 identity where a baseline shows reputation + badges. Presenta
 **Next:** decompose **chunk 4** from this doc's "Next" — live/served profiles (the deferred
 `serve --profiles` endpoint), richer per-land art, and a BYO-over-the-wire connector that renders a
 *live* third-party run rather than a fixture.
+
+**Chunk 4 in progress (2026-07-22 → 2026-08-05).** `serve-profiles-endpoint` landed 2026-07-22 (D-067,
+the engine half) and **`web-fetch-profiles` landed 2026-08-05 (D-069, the front-end half)**: the world
+now reads that endpoint when the page asks for it (`?profiles=…`) and the committed fixtures otherwise,
+with the source surfaced on screen (see "Data flow" above). Verified Tier-B headless with the endpoint
+up (5/5 payloads live, zero console errors) and down (fixture fallback, world still renders) — shots in
+`autoloop/shots/2026-08-05-2020/`, including a run against `serve --profiles --seed 7` whose **seed-7**
+numbers appear in no committed fixture, proving the live path end to end. Remaining chunk-4 tasks:
+`byo-live-connector` and `richer-land-art`.

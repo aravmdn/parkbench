@@ -1,6 +1,6 @@
 # 02 — Decision Log
 
-**Status:** Living · **Last updated:** 2026-07-03
+**Status:** Living · **Last updated:** 2026-07-26
 
 Append-only log of decisions and their rationale (lightweight ADR style). When a decision is
 reversed or superseded, add a **new** entry referencing the old one rather than editing history.
@@ -1496,3 +1496,45 @@ should be aware:**
 **Standing lesson:** OpenRouter's free `:free` catalog drifts and ids retire, so the default/roster must be
 re-checked against the live catalog periodically; the widened fallback warning now makes such rot **loud**
 instead of silent.
+### D-069 · 2026-08-05 · `web-fetch-profiles` — the world reads the live profiles endpoint, fixtures as the fallback (visual-world chunk 4, task 2)
+
+The front-end half of D-067. `web/` no longer *only* imports build-time fixture JSON: a new
+presentation-only loader **`web/src/profiles.js`** owns the world's data and resolves it from a page
+query param — `?profiles=http://127.0.0.1:8080` (or `?profiles=1` for that default base) fetches the
+**verbatim** `radar`/`leaderboard --json` from a running `parkbench serve --profiles`; **no param means
+fixtures only, with no network request at all**; `?profiles=off` forces fixtures. No engine code was
+touched (Tier B only — `src/parkbench/**`, `tests/**` and the committed fixtures are untouched, so
+scores and `BENCHMARK_VERSION` are unchanged).
+
+Design points, each chosen to keep the offline world exactly as reliable as before:
+
+- **Fixtures first, live second.** The store is seeded synchronously from the committed fixtures, so
+  frame 1 always draws; `loadProfiles()` runs *after* the first frames and mutates entries in place, and
+  the scenes (which re-read every frame) simply start showing live numbers. Nothing blocks on the wire.
+- **Fast, honest reachability.** A short `/health` probe (2.5 s, `AbortController`) decides
+  live-vs-fixture; data fetches get a longer budget (20 s) because the world is already interactive.
+  Any failure — dead port, wrong URL, 4xx, unparseable body — silently keeps the fixture for that
+  payload, and a shape guard (`axes` / `ranking`) means a foreign payload can never reach the draw loop.
+  *Why the load is deferred past the first frames:* Kaplay's boot (procedural sprite generation) can
+  block the main thread for >1.5 s on a software-GL machine, and a probe started *inside* that stall can
+  hit its own deadline before the browser resolves a perfectly healthy reply — the deadline must measure
+  the endpoint, not the boot.
+- **The UI states its provenance.** Per-payload `live` / `fixture` tags sit next to the existing
+  `bench vX.Y.Z` stamp (stats-screen subtitle + badge shelf, Hall of Fame footer, a corner `● LIVE` /
+  `○ FIXTURE` chip), and the park HUD carries `data: live` / `data: fixture`. Per payload, not global,
+  so a partial upgrade cannot overstate itself. The **BYO** trainer (`acme-bot`) stays on its committed
+  run fixture by construction — it is not on the engine's baseline roster, so there is nothing live to
+  ask for, and it keeps saying `fixture` even in live mode.
+
+**Tier-B verification** (headless Chromium over `vite preview` of `web/dist`): build clean (22 modules);
+**endpoint up** → `5/5 payloads live`, six 200s (`/health` + 4 radars + `/leaderboard`), **zero** console
+errors/warnings and zero page errors; **endpoint down / no param** → the world renders identically from
+the fixtures with the `fixture` tag, no hang. Shots + full console/network traces in
+`autoloop/shots/2026-08-05-2020/`, including a `serve --profiles --seed 7` run whose **seed-7** numbers
+(social 0.970 / economic 0.983) exist in **no** committed fixture — end-to-end proof the pixels came from
+the endpoint. Honest wrinkle recorded in `web/README.md`: when live data is *requested* but the server is
+down, the **browser** logs one `net::ERR_CONNECTION_REFUSED` for the failed probe (its network log, not
+an app error); the default no-param load stays completely silent because it never requests.
+
+Docs: `web/README.md` (the live-vs-fixture switch + the live loop), `11-visual-world.md` (two data paths;
+chunk-4 progress). Chunk 4 now has `byo-live-connector` + `richer-land-art` left.

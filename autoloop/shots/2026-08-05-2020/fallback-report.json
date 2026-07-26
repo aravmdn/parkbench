@@ -1,0 +1,48 @@
+{
+  "label": "fallback",
+  "url": "http://localhost:4179/?profiles=http%3A%2F%2F127.0.0.1%3A8099",
+  "console": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    },
+    {
+      "type": "info",
+      "text": "[parkbench] data source: fixture (no profiles endpoint at http://127.0.0.1:8099 - showing committed fixtures)"
+    }
+  ],
+  "consoleErrors": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    }
+  ],
+  "consoleWarnings": [],
+  "pageErrors": [],
+  "requestFailures": [
+    "http://127.0.0.1:8099/health :: net::ERR_CONNECTION_REFUSED"
+  ],
+  "profileRequests": [],
+  "shots": [
+    {
+      "name": "park",
+      "file": "C:\\projects\\theme park\\.claude\\worktrees\\agent-a249aee8c8c14ba4b\\autoloop\\shots\\2026-08-05-2020\\fallback-park.png",
+      "via": "canvas.toDataURL"
+    },
+    {
+      "name": "stats-heuristic",
+      "file": "C:\\projects\\theme park\\.claude\\worktrees\\agent-a249aee8c8c14ba4b\\autoloop\\shots\\2026-08-05-2020\\fallback-stats-heuristic.png",
+      "via": "canvas.toDataURL"
+    },
+    {
+      "name": "stats-greedy",
+      "file": "C:\\projects\\theme park\\.claude\\worktrees\\agent-a249aee8c8c14ba4b\\autoloop\\shots\\2026-08-05-2020\\fallback-stats-greedy.png",
+      "via": "canvas.toDataURL"
+    },
+    {
+      "name": "halloffame",
+      "file": "C:\\projects\\theme park\\.claude\\worktrees\\agent-a249aee8c8c14ba4b\\autoloop\\shots\\2026-08-05-2020\\fallback-halloffame.png",
+      "via": "canvas.toDataURL"
+    }
+  ]
+}
