@@ -1,12 +1,23 @@
-// props.js — world dressing: an entrance sign, per-land flavor props, and a controls legend.
+// props.js — world dressing: an entrance sign, park furniture, the per-land scenery, and a legend.
 //
 // Pure decoration to make the park feel inhabited and its controls discoverable. Presentation only
-// (D-012). Props are procedural sprites (pixels.js); the legend/entrance are drawn objects.
+// (D-012). Props are procedural sprites (pixels.js); the legend/entrance are drawn objects. The
+// per-land theming (fountain / stalls / works yard / hazard course) lives in landart.js and is
+// hung off this same pass.
 
-import { LANDS, PALETTE, PARK_NAME } from "./theme.js";
-import { landRect } from "./lands.js";
+import { PALETTE, PARK_NAME } from "./theme.js";
 import { makeLamp, makeBench } from "./pixels.js";
 import { WORLD_W, WORLD_H } from "./world.js";
+import { buildLandArt } from "./landart.js";
+
+// One bench per land, parked in open grass just off that land's paved forecourt (world.js
+// LAND_GROUND) so the park furniture never sits on the plaza / cobbles / yard / hazard kerb.
+const BENCHES = [
+  [34, 72], // Society Square — beside the fountain lawn
+  [196, 76], // Market Midway — on the pond bank
+  [34, 210], // Maker's Workshop — above the works yard
+  [196, 200], // Safety Gauntlet — above the hazard kerb
+];
 
 export function buildProps(k) {
   k.loadSprite("lamp", makeLamp());
@@ -17,11 +28,12 @@ export function buildProps(k) {
     k.add([k.sprite("lamp"), k.pos(x, y), k.anchor("center"), k.z(20)]);
   }
 
-  // One bench per land, in open grass off to the side.
-  for (const land of LANDS) {
-    const r = landRect(land.axis);
-    k.add([k.sprite("bench"), k.pos(r.x + 20, r.cy + 4), k.anchor("center"), k.z(20)]);
+  for (const [x, y] of BENCHES) {
+    k.add([k.sprite("bench"), k.pos(x, y), k.anchor("center"), k.z(20)]);
   }
+
+  // The four lands' own scenery.
+  buildLandArt(k);
 
   // Entrance signboard near the foot of the central path.
   const ex = WORLD_W / 2;

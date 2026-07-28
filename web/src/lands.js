@@ -31,12 +31,14 @@ export function buildLands(k) {
   for (const land of LANDS) {
     const r = landRect(land.axis);
 
-    // Faint accent wash so each region reads as its own place (grass still shows through).
+    // Faint accent wash tying the quadrant together. It used to be the *only* thing distinguishing
+    // the lands; now that each land has its own ground treatment + props (world.js LAND_GROUND,
+    // landart.js) the wash is lighter, so it unifies the region without muddying the new texture.
     k.add([
       k.rect(r.w, r.h),
       k.pos(r.x, r.y),
       k.color(k.Color.fromHex(land.accent)),
-      k.opacity(0.16),
+      k.opacity(0.1),
       k.z(10),
     ]);
 
