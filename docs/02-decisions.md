@@ -1,6 +1,6 @@
 # 02 — Decision Log
 
-**Status:** Living · **Last updated:** 2026-07-26
+**Status:** Living · **Last updated:** 2026-07-29
 
 Append-only log of decisions and their rationale (lightweight ADR style). When a decision is
 reversed or superseded, add a **new** entry referencing the old one rather than editing history.
@@ -1538,3 +1538,33 @@ an app error); the default no-param load stays completely silent because it neve
 
 Docs: `web/README.md` (the live-vs-fixture switch + the live loop), `11-visual-world.md` (two data paths;
 chunk-4 progress). Chunk 4 now has `byo-live-connector` + `richer-land-art` left.
+
+### D-070 · 2026-08-05 · Richer per-land art — each land gets its own ground + props (visual-world chunk 4)
+
+The four lands were distinguished **only by a flat accent wash + a name sign**, so Society Square,
+Market Midway, Maker's Workshop and the Safety Gauntlet all read as "green park, slightly different
+tint". This lap gives each land a real identity, in two layers:
+
+- **Ground treatment (the tilemap).** `world.js` gained `LAND_GROUND` — one paved forecourt per
+  quadrant — and `pixels.js` five new procedural tiles that take their signature colour from the same
+  `LANDS` accent the signs/gyms use: `S` a swept **flagstone plaza** (Society Square), `M` warm
+  **market cobbles** in offset courses with gold setts (Market Midway), `F` **steel checkerplate**
+  with tread + an accent rivet (Maker's Workshop), and `X`/`H` a **hazard-striped kerb** leading onto
+  a **concrete apron** (Safety Gauntlet).
+- **Props (new `web/src/landart.js`).** One motif per land from 10 new procedural generators: a stone
+  **fountain** + clipped **topiary hedges**; two awninged **market stalls** + goods **barrels**;
+  **crate stacks**, an **anvil**, a **cog wheel**; a **warning sign**, **traffic cones**, a striped
+  **barrier**. Hung off `buildProps()` so `main.js` was not touched.
+
+All art stays **procedurally generated in code** — original / CC0 by construction, deterministic seed,
+drawn once at boot, no per-frame allocation, no asset files (the art policy in `docs/11`). Cohesion is
+enforced by construction: every land colour is `mix()`ed between the shared GB ink/paper anchors and
+that land's accent, so four distinct places still read as one park; the quadrant accent wash was
+lightened **0.16 → 0.10** now that the ground carries the identity, and the per-land benches moved off
+the new paving. Placement is deliberately clear of the crossroads paths (the trainers' patrol routes),
+the gym footprints and their approach, and the entrance signboard — **the world stays walkable**.
+
+**Presentation-only (D-012), Tier B: no engine code, no scoring, no fixture touched** — `web/` build
+clean (22 modules), headless load with **0 console errors**, all five trainers still patrol, and gym
+entry still fires (walk-in showed `The Commons Carousel` / SCORE **0.951**, straight from the radar
+fixture). Before/after + per-land screenshots: `autoloop/shots/2026-08-05-2022/`.

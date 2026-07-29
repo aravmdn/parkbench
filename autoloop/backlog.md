@@ -171,12 +171,21 @@ the base the next two build on, so keep it first.
   completed-run JSON (not a committed fixture) drives the BYO trainer's stats screen, the flow is
   documented, any engine-side helper is stdlib-only + tested with `pytest` green + baselines
   byte-identical, the build is clean, and a screenshot is committed (Tier A+B).
-- [ ] `richer-land-art` — Upgrade the four lands' placeholder art beyond flat accent tints: per-land
+- [x] `richer-land-art` — Upgrade the four lands' placeholder art beyond flat accent tints: per-land
   tilesets/props that make Society Square / Market Midway / Maker's Workshop / Safety Gauntlet visually
   distinct (procedural + original/CC0-by-construction — extend `pixels.js`, no ripped assets, per the
   art policy in `docs/11`). **Done when:** each land is recognizably themed (distinct ground/props, not
   just a tint), the build is clean with no console errors, and before/after screenshots are committed to
-  `autoloop/shots/<ts>/` (Tier B; no engine code).
+  `autoloop/shots/<ts>/` (Tier B; no engine code). ✅ built + verified in worktree branch
+  `worktree-agent-ae9b853a96ffc7c6e` (D-070) — each land now has its own **ground treatment** (a paved
+  forecourt per quadrant: flagstone plaza · market cobbles · steel checkerplate · hazard kerb +
+  concrete apron, `world.js` `LAND_GROUND` + 5 new tiles in `pixels.js`) plus its own **props** (new
+  `landart.js`: fountain + topiary · awninged stalls + barrels · crates/anvil/cog · warning sign/cones/
+  barrier — 10 new procedural generators). Accent wash dropped 0.16→0.10 now that the ground carries
+  the identity. Presentation-only; no engine code. Build clean (22 modules), 0 console errors,
+  trainers still patrol + gym entry still fires (`The Commons Carousel` 0.951). Shots:
+  `autoloop/shots/2026-08-05-2022/`.
+
 > **Chunk 4 first task landed on `main`** (`serve-profiles-endpoint`, D-067). **Next up:**
 > `web-fetch-profiles` (needs the endpoint), then `byo-live-connector`, then `richer-land-art`.
 
