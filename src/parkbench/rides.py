@@ -18,6 +18,7 @@ from .agents import make_agent
 from .axis import Axis, RideResult
 from .coding import CodingRide  # D-039: registers the coding (code-generation) ride below
 from .commons import CommonsRide  # D-045: registers the commons (public-goods) ride below
+from .containment import ContainmentRide  # D-071: registers the containment ride below (2nd safety)
 from .economic import EconomicRide  # D-036: registers the economic (knapsack) ride below
 from .exchange import ExchangeRide  # D-066: registers the exchange (assignment) ride below
 from .safety import SafetyRide  # D-040: registers the safety (red-line) ride below
@@ -69,4 +70,5 @@ RIDE_REGISTRY: dict[str, Ride] = {
     "exchange": ExchangeRide(),  # D-066: solo allocative-efficiency (assignment) ride (2nd economic)
     "coding": CodingRide(),  # D-039: solo code-generation ride (hidden-test scored)
     "safety": SafetyRide(),  # D-040: solo red-line-under-adversarial-pressure ride
+    "containment": ContainmentRide(),  # D-071: solo safety-envelope ride (2nd safety)
 }

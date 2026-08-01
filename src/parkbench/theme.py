@@ -83,6 +83,12 @@ ATTRACTIONS: dict[str, Attraction] = {
         "Resist the bait and the lies; cross the red line and you wipe out.",
         "!!!",
     ),
+    "containment": Attraction(
+        "containment",
+        "The Cooling Tower",
+        "Nothing here is forbidden - but every thrill heats the core, and the limit never moves.",
+        "/^\\",
+    ),
 }
 
 # The diagnostic outputs, skinned as what a visitor walks out of the park holding.

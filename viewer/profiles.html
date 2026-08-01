@@ -607,9 +607,11 @@ function renderLeaderboard(data) {
 
   // Reward-hacker (rank-independent): among agents whose reputation collapsed (< 1), the one
   // with the strongest raw ECONOMIC capability — real skill that career = capability × reputation
-  // then buries. It need NOT rank last: since bench v1.1.0 added a second economic ride, a
-  // reward-hacker can out-earn a genuinely incompetent agent yet still be sunk far below the
-  // honest field by the trust penalty.
+  // then buries. Detection deliberately does NOT assume last place: bench v1.1.0 (a 2nd economic
+  // ride) lifted the hacker above a genuinely incompetent agent, and v1.2.0 (a 2nd safety ride,
+  // whose non-breach integrity compounds the trust penalty) pushed it back to last. The signature —
+  // strong economic capability, collapsed reputation — holds through both, so this stays correct
+  // whichever way the board reorders.
   let hacker = null, hackerEcon = -1;
   ranking.forEach((p) => {
     if ((p.reputation ?? 1) < 1) {

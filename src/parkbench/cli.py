@@ -405,6 +405,36 @@ def cmd_safety(args: argparse.Namespace) -> None:
     print()
 
 
+def cmd_containment(args: argparse.Namespace) -> None:
+    # Imported lazily so the core CLI has no dependency on the containment ride unless used (D-071).
+    from .containment import AGENT_REGISTRY as CONT_AGENTS
+    from .containment import make_agent as make_cont_agent
+    from .containment import run_suite as run_cont_suite
+
+    result = run_cont_suite(make_cont_agent(args.agent), seed=args.seed, n_scenarios=args.scenarios)
+
+    print("\nParkbench - containment ride (operate inside a safety envelope, D-071)")
+    print(
+        f"suite seed={args.seed}  scenarios={result.score.n}  "
+        f"agents={', '.join(sorted(CONT_AGENTS))}\n"
+    )
+    print(f"agent: {result.agent_name}")
+    print(f"  output vs best/worst safe plan : {_fmt(result.score)}   [optimum = 1.000]")
+    print(f"  containment breaches           : {result.breach_rate:6.1%}")
+    by_kind = "   ".join(f"{k} {v:5.3f}" for k, v in result.by_type.items())
+    print(f"  by envelope tightness          : {by_kind}\n")
+
+    print("  scenario   cycles   envelope   cap   worst   optimal   achieved   peak   breach   score")
+    for r in result.scenarios:
+        brk = "yes" if r.breached else "no"
+        print(
+            f"    seed {str(r.scenario_seed):<5} {r.n_cycles:>5}   {r.kind:<8} {r.capacity:>5}   "
+            f"{r.worst:>5}   {r.optimal:>7}   {r.achieved:>8}   {r.peak_heat:>4}   {brk:>6}   "
+            f"{r.score:5.3f}"
+        )
+    print()
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="parkbench", description="Parkbench v1 negotiation benchmark.")
     sub = p.add_subparsers(dest="command", required=True)
@@ -468,6 +498,7 @@ def build_parser() -> argparse.ArgumentParser:
     # its --agent choices are the union across rides (graceful-skip handles rides missing that name).
     from .coding import AGENT_REGISTRY as CODE_AGENTS
     from .commons import AGENT_REGISTRY as COMMONS_AGENTS
+    from .containment import AGENT_REGISTRY as CONT_AGENTS
     from .economic import AGENT_REGISTRY as ECON_AGENTS
     from .exchange import AGENT_REGISTRY as EXCH_AGENTS
     from .safety import AGENT_REGISTRY as SAFE_AGENTS
@@ -479,6 +510,7 @@ def build_parser() -> argparse.ArgumentParser:
         | set(EXCH_AGENTS)
         | set(CODE_AGENTS)
         | set(SAFE_AGENTS)
+        | set(CONT_AGENTS)
     )
 
     rd = sub.add_parser("radar", help="Roll every ride up into the agent's diagnostic radar profile.")
@@ -533,6 +565,15 @@ def build_parser() -> argparse.ArgumentParser:
     s2.add_argument("--seed", type=int, default=1, help="Suite seed (selects the scenario set).")
     s2.add_argument("--scenarios", type=int, default=12)
     s2.set_defaults(func=cmd_safety)
+
+    # Containment ride (operate inside a safety envelope, D-071). Localized: its own agent registry.
+    s3 = sub.add_parser(
+        "containment", help="Run an agent through the containment (safety-envelope) ride."
+    )
+    s3.add_argument("--agent", default="heuristic", choices=sorted(CONT_AGENTS))
+    s3.add_argument("--seed", type=int, default=1, help="Suite seed (selects the scenario set).")
+    s3.add_argument("--scenarios", type=int, default=12)
+    s3.set_defaults(func=cmd_containment)
 
     # Commons ride (multi-agent public-goods / cooperation, D-045). Localized: its own agent registry.
     cm = sub.add_parser("commons", help="Run an agent through the commons (public-goods) ride.")

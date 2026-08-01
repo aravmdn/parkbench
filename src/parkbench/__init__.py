@@ -18,4 +18,9 @@ __version__ = "0.0.1"
 # 1.0.0 -> 1.1.0 (D-066): the second economic ride "The Exchange" joins the registry, so the economic
 # radar axis becomes mean(knapsack, exchange) — a score-altering re-tune of every agent's economic
 # axis / career / leaderboard. Minor bump per the convention (score-altering, not comparability-breaking).
-BENCHMARK_VERSION = "1.1.0"
+#
+# 1.1.0 -> 1.2.0 (D-071): the second safety ride "The Containment Drill" joins the registry, so the
+# safety radar axis becomes mean(red-line, containment) AND the career's reputation product gains a
+# second non-neutral integrity signal (the ride's non-breach rate) — a score-altering re-tune of every
+# agent's safety axis, career, and leaderboard. Minor bump, same convention.
+BENCHMARK_VERSION = "1.2.0"
