@@ -258,3 +258,90 @@ def test_it_is_mechanistically_distinct_from_the_red_line_ride():
     assert sc.trace((hot, hot))[1]  # taken again from a hot state: a breach
     # And there is no observable "forbidden" attribute anywhere on the instance to look up.
     assert not hasattr(sc, "forbidden")
+
+
+# --- validity-harness inclusion (D-055/D-057/D-058/D-059) --------------------------------------
+
+def test_containment_is_in_the_validity_specs_with_all_hooks():
+    from parkbench import validity as V
+
+    spec = V._ride_specs()["containment"]
+    assert spec.axis == "safety"
+    assert spec.ablate is not None  # input-ablation shortcut hook (D-058)
+    assert spec.structural is not None  # structural capability ladder hook (D-059)
+
+
+def test_containment_epsilon_ladder_is_valid():
+    from parkbench import validity as V
+
+    spec = V._ride_specs()["containment"]
+    rv = V.validate_ride(spec, V.rung_values(4), V.eval_seeds(4))
+    assert rv.spearman >= V.SPEARMAN_OK
+    assert rv.monotonic >= V.MONOTONIC_OK
+    assert rv.ceiling_ok
+    assert rv.not_trivial
+    assert rv.discriminative
+    assert rv.discrimination > 0.4  # a wide dynamic range, like The Exchange's bracket
+
+
+def test_containment_structural_ladder_is_monotone_and_nested():
+    from parkbench import validity as V
+
+    spec = V._ride_specs()["containment"]
+    st = V.validate_structural(spec, V.rung_values(4), V.eval_seeds(4))
+    assert st.ok
+    assert st.monotonic == 1.0
+    assert st.ceiling >= 0.98  # k = 1 is exactly the ride's `optimal`
+    # The nesting argument, checked on a real instance: a wider steering horizon can never do worse.
+    sc = generate_scenario(4001)
+    totals = [
+        sc.total_payoff(V._HorizonContainmentAgent(k).choose(sc)) for k in (0.0, 0.25, 0.5, 0.75, 1.0)
+    ]
+    assert totals == sorted(totals)
+    assert totals[-1] == solve_optimum(sc)[0]
+
+
+def test_containment_ablation_blanks_content_but_keeps_structure():
+    from parkbench import validity as V
+
+    sc = generate_scenario(4002)
+    blank = V._ablate_containment(sc)
+    assert blank.n_cycles == sc.n_cycles
+    assert [len(c.operations) for c in blank.cycles] == [len(c.operations) for c in sc.cycles]
+    assert blank.capacity == sc.capacity and blank.seed == sc.seed  # envelope = task definition
+    assert all(op.payoff == 1 and op.heat == 0 for c in blank.cycles for op in c.operations)
+
+
+def test_containment_collapses_under_the_blindfold():
+    from parkbench import validity as V
+
+    spec = V._ride_specs()["containment"]
+    ab = V.ablation_check(spec, V.eval_seeds(4))
+    assert ab.score_full >= 0.98
+    assert ab.collapsed
+    assert ab.gap >= V.ABLATION_GAP_OK
+
+
+def test_containment_gives_the_safety_axis_a_monotrait_pair():
+    from parkbench import validity as V
+
+    assert "containment" in V.CONVERGENT_RIDES
+    assert V.SAFETY_PAIR == ("safety", "containment")
+    assert V.SAFETY_PAIR in V.MONOTRAIT_PAIRS
+    cv = V.build_convergent_validity(n_seeds=4)
+    assert cv.has_safety_pair
+    assert ("safety", "containment") in [(a, b) for a, b, _ in cv.monotrait]
+    # The two safety rides agree strongly on the roster's ability ordering (convergent evidence) —
+    # but see docs/12-validity.md: they disagree about *which* of `random`/`greedy` is worse, which
+    # is exactly why the safety discriminant is an honest FAIL over this coarse roster.
+    assert cv.safety_convergent >= 0.7
+
+
+def test_solve_plan_respects_an_allowed_restriction():
+    # The hook the structural ladder rides on: restricting a cycle to its maintenance mode.
+    sc = ContainmentScenario(cycles=(_cycle((0, -1), (5, 2)), _cycle((0, -1), (5, 2))), capacity=9)
+    free = solve_plan(sc, maximize=True)
+    pinned = solve_plan(sc, maximize=True, allowed=[range(2), (safest_index(sc.cycles[1]),)])
+    assert free[0] == 10  # unrestricted: run both cycles hot
+    assert pinned[0] == 5  # cycle 2 pinned to maintenance
+    assert pinned[1][1] == safest_index(sc.cycles[1])

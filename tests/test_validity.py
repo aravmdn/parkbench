@@ -143,7 +143,7 @@ def test_fast_rides_are_discriminative():
     """Each pure-Python ride's score must track known ability: monotone, ceiling reached."""
     seeds = V.eval_seeds(4)
     ps = V.rung_values(4)
-    for key in ("economic", "safety", "commons"):
+    for key in ("economic", "safety", "containment", "commons"):
         spec = V._ride_specs()[key]
         rv = V.validate_ride(spec, ps, seeds)
         assert rv.spearman >= V.SPEARMAN_OK, (key, rv.spearman)
@@ -212,7 +212,7 @@ def test_blindfolded_best_agent_collapses_on_each_fast_ride():
     """The shortcut detector's verdict: blank the observation and the best agent's score collapses."""
     specs = V._ride_specs()
     seeds = V.eval_seeds(4)
-    for key in ("economic", "safety", "commons"):
+    for key in ("economic", "safety", "containment", "commons"):
         a = V.ablation_check(specs[key], seeds)
         assert a.score_full >= 0.98, (key, a.score_full)  # sighted, it owns the ceiling
         assert a.score_ablated < 0.5, (key, a.score_ablated)  # blindfolded, it falls apart
@@ -367,7 +367,7 @@ def test_structural_ladder_tracks_capability_on_each_fast_ride():
     the STRUCTURAL capability dial — reproducing the ε-ladder's rho >= 0.9 with no randomness."""
     seeds = V.eval_seeds(4)
     ks = V.rung_values(4)
-    for key in ("economic", "safety", "commons"):
+    for key in ("economic", "safety", "containment", "commons"):
         spec = V._ride_specs()[key]
         sv = V.validate_structural(spec, ks, seeds)
         assert sv.spearman >= V.STRUCTURAL_SPEARMAN_OK, (key, sv.spearman)
@@ -469,7 +469,7 @@ def test_fast_ride_item_hygiene_no_negative_item_retained():
     every seed suite is internally consistent (alpha >= 0.7) with nothing flagged."""
     seeds = V.eval_seeds(4)
     ps = V.rung_values(4)
-    for key in ("economic", "safety", "commons"):
+    for key in ("economic", "safety", "containment", "commons"):
         h = V.build_item_hygiene(V._ride_specs()[key], ps, seeds)
         # Partition invariant: retained + flagged == all items, with no overlap.
         assert set(h.retained) | set(h.flagged) == set(seeds), key
@@ -589,26 +589,44 @@ def test_negotiation_pairs_drop_optimal_while_solo_pairs_keep_it():
 
 
 def test_convergent_and_discriminant_on_held_out_seeds():
-    """The real matrix on held-out eval seeds. The two social rides converge and clear their own
-    row/column (social discriminant PASS — the D-057 headline, still holding at the widened N=4
-    roster). Since D-066 the two ECONOMIC rides also converge (economic x exchange), giving the
-    economic axis its first within-axis pair — but economic x safety does NOT yet drop below it over
-    these deterministic baselines (greedy is a near-tie with random on safety here), so the economic
-    discriminant honestly FAILS: exactly the outcome docs/13 A.5 named as informative either way."""
+    """The real matrix on held-out eval seeds — three within-axis pairs since D-071, and an honest
+    negative on all three.
+
+    CONVERGENT evidence is strong: the two social rides tie at +1.00, the two economic rides tie at
+    +1.00, and the two safety rides agree at +0.80 (they disagree only about whether `random` or
+    `greedy` is the *worse* agent — see below).
+
+    DISCRIMINANT evidence is not. Every pair is tied or beaten by a cross-axis correlation in its own
+    row/column, so all three verdicts are FAIL — including the **social** pair, which passed from
+    D-057 through D-066. The Containment Drill (D-071) ranks the four deterministic baselines in
+    exactly the order the social rides do (`greedy` worst, because ignoring accumulating hazard is as
+    pathological here as free-riding is there), so `negotiation x containment` and
+    `commons x containment` both land at +1.00 and tie the social monotrait. This is a real,
+    reported regression in the verdict — not a bug — and it is the sharpest evidence yet for the
+    limit docs/13 A.6 already named: with only four deterministic baselines the whole matrix turns on
+    a single bit ("is greedy worst or second-worst?"), which is far too coarse a roster to separate
+    constructs. Fixing it needs a richer agent roster (the criterion cohort), not a different ride."""
     cv = V.build_convergent_validity(n_seeds=8)
     assert cv.agents == ("random", "greedy", "heuristic", "optimal")
-    # social: convergent and distinct (clears every heterotrait value in its row/column).
+    # All three within-axis pairs are present and converge.
     assert cv.social_convergent >= 0.9  # negotiation & commons rank the roster near-identically
-    for a, b, rho in cv.social_heterotrait:
-        assert cv.social_convergent > rho, (a, b, rho)
-    assert cv.discriminant_ok is True
-    # economic: the new monotrait pair converges strongly (both economic rides rank the roster alike).
-    assert cv.has_economic_pair
-    assert cv.economic_convergent >= 0.9
-    assert ("economic", "exchange") in [(a, b) for a, b, _ in cv.monotrait]
-    # ...but it does not yet separate from safety over these baselines (an honest, published finding).
+    assert cv.has_economic_pair and cv.economic_convergent >= 0.9
+    assert cv.has_safety_pair and cv.safety_convergent >= 0.7
+    monotrait_pairs = [(a, b) for a, b, _ in cv.monotrait]
+    assert ("negotiation", "commons") in monotrait_pairs
+    assert ("economic", "exchange") in monotrait_pairs
+    assert ("safety", "containment") in monotrait_pairs
+    # ...and none of them yet clears its own row/column over these coarse deterministic baselines.
+    assert cv.discriminant_ok is False  # social: regressed from PASS by containment x social = +1.00
     assert cv.economic_discriminant_ok is False
+    assert cv.safety_discriminant_ok is False
     assert cv.all_discriminant_ok is False
+    # The specific ties that sink the social pair — pinned so the finding cannot silently change.
+    assert cv.corr("negotiation", "containment") >= cv.social_convergent
+    assert cv.corr("commons", "containment") >= cv.social_convergent
+    # The specific tie that sinks the safety pair: each safety ride agrees MORE with a cross-axis
+    # ride than the two safety rides agree with each other.
+    assert cv.max_safety_heterotrait > cv.safety_convergent
 
 
 def test_convergent_is_deterministic():
@@ -628,41 +646,45 @@ def test_report_builds_and_serializes():
     d = report.to_dict()
     assert d["all_valid"] is True
     assert d["gaming_resistant"] is True
-    assert {r["ride"] for r in d["rides"]} == {"economic", "exchange", "safety", "commons"}
-    # The convergent/discriminant block is present. The SOCIAL discriminant passes (D-057 headline);
-    # the generalized verdict over every within-axis pair does NOT, because the new economic pair
-    # (D-066) converges but does not yet separate from safety (docs/13 A.5).
+    fast_rides = {"economic", "exchange", "safety", "containment", "commons"}
+    assert {r["ride"] for r in d["rides"]} == fast_rides
+    # The convergent/discriminant block is present. Since D-071 THREE axes carry a within-axis pair
+    # and all three discriminant verdicts are an honest FAIL — including the social pair, which
+    # passed from D-057 until the containment ride joined the matrix (see the held-out-seeds test
+    # above and docs/12-validity.md).
     assert report.convergent is not None
-    assert d["discriminant_ok"] is True
+    assert d["discriminant_ok"] is False
     assert d["all_discriminant_ok"] is False
     assert d["economic_discriminant_ok"] is False
+    assert d["safety_discriminant_ok"] is False
     cd = d["convergent"]
-    assert cd["social_convergent"] >= 0.9
-    assert cd["discriminant_ok"] is True
-    assert cd["economic_convergent"] >= 0.9  # the two economic rides converge (the new monotrait pair)
+    assert cd["social_convergent"] >= 0.9  # convergence itself is still strong on every pair
+    assert cd["economic_convergent"] >= 0.9
+    assert cd["safety_convergent"] >= 0.7
+    assert cd["discriminant_ok"] is False
     assert cd["all_discriminant_ok"] is False
     assert {r["ride"] for r in cd["rides"]} == {
-        "negotiation", "commons", "economic", "exchange", "safety"
+        "negotiation", "commons", "economic", "exchange", "safety", "containment"
     }
-    assert len(cd["matrix"]) == 10  # 5 rides -> C(5,2) = 10 pairs
-    # The two present within-axis pairs are surfaced (social + the new economic pair, D-066).
+    assert len(cd["matrix"]) == 15  # 6 rides -> C(6,2) = 15 pairs
+    # All three present within-axis pairs are surfaced (social D-057, economic D-066, safety D-071).
     assert {(m["a"], m["b"]) for m in cd["monotrait_discriminant"]} == {
-        ("negotiation", "commons"), ("economic", "exchange")
+        ("negotiation", "commons"), ("economic", "exchange"), ("safety", "containment")
     }
     # The input-ablation block (D-058) is present and every fast ride collapses when blindfolded.
     assert report.ablation_ok
     assert d["ablation_ok"] is True
-    assert {a["ride"] for a in d["ablation"]} == {"economic", "exchange", "safety", "commons"}
+    assert {a["ride"] for a in d["ablation"]} == fast_rides
     assert all(a["collapsed"] for a in d["ablation"])
     # The structural capability ladder (D-059) is present and every fast ride tracks its dial.
     assert report.structural_ok
     assert d["structural_ok"] is True
-    assert {s["ride"] for s in d["structural"]} == {"economic", "exchange", "safety", "commons"}
+    assert {s["ride"] for s in d["structural"]} == fast_rides
     assert all(s["ok"] and s["spearman"] >= V.STRUCTURAL_SPEARMAN_OK for s in d["structural"])
     # The item-hygiene block (D-060) is present: consistent suites, no flagged item retained.
     assert report.hygiene_ok
     assert d["hygiene_ok"] is True
-    assert {h["ride"] for h in d["hygiene"]} == {"economic", "exchange", "safety", "commons"}
+    assert {h["ride"] for h in d["hygiene"]} == fast_rides
     for h in d["hygiene"]:
         assert h["alpha_ok"] and h["alpha"] >= V.ALPHA_OK
         assert h["flagged"] == [] and h["n_items"] == len(h["retained"])

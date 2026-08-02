@@ -190,6 +190,32 @@ def _ablate_safety(scenario):
     return SafetyScenario(rounds=rounds, forbidden=scenario.forbidden, seed=scenario.seed)
 
 
+def _ablate_containment(scenario):
+    """Blank a containment instance: every operating mode becomes the constant ``(payoff 1, heat 0)``.
+
+    Structure kept: the cycle count, each cycle's mode count, the declared ``capacity`` and
+    ``start_heat`` (the safety envelope is the *task definition* the agent is told up front, exactly
+    as the red-line ride's `forbidden` set is), and the seed (an opaque cache key). Content blanked:
+    every mode's output *and* its hazard cost — so a blindfolded agent cannot tell a maintenance mode
+    from a meltdown-in-waiting. Its planner sees a flat, unconstrained instance where every plan
+    ties, returns the lowest-index mode each cycle, and is scored against the *real* instance, where
+    that plan drifts through the envelope. (The blanked instance's degenerate bracket only affects
+    the *observation*; the real scoring instance is untouched, so the check is well-defined.)
+    """
+    from .containment.scenario import ContainmentScenario, Cycle, Operation
+
+    cycles = tuple(
+        Cycle(tuple(Operation(payoff=1, heat=0) for _ in c.operations)) for c in scenario.cycles
+    )
+    return ContainmentScenario(
+        cycles=cycles,
+        capacity=scenario.capacity,
+        start_heat=scenario.start_heat,
+        kind=scenario.kind,
+        seed=scenario.seed,
+    )
+
+
 def _ablate_commons(scenario):
     """Blank a commons game: the endowment (and with it the threshold/levels) zeroes out.
 
@@ -381,6 +407,38 @@ class _HorizonSafetyAgent:
         return tuple(choices)
 
 
+class _HorizonContainmentAgent:
+    """Bounded **steering** horizon: it may actively pick a mode only in the first ``⌈k·R⌉`` cycles.
+
+    A limited operator: inside its horizon it plans *exactly* (the ride's own breach-free DP); beyond
+    it, it has no capacity left to steer and simply leaves the system on **maintenance** (the cycle's
+    lowest-heat mode — always available, never breaching). The dial is therefore "how much of the run
+    can you actually manage", with no randomness anywhere.
+
+    Monotone by construction, the same nesting argument as `_HorizonEconomicAgent`: the set of plans
+    allowed at horizon ``m`` (those that idle on maintenance from cycle ``m`` on) is a **subset** of
+    the set allowed at ``m+1``, so the best achievable breach-free output is non-decreasing in ``k``
+    on every instance. ``k=0`` is the fully-idled floor; ``k=1`` is exactly the ride's `optimal`.
+    """
+
+    def __init__(self, k: float) -> None:
+        self._k = k
+        self.name = f"steer-horizon-{k:.2f}"
+
+    def reset(self, seed: int = 0) -> None:  # stateless; the dial is the only parameter
+        pass
+
+    def choose(self, scenario):
+        from .containment.scenario import safest_index, solve_plan
+
+        horizon = math.ceil(self._k * scenario.n_cycles)
+        allowed = [
+            range(len(cycle.operations)) if t < horizon else (safest_index(cycle),)
+            for t, cycle in enumerate(scenario.cycles)
+        ]
+        return solve_plan(scenario, maximize=True, allowed=allowed)[1]
+
+
 class _HorizonCommonsAgent:
     """Bounded lookahead: the exact best response to the game *truncated at* ``⌈k·R⌉`` rounds.
 
@@ -419,6 +477,7 @@ class _HorizonCommonsAgent:
 def _ride_specs() -> dict[str, _RideSpec]:
     """Build the spec table lazily so importing this module stays cheap and side-effect free."""
     from .commons import agents as commons_agents, suite as commons_suite
+    from .containment import agents as containment_agents, suite as containment_suite
     from .economic import agents as economic_agents, suite as economic_suite
     from .exchange import agents as exchange_agents, suite as exchange_suite
     from .safety import agents as safety_agents, suite as safety_suite
@@ -444,6 +503,13 @@ def _ride_specs() -> dict[str, _RideSpec]:
             safety_suite.DEFAULT_N_SCENARIOS, ablate=_ablate_safety,
             structural=_HorizonSafetyAgent,
             structural_mechanism="deliberation horizon (verifies first k*R rounds)",
+        ),
+        "containment": _RideSpec(
+            "containment", "safety", "choose", containment_suite.run_suite,
+            containment_agents.OptimalAgent, containment_agents.RandomAgent,
+            containment_suite.DEFAULT_N_SCENARIOS, ablate=_ablate_containment,
+            structural=_HorizonContainmentAgent,
+            structural_mechanism="steering horizon (exact safe plan for first k*R cycles)",
         ),
         "commons": _RideSpec(
             "commons", "social", "contribute", commons_suite.run_suite,
@@ -870,12 +936,16 @@ def gaming_check(seeds) -> GamingResult:
 # `optimal` and fall back to N=3 — the code already correlates each pair over its own shared subset
 # (docs/13 §A.5). The social convergent pair (negotiation×commons) therefore stays N=3.
 CONVERGENT_ROSTER = ("random", "greedy", "heuristic", "optimal")
-# The within-axis (monotrait) ride pairs — one per axis that carries two rides today (D-045/D-066).
+# The within-axis (monotrait) ride pairs — one per axis that carries two rides today
+# (D-045 social / D-066 economic / D-071 safety). Coding is the last single-ride axis.
 SOCIAL_PAIR = ("negotiation", "commons")
 ECONOMIC_PAIR = ("economic", "exchange")
-MONOTRAIT_PAIRS = (SOCIAL_PAIR, ECONOMIC_PAIR)
+SAFETY_PAIR = ("safety", "containment")
+MONOTRAIT_PAIRS = (SOCIAL_PAIR, ECONOMIC_PAIR, SAFETY_PAIR)
 # Fast rides in the matrix (coding is opt-in: it spawns a subprocess per task).
-CONVERGENT_RIDES = ("negotiation", "commons", "economic", "exchange", "safety")
+CONVERGENT_RIDES = (
+    "negotiation", "commons", "economic", "exchange", "safety", "containment",
+)
 
 
 def _pair_key(a: str, b: str) -> str:
@@ -1037,6 +1107,27 @@ class ConvergentValidity:
         than either agrees with a different-axis ride ⇒ the economic axis is a distinct construct."""
         return self.discriminant_for(ECONOMIC_PAIR)[2]
 
+    # --- safety pair (the monotrait pair unlocked by The Containment Drill, D-071) ----------------
+
+    @property
+    def has_safety_pair(self) -> bool:
+        return self._has_pair(SAFETY_PAIR)
+
+    @property
+    def safety_convergent(self) -> float:
+        """The convergent value: Spearman between the two safety rides (0.0 if the pair is absent)."""
+        return self._convergent_for(SAFETY_PAIR)
+
+    @property
+    def max_safety_heterotrait(self) -> float:
+        return self.discriminant_for(SAFETY_PAIR)[1]
+
+    @property
+    def safety_discriminant_ok(self) -> bool:
+        """Campbell-Fiske for the **safety** pair: the red-line and containment rides agree with each
+        other more than either agrees with a different-axis ride ⇒ safety is a distinct construct."""
+        return self.discriminant_for(SAFETY_PAIR)[2]
+
     def to_dict(self) -> dict:
         return {
             "agents": list(self.agents),
@@ -1048,6 +1139,9 @@ class ConvergentValidity:
             "economic_convergent": round(self.economic_convergent, 4),
             "max_economic_heterotrait": round(self.max_economic_heterotrait, 4),
             "economic_discriminant_ok": self.economic_discriminant_ok,
+            "safety_convergent": round(self.safety_convergent, 4),
+            "max_safety_heterotrait": round(self.max_safety_heterotrait, 4),
+            "safety_discriminant_ok": self.safety_discriminant_ok,
             "all_discriminant_ok": self.all_discriminant_ok,
             "monotrait_discriminant": [
                 {
@@ -1564,6 +1658,9 @@ class ValidityReport:
             "economic_discriminant_ok": bool(
                 self.convergent and self.convergent.economic_discriminant_ok
             ),
+            "safety_discriminant_ok": bool(
+                self.convergent and self.convergent.safety_discriminant_ok
+            ),
             "ablation_ok": self.ablation_ok,
             "structural_ok": self.structural_ok,
             "hygiene_ok": self.hygiene_ok,
@@ -1584,14 +1681,15 @@ def build_validity_report(
 ) -> ValidityReport:
     """Assemble the full validity report over the held-out seed range.
 
-    The three pure-Python solo rides (economic, safety, commons) always run; the subprocess-backed
-    coding ride is opt-in (``include_coding``) and runs on a lighter config to stay bounded.
+    The five pure-Python solo rides (economic, exchange, safety, containment, commons) always run;
+    the subprocess-backed coding ride is opt-in (``include_coding``) and runs on a lighter config to
+    stay bounded.
     """
     specs = _ride_specs()
     ps = rung_values(rungs)
     seeds = eval_seeds(n_seeds, seed_base)
 
-    keys = ["economic", "exchange", "safety", "commons"]
+    keys = ["economic", "exchange", "safety", "containment", "commons"]
     if include_coding and "coding" in specs:
         keys.append("coding")
 
@@ -1731,7 +1829,7 @@ def render_validity_report(report: ValidityReport) -> str:
         for a, b, rho in c.heterotrait:
             lines.append(f"      {a:<12} x {b:<12} rho={rho:+.3f}   cross-axis")
         # Per within-axis (monotrait) pair: does its convergent correlation clear its own row/column?
-        # Since D-066 there are two — social (D-057) and the economic pair unlocked by The Exchange.
+        # Since D-071 there are three — social (D-057), economic (D-066), and safety (D-071).
         for a, b, conv, max_het, ok in c.monotrait_discriminant:
             axis = c.axes[a]
             dv = "PASS" if ok else "FAIL"
@@ -1742,7 +1840,8 @@ def render_validity_report(report: ValidityReport) -> str:
         lines.append(
             f"       overall discriminant (every within-axis pair distinct): "
             f"{'PASS' if c.all_discriminant_ok else 'FAIL'}  "
-            f"(economic now has a monotrait pair too, D-066; safety still single-ride)"
+            f"(3 of 4 axes now have a monotrait pair: social D-057, economic D-066, safety D-071; "
+            f"coding is the last single-ride axis)"
         )
 
     if report.ablations:
