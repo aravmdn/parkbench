@@ -1,6 +1,6 @@
 # 13 — External validity: a plan (second ride per axis + criterion validity)
 
-**Status:** Draft · **Last updated:** 2026-07-22 · **Related decisions:** [D-055](02-decisions.md), [D-057](02-decisions.md)–[D-061](02-decisions.md) · **Parent doc:** [`12-validity.md`](12-validity.md)
+**Status:** Draft · **Last updated:** 2026-08-05 · **Related decisions:** [D-055](02-decisions.md), [D-057](02-decisions.md)–[D-061](02-decisions.md), [D-066](02-decisions.md), [D-071](02-decisions.md) · **Parent doc:** [`12-validity.md`](12-validity.md)
 
 This is a **planning document** for the *external* half of the trust track (roadmap
 [#6](03-roadmap.md)). The *internal* half is done (D-055, D-057–D-061, see
@@ -328,7 +328,7 @@ Effort is in "laps" (one focused, verifiable session ≈ one lap), matching the 
 | 2 | Generalize the MTMM discriminant to **every** monotrait pair + widen the solo-ride roster to N=4 (§A.5) — ✅ **done with #1 (D-066)** | 0.5 lap | Fully | Landed alongside The Exchange: `monotrait_discriminant` / `all_discriminant_ok` + the N=4 roster. Verdict: economic converges but does not yet separate from safety (honest FAIL). |
 | 3 | **Criterion-harness scaffold** (§B.4) — ✅ landed (D-064) | 0.5 lap | Fully | The correlation instrument + placeholder + swap-in path. |
 | 4 | **Real coding criterion cohort** (coding ↔ HumanEval/MBPP) | 1–2 laps | **No** (needs real-agent runs) | The first *strong-construct* external evidence, on the one axis with a clean external analog. |
-| 5 | Second **safety** ride, then second **coding** ride | ~1–2 laps each | Fully (safety) / partly (coding is slow) | Extends monotrait coverage to all four axes → the full MTMM matrix. |
+| **5** | Second **safety** ride ("The Containment Drill") — ✅ **BUILT (D-071)**; second **coding** ride still open | ~1–2 laps each | Fully (safety) / partly (coding is slow) | Delivered the safety monotrait pair (3/4 axes now paired; coding is the last single-ride axis) and a wide-range safety ride (floor 0.41, disc **0.588**). **Honest outcome: the safety discriminant FAILs *and* the social discriminant regressed PASS → FAIL** — see §E. |
 | 6 | Harder economic difficulty tier + **saturation monitor** (roadmap #6) | ~1 lap | Fully | Re-hardens the axis once agents reach the ceiling; ties to the narrow-range finding. |
 
 ### Recommendation
@@ -345,10 +345,47 @@ strong-construct external analog.
 
 ---
 
+## E · Sequence item #5, as built: the second safety ride (D-071) — and what it revealed
+
+The Containment Drill shipped as `src/parkbench/containment/` (registry key `"containment"`, CLI
+`parkbench containment`), designed to be **mechanistically distinct** from the red-line ride rather
+than a reskin: nothing is labelled forbidden, safety is a property of the *trajectory*, safety costs
+output *in advance*, and there is no adversary — the failure mode is a lack of foresight, not defiance
+or gullibility. Full design in [`07-multi-ride.md`](07-multi-ride.md).
+
+**It delivered the intended payoffs.** The ride is **VALID** (ε-ladder ρ = 1.00, monotone, floor 0.41,
+discrimination **0.588**, split-half reliability 1.00), collapses under input ablation (1.000 → 0.296,
+gap 0.704), tracks a randomness-free structural dial at ρ = 1.00, and its seed suite is clean
+(α = 0.987, nothing flagged). The safety axis became `mean(red-line, containment)`, three of four axes
+now carry a monotrait pair, and the reward-hacker headline **strengthened**: `greedy` is dead last
+again at the public seed 1 (career 0.055 < `random` 0.124) with the Goodhart gap widening to 0.928.
+
+**And it produced the plan's most informative negative so far.** Two results, neither tuned away:
+
+1. **The safety monotrait pair converges at only ρ = +0.80**, because the two safety rides *disagree*
+   about whether `random` or `greedy` is the worse agent — the intended mechanistic distinction, made
+   visible. Its heterotrait row/column peaks at +1.00 ⇒ **safety discriminant FAIL**.
+2. **The social discriminant regressed from PASS to FAIL.** The containment ride ranks the four
+   baselines exactly as the two social rides do, so `negotiation × containment` and
+   `commons × containment` both hit +1.00 and tie the social monotrait. The D-057 headline no longer
+   holds as measured.
+
+**The lesson for this plan.** §A.6 flagged "small-N coarseness persists" as a risk; D-071 shows it is
+now *the* binding constraint. Each added monotrait pair introduces six more heterotrait cells that
+every pair must clear, while a Spearman over four deterministic baselines can express only a handful
+of values — in practice the whole matrix turns on "is `greedy` worst or second-worst?". So **adding
+more rides can no longer improve the discriminant verdict; it can only make it harder.** That
+re-prioritises the remaining sequence: item **#4 (a real criterion cohort)** — which is also what
+supplies a richer, non-deterministic agent roster — should now come **before** item #5's remaining
+half (a second coding ride) and before item #6.
+
 ## D · What this plan does **not** claim
 
 - It does **not** claim criterion validity is achieved — only that the instrument to measure it now
-  exists and the data it needs is named. (Still true after D-066: §B remains planned.)
+  exists and the data it needs is named. (Still true after D-066 and D-071: §B remains planned.)
+- It does **not** claim any radar axis has been shown *distinct*. After D-071 all three within-axis
+  pairs converge and **all three fail** the discriminant test — see §E. The recommended next step is
+  therefore the criterion cohort (§B / sequence #4), not another ride.
 - It did **not** claim the second economic ride *would* break `economic × safety = +1.00` — and
   ⟶ **as built (D-066), it did not**: the honest, measured outcome is that economic and safety still
   co-vary over the deterministic baselines (economic discriminant FAIL), while the economic *convergent*

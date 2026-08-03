@@ -1,6 +1,6 @@
 # 04 — Open Questions
 
-**Status:** Living · **Last updated:** 2026-07-22
+**Status:** Living · **Last updated:** 2026-08-05
 
 Questions still genuinely open. When one is resolved it becomes an entry in the decision log
 ([`02-decisions.md`](02-decisions.md)) and is listed under "Resolved" below.
@@ -50,6 +50,30 @@ below (D-027–D-030)._
   the filesystem by absolute path, runs with the parent's OS privileges, and has no CPU/memory/output
   caps — filesystem/network jails, resource limits, container/seccomp), folded into BYO-protocol
   hardening (roadmap #5); and continued vigilance as new ride types arrive._
+- **Should reputation aggregate integrity *per axis* before multiplying? (raised by D-071.)** The
+  career's reputation is the **product** of every ride's `integrity` signal (D-041), which was designed
+  when each axis had at most one rule-bearing ride. Since **D-071** the safety axis carries **two**
+  rides that both declare a non-neutral integrity signal (`1 − violation_rate` and `1 − breach_rate`),
+  and the reward-hacker `greedy` fails both — so its reputation is discounted **twice for the same
+  underlying pathology** (0.333 → 0.111; career 0.174 → 0.055). That is the mechanic working as
+  specified (a repeat offender compounds) and it restored the strong "reward-hacking is worse than
+  doing nothing" ordering — but it means an agent's reputation penalty now scales with **how many rides
+  happen to sit on the axis it fails**, which is a property of the *park's composition*, not of the
+  agent. The alternative — aggregate integrity within an axis first (mean or min), then multiply across
+  axes — is defensible and was **deliberately not** taken in D-071 because it would silently re-weight
+  every existing career. Resolve before a third ride lands on any rule-bearing axis. See
+  [`07-multi-ride.md`](07-multi-ride.md) (containment ride) and D-041/D-071.
+- **Are any of the four radar axes *distinct* constructs? (sharpened, and currently negative, by
+  D-071.)** The MTMM matrix now covers **three** within-axis pairs (social D-045/D-057, economic D-066,
+  safety D-071). All three **converge**; as of D-071 **none** passes the Campbell-Fiske discriminant
+  test — including the social pair, which passed from D-057 until the containment ride tied it at
+  +1.00. The measured cause is the **roster**, not any ride: four *deterministic* baselines cannot
+  supply enough distinct orderings, and each added monotrait pair introduces six more heterotrait cells
+  every pair must clear, so **adding rides can now only make the test harder**. The unblocking step is a
+  richer, non-deterministic agent cohort (real BYO/LLM agents with genuinely differing per-axis
+  strengths) — i.e. the criterion cohort of [`13-external-validity-plan.md`](13-external-validity-plan.md)
+  §B, which this finding promotes ahead of a second coding ride. Full numbers in
+  [`12-validity.md`](12-validity.md) § "Update (D-071)".
 - **A live, read-only profiles endpoint for the spectator surfaces.** The `live-profiles` task shipped
   its **static-export** half (D-062, `parkbench export-profiles` — one command regenerates every
   `web/`+`viewer/` fixture from the versioned CLI, so nothing is hand-copied). The other half — a small

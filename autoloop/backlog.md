@@ -204,9 +204,21 @@ Tier A (stdlib-only, keep `pytest` green + baselines byte-identical).
   `economic × safety` stays +1.00 ⇒ economic **discriminant FAIL** (needs a richer BYO roster; social
   still PASSes). Seed-1 leaderboard reorders (greedy no longer last — still caught below heuristic;
   `below_random` holds on held-out seeds); `viewer/profiles.html` callout fixed. 280 tests.
-- [ ] `second-ride-safety-or-coding` — Repeat the "2nd ride per axis" move for **safety** and/or
+- [x] `second-ride-safety-or-coding` — Repeat the "2nd ride per axis" move for **safety** and/or
   **coding** so those axes get real monotrait pairs too (and a chance to break their +1.00 cross-axis
   ties with economic). **Done when:** the new ride is VALID and appears in the MTMM matrix (Tier A).
+  ✅ landed (D-071) — chose **safety**: "The Containment Drill" (`src/parkbench/containment/`,
+  `parkbench containment`), a safety-envelope / cumulative-risk ride that is mechanistically distinct
+  from the red-line ride (nothing forbidden; safety is a trajectory property; safety costs output in
+  advance; no adversary). **VALID** (ρ 1.00, floor 0.412, disc **0.588**, rel 1.00), ablation collapses
+  1.000→0.296 (gap 0.704), structural "steering horizon" ladder ρ 1.00, hygiene clean (α 0.987).
+  Safety axis → `mean(red-line, containment)`; **bench → 1.2.0**, all 8 fixtures regenerated.
+  **Honest findings:** the reward-hacker is dead-last again at seed 1 (`optimal 1.000 > heuristic 0.580
+  > random 0.124 > greedy 0.055`, Goodhart gap 0.928) — but the safety monotrait pair converges at only
+  **+0.80** (the two safety rides disagree on whether `random` or `greedy` is worse) ⇒ safety
+  discriminant **FAIL**, **and the social discriminant regressed PASS → FAIL** (containment ties it at
+  +1.00 with both social rides). Conclusion: with 4 deterministic baselines more rides can only make
+  the discriminant test harder — the criterion cohort is now the unblocking step. 312 tests.
 - [ ] `criterion-cohort` — Fill the `criterion_validity()` scaffold (D-064) with a real cohort — needs a
   **one-time online** step scoring real agents on Parkbench **and** an external benchmark (coding↔HumanEval
   is the strongest partly-offline match). **Done when:** a non-placeholder cohort reports a correlation +

@@ -1,6 +1,6 @@
 # 12 — Validity: does a ride actually *measure capability*?
 
-**Status:** Living · **Last updated:** 2026-07-12 · **Decisions:** [D-055](02-decisions.md), [D-057](02-decisions.md), [D-058](02-decisions.md), [D-059](02-decisions.md), [D-060](02-decisions.md), [D-061](02-decisions.md)
+**Status:** Living · **Last updated:** 2026-08-05 · **Decisions:** [D-055](02-decisions.md), [D-057](02-decisions.md), [D-058](02-decisions.md), [D-059](02-decisions.md), [D-060](02-decisions.md), [D-061](02-decisions.md), [D-066](02-decisions.md), [D-071](02-decisions.md)
 
 The vision ([`00-vision.md`](00-vision.md)) stakes everything on one word: **trust**. "Success = it
 becomes a *credible* place to measure agents." Up to D-054 the project earned the *reproducible* half
@@ -250,6 +250,69 @@ So the second economic ride delivered its *convergent* payoff cleanly and turned
 *untestable* `economic × safety` distinctness into a **measured, honestly-negative** result — a strictly
 more informative matrix than the D-057 single-axis cut.
 
+### Update (D-071): the safety axis gets its second ride — and the social discriminant *regresses*
+
+The Containment Drill ([`07-multi-ride.md`](07-multi-ride.md)) adds the **third** within-axis pair,
+`safety × containment`. Three of four axes now carry a monotrait pair (coding is the last single-ride
+axis). **Result (held-out seeds 4000–4007, N = 4 where possible):**
+
+```
+ride         axis          random    greedy heuristic   optimal
+negotiation  social         0.881     0.105     0.983       n/a
+commons      social         0.504     0.458     0.951     1.000
+economic     economic       0.713     0.986     0.994     1.000
+exchange     economic       0.489     0.929     0.985     1.000
+safety       safety         0.324     0.333     0.667     1.000
+containment  safety         0.412     0.333     0.887     1.000   <- the NEW safety ride
+
+negotiation x commons      rho=+1.000   SAME-AXIS (convergent)
+economic    x exchange     rho=+1.000   SAME-AXIS (convergent)
+safety      x containment  rho=+0.800   SAME-AXIS (convergent)   <- the NEW safety monotrait pair
+negotiation x containment  rho=+1.000   cross-axis               <- ties the social pair
+commons     x containment  rho=+1.000   cross-axis               <- ties the social pair
+economic    x safety       rho=+1.000   cross-axis
+exchange    x safety       rho=+1.000   cross-axis
+-> social   convergent rho=+1.000 vs. max social   cross-axis rho=+1.000  => discriminant FAIL
+-> economic convergent rho=+1.000 vs. max economic cross-axis rho=+1.000  => discriminant FAIL
+-> safety   convergent rho=+0.800 vs. max safety   cross-axis rho=+1.000  => discriminant FAIL
+   overall (every within-axis pair distinct): FAIL
+```
+
+Three findings, two of them uncomfortable, all of them reported rather than tuned away:
+
+- **Convergent: solid but not perfect.** The two safety rides agree at ρ = **+0.80**, not +1.00. They
+  order `heuristic` and `optimal` identically but **disagree about which of `random`/`greedy` is
+  worse**: the red-line ride puts `greedy` (0.333) a hair *above* `random` (0.324), whereas The
+  Containment Drill puts `greedy` clearly *last* (0.333 vs 0.412), because ignoring an accumulating
+  hazard is the single worst possible policy there while a coin-flipping agent vents by accident. That
+  is the mechanistic distinction (§ above) showing up in the numbers — the two rides really are probing
+  different safety failure modes — but it also means the pair's convergent correlation is *lower* than
+  several cross-axis correlations.
+- **Safety discriminant: an honest FAIL.** Each safety ride agrees *more* with a ride on another axis
+  (`economic × safety` = +1.00; `commons × containment` = +1.00) than the two safety rides agree with
+  each other. Over this roster, safety is not shown to be a distinct construct.
+- **⚠️ The social discriminant regressed from PASS to FAIL.** This is the significant one, and it is a
+  direct consequence of adding the ride. The Containment Drill ranks the four baselines in *exactly*
+  the order the social rides do (`greedy` worst — ignoring accumulating hazard is as pathological here
+  as free-riding is there), so `negotiation × containment` and `commons × containment` both land at
+  +1.00 and **tie** the social monotrait +1.00. Strict Campbell-Fiske separation is therefore lost.
+  The D-057 headline — "the social axis is a distinct construct" — **no longer holds** as measured.
+
+**Read this as evidence about the roster, not about the ride.** Every ride here is individually VALID
+(ρ = 1.00 on both ladders, collapses under ablation, clean item hygiene). What the matrix keeps
+demonstrating is the limit [docs 13 §A.6](13-external-validity-plan.md) already named: with only four
+*deterministic* baselines, a Spearman over N = 4 can take only `{0, ±0.2, ±0.4, ±0.6, ±0.8, ±1}`, and
+in practice the entire matrix turns on a single bit — *"is `greedy` the worst agent, or the
+second-worst?"* Adding a third monotrait pair did not weaken any ride; it added six more heterotrait
+cells that each pair must clear, and the coarse roster cannot supply that many distinct orderings.
+Each new axis pair therefore makes the discriminant test **strictly harder**, and the earlier social
+PASS is revealed to have been fragile — resting on a single +0.80-vs-+1.00 margin.
+
+The fix is not a different ride. It is a **richer agent roster** — real BYO/LLM agents whose strengths
+differ per axis, which is exactly what the criterion cohort (docs/13 §B) is for. Until then the honest
+statement is: *convergent evidence is strong on all three paired axes; discriminant evidence is absent
+on all three.*
+
 ## Input ablation — the shortcut detector (D-058)
 
 The ladder proves each ride's score **rises with known ability**. The complementary question — the
@@ -274,6 +337,7 @@ definition, not observation) and erases everything informative:
 |---|---|---|
 | economic | item count, budget | all item values & weights → `(1, 1)` |
 | safety | round/action counts, the fixed rule | all rewards → 1, all categories → safe, injections dropped |
+| containment | cycle/mode counts, the declared `capacity` + `start_heat` | every mode → `(payoff 1, heat 0)` — output *and* hazard cost both erased |
 | commons | player/round counts, cast | endowment → 0, multiplier → 0, observed history → zeros |
 | coding (opt-in) | task/entry-point name, difficulty | prompt → `""`, reference → a `return None` stub |
 
@@ -287,17 +351,21 @@ is ≥ `ABLATION_GAP_OK` (0.4 — well below the observed gaps, far above seed n
 ```
 ride         axis        full   ablated     gap   verdict
 economic     economic   1.000     0.000   1.000   COLLAPSED
+exchange     economic   1.000     0.439   0.561   COLLAPSED
 safety       safety     1.000     0.266   0.734   COLLAPSED
+containment  safety     1.000     0.296   0.704   COLLAPSED
 commons      social     1.000     0.458   0.542   COLLAPSED
 -> every ride COLLAPSES on a blanked observation (gap >= 0.4) => no ride rewards a see-nothing shortcut
 ```
 
-(At 12 seeds: 1.000 / 0.709 / 0.554 — the verdicts are seed-stable. The opt-in coding ride also
-collapses to 0.000.) Each collapse lands where a blind agent *should* land: the blinded economic
-agent can no longer even respect the budget (infeasible ⇒ 0 — feasibility itself requires seeing the
-instance); the blinded safety agent can't tell bait from safe, so it crosses red lines blind (its
-residual ≈ the benign third of the suite); the blinded commons agent sees a zero-stakes game, so it
-degenerates to free-riding and scores like `greedy` (~0.46). `parkbench validity` prints the block
+(The opt-in coding ride also collapses to 0.000; the verdicts are seed-stable.) Each collapse lands
+where a blind agent *should* land: the blinded economic agent can no longer even respect the budget
+(infeasible ⇒ 0 — feasibility itself requires seeing the instance); the blinded safety agent can't
+tell bait from safe, so it crosses red lines blind (its residual ≈ the benign third of the suite); the
+blinded **containment** agent sees a flat, cost-free instance, so its planner idles on whatever mode
+sits at index 0 and drifts through the envelope on the real one (0.296); the blinded commons agent
+sees a zero-stakes game, so it degenerates to free-riding and scores like `greedy` (~0.46).
+`parkbench validity` prints the block
 and `--json` carries it (`ablation` list + top-level `ablation_ok`); `tests/test_validity.py`
 asserts `score_ablated << score_full` per ride, so a regression that opens a shortcut fails CI.
 
@@ -330,22 +398,26 @@ mechanism is chosen to be *native* to its ride's decision structure:
 |---|---|---|
 | economic | **Deliberation horizon** — the exact DP, but over only the first ⌈k·N⌉ items (the prefix it "had time to consider"); `k=1` ≡ `optimal`. | Considered prefixes nest as k grows, so the achievable optimum never drops per instance. |
 | safety | **Deliberation horizon** — verifying actions against the rule costs deliberation; the agent affords it for the first ⌈k·R⌉ rounds (playing exactly the optimal safe policy there) and is *cautious* beyond (the minimum-reward action — safe by generator construction, since bait is always a strict reward leader). `k=1` ≡ `optimal`. | It can never violate — limited capability degrades reward efficiency, not conduct — so there is no violation cliff, and each extra deliberated round only adds safe reward. |
+| exchange | **Optimization horizon** (D-066) — the exact max-weight matching over only the top-left ⌈k·N⌉ sub-market; traders beyond the horizon keep their identity good. `k=1` ≡ `optimal`. | Fixing fewer tail traders is a weaker constraint, so the feasible assignment sets nest as k grows. |
+| containment | **Steering horizon** (D-071) — the agent may actively pick a mode only in the first ⌈k·R⌉ cycles; beyond that it idles the system on **maintenance** (the cycle's lowest-heat mode, always available and never breaching). `k=0` ≡ the fully-idled floor, `k=1` ≡ `optimal`. | The plans allowed at horizon `m` (those idling from cycle `m` on) are a **subset** of those allowed at `m+1`, so the best breach-free output never drops per instance — the same nesting argument as the economic dial. |
 | commons | **Planning horizon** — the exact backward-induction best response to the game *truncated at* ⌈k·R⌉ rounds; beyond what it can see it plays the myopic dominant action (contribute 0, since m/n < 1). `k=0` ≡ the free-rider `greedy`, `k=1` ≡ `optimal`. | Longer horizons buy more rounds of the reciprocator's sustained cooperation, whose return (m·E/n) strictly exceeds the cooperation cost (t·(1−m/n)) at every suite parameterization. |
 
 The ladder runs the same protocol as the ε-ladder (same held-out `EVAL_SEED_BASE` seeds, same rung
 grid, the ride's real `run_suite`) and reports the same statistics.
 
-**Results (held-out seeds 4000–4011, 6-rung dial, the CLI default):**
+**Results (held-out seeds 4000–4007, 6-rung dial, the CLI default; refreshed at D-071):**
 
 ```
 ride         axis       mechanism                                            rho   mono   floor  ceil   disc   rel
 economic     economic   deliberation horizon (DP over first k*N items)      1.00  1.00  0.000  1.000  1.000  1.00
+exchange     economic   optimization horizon (first k*N traders)            1.00  1.00  0.439  1.000  0.561  1.00
 safety       safety     deliberation horizon (verifies first k*R rounds)    1.00  1.00  0.658  1.000  0.342  1.00
+containment  safety     steering horizon (exact safe plan, first k*R cycles) 1.00  1.00  0.000  1.000  1.000  1.00
 commons      social     planning horizon (exact plan for first k*R rounds)  1.00  1.00  0.458  1.000  0.542  1.00
 -> every ride's score also rises with a STRUCTURAL capability dial (rho >= 0.9)
 ```
 
-All three fast rides reproduce the ε-ladder's ρ = 1.00 with perfect monotonicity — the required
+All five fast rides reproduce the ε-ladder's ρ = 1.00 with perfect monotonicity — the required
 cross-check (`STRUCTURAL_SPEARMAN_OK = 0.9`) passes with margin. This is a small
 multitrait-multimethod move at the *ladder* level: two entirely different manipulations of ability
 (mixture rate; structural capacity) produce the same score gradient, which is exactly what "the ride
@@ -400,20 +472,23 @@ This is a **reporting/flagging harness**: it never changes any ride's actual sco
 existing outputs are untouched. `parkbench validity` prints the block and `--json` carries it
 (`hygiene` list + top-level `hygiene_ok`).
 
-**Results (held-out seeds 4000–4011, 6-rung ladder, the CLI default):**
+**Results (held-out seeds 4000–4007, 6-rung ladder, the CLI default; refreshed at D-071):**
 
 ```
 ride         axis       alpha   items  retained  flagged  weak   min r_it  max r_it
-economic     economic  0.994      12        12        0     0     +0.917    +0.996
-safety       safety    0.993      12        12        0     0     +0.916    +0.998
-commons      social    0.996      12        12        0     0     +0.950    +0.998
+economic     economic  0.991       8         8        0     0     +0.942    +0.992
+exchange     economic  0.992       8         8        0     0     +0.954    +0.991
+safety       safety    0.990       8         8        0     0     +0.929    +0.992
+containment  safety    0.987       8         8        0     0     +0.928    +0.996
+commons      social    0.993       8         8        0     0     +0.951    +0.999
 -> every ride's seed suite is internally consistent (alpha >= 0.7) and no item has negative
    discrimination => all items retained (the retention rule had nothing to prune)
 ```
 
-Every generated instance discriminates ability strongly (worst item-rest r = +0.916) and each
-ride's 12-seed suite is highly consistent (α ≥ 0.993) — the generators are producing homogeneous,
-ability-sensitive items, with nothing to prune today.
+(At the wider 12-seed sweep the figures are α ≥ 0.993 with min item-rest r = +0.916 — seed-stable.)
+Every generated instance discriminates ability strongly (worst item-rest r = +0.928 here) and every
+ride's seed suite is highly consistent (α ≥ 0.987) — the generators are producing homogeneous,
+ability-sensitive items, with nothing to prune today, including the new containment suite.
 
 **Honest limitations:** (a) the "persons" are the six ε-ladder rungs — N = 6 graded synthetic
 abilities, not a population of real agents, so α and `r_it` certify consistency *against constructed
@@ -475,39 +550,45 @@ The stamp is applied at the CLI emission point, so run logs and viewer fixtures 
 
 ## Results (held-out seeds 4000–4011, 6-rung ladder)
 
+The table below is the default run (`parkbench validity`, held-out seeds 4000–4007, 6 rungs) as of
+**D-071**:
+
 ```
 ride        axis       verdict          rho   mono   floor  ceil   disc    lin   res  rel
-economic    economic   VALID            1.00  1.00  0.706  1.000  0.294   0.99   4/5  0.99
-exchange    economic   VALID            1.00  1.00  0.494  1.000  0.506   0.99   5/5  0.99
-safety      safety     VALID            1.00  1.00  0.303  1.000  0.697   1.00   4/5  0.99
-commons     social     VALID            1.00  1.00  0.483  1.000  0.517   1.00   4/5  0.99
+economic    economic   VALID            1.00  1.00  0.713  1.000  0.287   0.98   4/5  0.99
+exchange    economic   VALID            1.00  1.00  0.489  1.000  0.511   0.99   4/5  0.99
+safety      safety     VALID            1.00  1.00  0.324  1.000  0.676   0.98   3/5  0.98
+containment safety     VALID            1.00  1.00  0.412  1.000  0.588   0.98   3/5  1.00
+commons     social     VALID            1.00  1.00  0.504  1.000  0.496   1.00   2/5  0.98
 overall: ALL RIDES DISCRIMINATIVE   mean rho = 1.000
 
-gaming: greedy CAUGHT (below random on the held-out seeds) — economic 0.988 but career 0.174,
-        Goodhart gap 0.814
+gaming: greedy CAUGHT (below random on the held-out seeds) — economic 0.983 but career 0.056,
+        Goodhart gap 0.928
 ```
 
-(Since D-061 the `res` column is computed from the bootstrap CIs. **The Exchange (D-066) directly
-repairs the economic axis's flagged narrow range**: its best/worst-response bracket gives `random` a
-**0.49 floor** (vs the knapsack's 0.71), so its discrimination is **0.506** — the widest of any fast
-ride — and it resolves **all 5/5** adjacent rungs. The economic axis is now `mean(economic, exchange)`,
-so the two rides sit side by side above. The `gaming` line's `below random` still holds on the held-out
-eval seeds; at the *public* seed 1 the second economic ride lifts `greedy`'s mean capability just above
-`random`'s, so the seed-1 leaderboard now reads optimal > heuristic > greedy > random — `greedy` is
-still **caught** far below the honest `heuristic`, its Goodhart gap intact.)
+(Since D-061 the `res` column is computed from the bootstrap CIs; at the default 8 seeds it is lower
+than the 12-seed figures quoted for earlier laps. **The Exchange (D-066) directly repairs the economic
+axis's flagged narrow range**: its best/worst-response bracket gives `random` a **0.49 floor** (vs the
+knapsack's 0.71) and a **0.51** discrimination. **The Containment Drill (D-071)** does the same job on
+the safety axis with the same bracket-plus-hard-gate scoring: floor **0.41**, discrimination **0.588**,
+split-half reliability **1.00**. The `gaming` line's `below random` holds on the held-out seeds *and*,
+since D-071, at the public seed 1 again: the second safety ride adds a second non-neutral integrity
+term to the reputation product, so `greedy`'s career falls to 0.055 — below `random`'s 0.124 — and the
+Goodhart gap widens 0.814 → **0.928**.)
 
-All four pure-Python rides genuinely track known ability (ρ = 1.00, perfectly monotone, ceiling
+All five pure-Python rides genuinely track known ability (ρ = 1.00, perfectly monotone, ceiling
 reached). The **knapsack economic ride still has a high random floor (0.71)** — that is inherent to its
-`achieved/optimal` scoring — but the axis is no longer *only* that narrow ride: **The Exchange gives
-the economic axis a wide-range (0.506) second ride**, the concrete fix docs/12 called for. The `coding`
-ride is real but subprocess-graded (slow), so it is **opt-in** (`--coding`).
+`achieved/optimal` scoring — but neither weak-range axis is *only* that narrow ride any more: the two
+bracket-scored second rides (Exchange, Containment) give the economic and safety axes wide dynamic
+ranges. The `coding` ride is real but subprocess-graded (slow), so it is **opt-in** (`--coding`) — and
+it is now the **only** single-ride axis.
 
 ---
 
 ## How to run
 
 ```bash
-parkbench validity                 # 3 fast rides + gaming + MTMM + ablation + structural ladder + item hygiene
+parkbench validity                 # 5 fast rides + gaming + MTMM + ablation + structural ladder + item hygiene
 parkbench validity --seeds 16      # more seeds ⇒ tighter CIs ⇒ more resolvable rungs (≥8 stabilizes MTMM)
 parkbench validity --coding        # also validate the (slow) coding ride + add it to the matrix
 parkbench validity --json          # machine-readable report (incl. `convergent` + `structural` blocks)
@@ -522,23 +603,26 @@ discrimination fails CI.
 ## Honest remaining gaps (the validity roadmap)
 
 This harness is a real down-payment, not the finish line. It proves each ride discriminates *known*
-ability and resists the *known* reward-hacker, (since D-057) that the social axis is a construct
-distinct from the economic/safety axes over a small roster, (since D-058) that no ride's score
+ability and resists the *known* reward-hacker, (since D-057) that rides sharing an axis **converge**
+— now on three axes (D-066, D-071), (since D-058) that no ride's score
 survives a blanked observation (no blind shortcut), (since D-059) that the score gradient is
 reproduced by a randomness-free *structural* capability dial, (since D-060) that every
 individual held-out seed is itself a consistent, ability-discriminating test item, and (since
 D-061) that its error bars are assumption-free bootstrap intervals and every emitted result names
 the benchmark version that produced it; it does **not** yet prove the tasks
-resemble real-world capability, nor that *every* axis is distinct (three of four carry a single
-ride).
+resemble real-world capability, nor that **any** axis is *distinct* — as of D-071 every within-axis
+pair fails the Campbell-Fiske discriminant test over the four deterministic baselines (and coding
+still carries a single ride).
 
-> **★ Convergent / discriminant — first offline cut landed (D-057).** The MTMM discriminant half is
-> now implemented (section above): the two social rides converge (ρ = +1.00) and that exceeds their
-> cross-axis correlations. What remains for full **criterion validity** is the harder, external half —
-> showing the ride scores **correlate with a measure already trusted** (an established benchmark or a
-> real task outcome) and giving every non-social axis a **second ride** so it, too, has a within-axis
-> pair. That is what would move the claim all the way from *"the axes look distinct over three
-> agents"* to *"a high Parkbench score means real capability"*.
+> **★ Convergent / discriminant — measured, and currently negative (D-057 → D-066 → D-071).** The
+> MTMM half is implemented (sections above) and now covers **three of four axes** (social, economic,
+> safety; coding is the last single-ride axis). **Convergent evidence is strong on all three**
+> (ρ = +1.00 / +1.00 / +0.80). **Discriminant evidence is absent on all three** — including the social
+> pair, which passed from D-057 until the containment ride (D-071) tied it. The measured blocker is
+> not any ride but the **roster**: four deterministic baselines cannot supply enough distinct
+> orderings for a Campbell-Fiske separation, and each new monotrait pair makes the test strictly
+> harder. What remains is therefore the same external half as before — a **richer, real agent cohort**
+> plus **criterion validity** against a measure the world already trusts.
 
 In (effort) priority order, the techniques the research surfaced:
 
@@ -554,10 +638,12 @@ In (effort) priority order, the techniques the research surfaced:
    discrimination over the ladder's person×item matrix; all 12 held-out seeds per fast ride are
    retained (α ≥ 0.993, min r_it +0.916, nothing flagged). *Remaining:* wiring a flagged item back
    into generator tuning if one ever appears, and a real-agent (non-synthetic) person sample.
-4. **Convergent / discriminant validity — ✅ first cut landed (D-057).** MTMM matrix over the four
-   axes; social pair converges and clears its cross-axis correlations. *Remaining:* a larger roster
-   (needs a negotiation `optimal`), a second ride per non-social axis, and an **external** criterion
-   correlation.
+4. **Convergent / discriminant validity — ✅ measured (D-057, D-066, D-071); verdict negative.** MTMM
+   matrix over the four axes, now with **three** within-axis pairs. All three converge; **none**
+   currently clears its own row/column (the social pair regressed to FAIL when the containment ride
+   joined). *Remaining, and now the clearly-binding constraint:* a **larger, non-deterministic roster**
+   (real BYO/LLM agents whose per-axis strengths differ; a negotiation `optimal` would also widen
+   social pairs to N = 4), a second **coding** ride, and an **external** criterion correlation.
 5. **Bootstrap CIs + benchmark versioning — ✅ landed (D-061).** Section above: the harness's CIs
    are now seeded percentile-bootstrap intervals (B = 2,000, type-7 percentiles, deterministic) and
    every `--json` result carries a top-level `benchmark_version` (initial `1.0.0`, bump-on-score-change
