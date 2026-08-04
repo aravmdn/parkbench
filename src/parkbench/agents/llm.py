@@ -179,6 +179,14 @@ class LLMAgent(Agent):
         self._no_key = self._built_own_provider and not getattr(self.provider, "api_key", "")
         self._warned_fallback = False
 
+        # The most recent fallback's cause, as ``"<ExceptionType>: <message>"`` (``None`` until one
+        # happens). ``act`` deliberately swallows every exception, which made the *reason* for a
+        # silent degrade unrecoverable by a caller — so `parkbench doctor --live` (D-072) could say
+        # "not live" but never why. Recording it here is reporting-only: no control flow, stdout or
+        # score depends on it. Never contains the API key (providers raise on transport/parse, and
+        # the doctor scrubs known secrets out of borrowed text anyway).
+        self.last_fallback_error: Optional[str] = None
+
     @property
     def used_live_llm(self) -> bool:
         """True iff at least one move came from a real provider response (not the fallback)."""
@@ -304,10 +312,11 @@ class LLMAgent(Agent):
             action = self.parse_action(text, obs)
             self.live_calls += 1
             return action
-        except Exception:
+        except Exception as exc:
             # Any failure (no key, retired model id, rate limit, network, timeout, bad/parse,
             # validation) -> a safe, deterministic move. Never raise: a run must not crash/hang.
             self.fallback_calls += 1
+            self.last_fallback_error = f"{type(exc).__name__}: {exc}"
             self._warn_fallback_once()
             return self._fallback.act(obs)
 

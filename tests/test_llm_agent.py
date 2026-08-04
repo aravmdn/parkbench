@@ -254,6 +254,24 @@ def test_key_present_live_failure_warns_once_with_distinct_message(monkeypatch, 
     assert capsys.readouterr().out == ""  # stdout/scores untouched
 
 
+def test_fallback_records_its_cause(monkeypatch):
+    """The reason for a silent degrade is recoverable by a caller (`parkbench doctor --live`, D-072).
+
+    ``act`` swallows every exception by design, which used to make "why is this not live?"
+    unanswerable in-process — the D-068 symptom seen from the other side.
+    """
+    obs = _obs_for(seed=1)
+    agent = LLMAgent(provider=FakeProvider(reply='{"type":"message","message":"hi"}'))
+    agent.reset(0, 8)
+    agent.act(obs)
+    assert agent.last_fallback_error is None  # a live move records nothing
+
+    broken = LLMAgent(provider=FakeProvider(raises=True))
+    broken.reset(0, 8)
+    broken.act(obs)
+    assert broken.last_fallback_error == "RuntimeError: simulated provider failure"
+
+
 def test_openrouter_provider_reads_env(monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     monkeypatch.setenv("OPENROUTER_MODEL", "some/model:free")
