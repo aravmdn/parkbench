@@ -1,6 +1,6 @@
 # 02 — Decision Log
 
-**Status:** Living · **Last updated:** 2026-08-03
+**Status:** Living · **Last updated:** 2026-08-05
 
 Append-only log of decisions and their rationale (lightweight ADR style). When a decision is
 reversed or superseded, add a **new** entry referencing the old one rather than editing history.
@@ -1661,3 +1661,73 @@ Docs: `07-multi-ride.md` (new ride, three two-ride axes, updated career/leaderbo
 `12-validity.md` (D-071 MTMM update + refreshed results table + revised "remaining gaps"),
 `13-external-validity-plan.md` (§E as-built + re-prioritised sequence), `04-open-questions.md`
 (per-axis integrity aggregation). **312 tests.**
+
+### D-072 · 2026-08-05 · `parkbench doctor` — one command for "is my setup live, and where is each setting from?"
+
+**Decision:** Add a **`parkbench doctor`** command (new `src/parkbench/doctor.py`, new
+`tests/test_doctor.py`) that diagnoses the local setup and prints a short, scannable, **secret-free**
+report, and make `dotenv.py`'s OS-env-wins precedence **observable** so doctor can attribute every
+setting to its true source.
+
+**Why:** D-068 cost the owner a session to a setup that *looked* fine and silently was not — a retired
+default model (so `--agent llm` quietly printed heuristic fallback numbers), and an OS-environment
+`OPENROUTER_API_KEY` shadowing a *different* key in the gitignored `.env` (the `.env` one was never
+read, and nothing said so). D-068 fixed the causes; nothing yet answers the *question*. There was **no
+single command** that says where each setting comes from or whether the agent is genuinely live, and
+"the OS environment wins" (D-033) is the right policy but was completely invisible.
+
+**What it reports:**
+- **runtime** — Python + interpreter, the imported `parkbench` package's **path** and whether it is an
+  *editable* install, and `BENCHMARK_VERSION`. The path line catches the git-worktree trap (standing in
+  one checkout while `import parkbench` resolves to another silently invalidates every run and test).
+- **config provenance (the headline)** — for `OPENROUTER_API_KEY` / `OPENROUTER_MODEL`, the source of
+  the **effective** value (`OS env` / `.env` / in-code default) and an explicit
+  `.env value SHADOWED (differs)` warning. That one line is what would have saved the D-068 session.
+- **secrets hygiene** — a secret's content is never emitted (text or `--json`, where `"value": null`
+  for secrets); only presence, source, char count and a *shape* hint (`sk-or-` prefix expected). Known
+  secret values are scrubbed out of borrowed text (e.g. a provider error), including the **shadowed**
+  `.env` value — a shadowed key is still a real credential. A test asserts no leak on both paths (it
+  caught exactly that hole in the first implementation).
+- **llm model** — the effective id + where it came from + the in-code default.
+- **fixture provenance** — the existing `export.export_profiles(check=True)` logic **reused**, never
+  reimplemented (a test asserts the delegation), so a drifted spectator fixture fails here too.
+- **`--live` (opt-in)** — builds `make_agent("llm")` and plays **one** move, so it exercises the real
+  provider/prompt/parser a scored run uses; a parallel "ping the API" check could pass while real runs
+  still fell back (the D-068 failure mode). **Without `--live` doctor makes zero network calls** — a
+  `urllib.request.urlopen` tripwire in the tests asserts it.
+
+**Supporting changes (deliberately minimal, both additive):**
+- `dotenv.py` gains `parse_dotenv` (non-mutating), `load_dotenv_report` → a **`DotenvLoad`** record
+  (`loaded` = keys this call set · `shadowed` = keys the file declared but the OS env already owned ·
+  `source_of` / `is_shadowed` / `shadow_differs`), and `last_load()`. **Load semantics are unchanged**
+  — `load_dotenv` still never overrides `os.environ` and still returns the keys it set (its existing
+  tests pass untouched). The record is what makes provenance knowable at all: by the time a subcommand
+  runs, `cli.main()` has already merged the file into `os.environ`, where a file-sourced value is
+  indistinguishable from an OS-env one.
+- `agents/llm.py` gains `LLMAgent.last_fallback_error` (set in the existing `except` clause). `act`
+  swallows every exception by design, which made the *reason* for a silent degrade unrecoverable
+  in-process — so `--live` could say "not live" but never why. Reporting-only: no control flow, stdout
+  or score depends on it (D-068's stderr warning and byte-identical stdout are untouched).
+
+**Exit code:** `0` unless something is *actually broken* — fixture drift/missing, or a `--live` probe
+that did not reach a model. Advisories (no API key, a shadowed `.env` value, a package imported from
+another tree) are **warnings**: they colour the report, not the exit code. `--json` carries the
+`benchmark_version` stamp like every other `--json` command (D-061).
+
+**Scope discipline:** stdlib-only (D-023/D-030), deterministic, **purely additive** — no ride, scoring,
+fixture or `BENCHMARK_VERSION` change; `export-profiles --check` stays 8/8 `ok` at v1.1.0 and public
+baselines are byte-identical. **314 passing tests** (+33: 25 doctor · 7 dotenv · 1 llm — from 281 on
+`main`, i.e. the status block's 280 plus D-068's own +1).
+
+**Rejected:** (a) inferring provenance by re-parsing `.env` and comparing to `os.environ` after the
+load — ambiguous whenever the two values agree, and actively wrong (it reports every key as shadowed)
+once `cli.main` has loaded the file; (b) making `.env` override the OS environment to "fix" the
+shadowing — that breaks CI secrets and D-033's stated precedence; the answer is to make the precedence
+*visible*, not to change it; (c) a standalone `check_key()` network ping for `--live` — it could
+succeed while real runs still fell back, which is precisely the bug being guarded against; (d) folding
+the diagnosis into `export-profiles` or `map` — a setup diagnosis is its own concern and needs its own
+exit code.
+
+**Verify:** `parkbench doctor` · `parkbench doctor --json` · `parkbench doctor --live` (needs a key;
+verified live on this box: one call to `google/gemma-4-26b-a4b-it:free` returned a usable move) ·
+`pytest tests/test_doctor.py tests/test_dotenv.py` (25 + 10).

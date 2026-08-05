@@ -204,6 +204,14 @@ Tier A (stdlib-only, keep `pytest` green + baselines byte-identical).
   `economic × safety` stays +1.00 ⇒ economic **discriminant FAIL** (needs a richer BYO roster; social
   still PASSes). Seed-1 leaderboard reorders (greedy no longer last — still caught below heuristic;
   `below_random` holds on held-out seeds); `viewer/profiles.html` callout fixed. 280 tests.
+- [x] `setup-doctor` — (QoL, added out-of-queue as a D-068 follow-up) A `parkbench doctor` command that
+  diagnoses the local setup and says **where every setting comes from**. ✅ landed (D-072) —
+  `src/parkbench/doctor.py` + `parkbench doctor [--live] [--no-fixtures] [--json]`: runtime (incl.
+  editable-install + wrong-source-tree detection), **config provenance** with an explicit
+  `.env value SHADOWED (differs)` warning, secret-free reporting (presence/source/length only), the
+  reused `export-profiles --check`, and an opt-in **one-call** live LLM probe (zero network calls
+  without `--live`). `dotenv.py` now records loaded-vs-shadowed keys; `LLMAgent.last_fallback_error`
+  makes a silent degrade's cause reportable. +33 tests (314), baselines byte-identical (Tier A).
 - [x] `second-ride-safety-or-coding` — Repeat the "2nd ride per axis" move for **safety** and/or
   **coding** so those axes get real monotrait pairs too (and a chance to break their +1.00 cross-axis
   ties with economic). **Done when:** the new ride is VALID and appears in the MTMM matrix (Tier A).

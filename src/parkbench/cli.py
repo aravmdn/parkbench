@@ -7,6 +7,7 @@
   parkbench career  — the radar weighted by cross-ride reputation (D-041).
   parkbench leaderboard — rank agents by career score (D-042).
   parkbench export-profiles — regenerate/--check the web/ + viewer/ spectator fixtures (D-062).
+  parkbench doctor  — diagnose the local setup + where every setting comes from (D-072).
 """
 
 from __future__ import annotations
@@ -247,6 +248,23 @@ def cmd_export(args: argparse.Namespace) -> int:
     if args.check and any(not r.ok for r in results):
         return 1
     return 0
+
+
+def cmd_doctor(args: argparse.Namespace) -> int:
+    # Imported lazily so the core CLI carries no dependency on the diagnostics unless used (D-072).
+    from .doctor import build_doctor_report, render_doctor_report
+
+    report = build_doctor_report(
+        root=args.root, seed=args.seed, live=args.live, check_fixtures=args.fixtures
+    )
+    if args.json:
+        _emit_json(report.to_dict())
+    else:
+        print()
+        print(render_doctor_report(report))
+        print()
+    # 0 = healthy (warnings included); non-zero only when something is actually broken.
+    return report.exit_code
 
 
 def cmd_validity(args: argparse.Namespace) -> None:
@@ -608,6 +626,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="Verify committed fixtures match the current CLI output without writing (drift => exit 1).",
     )
     xp.set_defaults(func=cmd_export)
+
+    # Setup doctor (D-072): one command that answers "is my setup actually live, and where is each
+    # setting coming from?" — the question D-068 had no way to ask. Zero network calls without --live.
+    dr = sub.add_parser(
+        "doctor",
+        help="Diagnose the local setup: runtime, config provenance (.env vs OS env), fixtures.",
+    )
+    dr.add_argument("--root", default=".", help="Repo root under which web/ and viewer/ live.")
+    dr.add_argument("--seed", type=int, default=1, help="Seed for the fixture check + live probe.")
+    dr.add_argument(
+        "--live", action="store_true",
+        help="Also make ONE real OpenRouter call through the llm agent to prove it is genuinely "
+             "live (without this flag, doctor makes no network calls at all).",
+    )
+    dr.add_argument(
+        "--no-fixtures", dest="fixtures", action="store_false",
+        help="Skip the (slower) export-profiles provenance check.",
+    )
+    dr.add_argument("--json", action="store_true", help="Emit the diagnosis as JSON instead of text.")
+    dr.set_defaults(func=cmd_doctor, fixtures=True)
     return p
 
 

@@ -29,7 +29,8 @@ sharper discrimination (D-031/D-032).
 | `server.py` | The park-hosted HTTP/JSON server (D-027): an `HttpBridgeAgent` (side-A stub that blocks on the network) + a stdlib `ThreadingHTTPServer`. Hosts one run, drives it via `run_suite`, writes the same run log. |
 | `client.py` | `drive_agent(base_url, agent)` — a reference `urllib` poll-loop adapter that serves any local `Agent` to a `ParkServer` over the wire (the BYO example). |
 | `cli.py` | `parkbench run` (incl. `--swap-persona`, `--inject-scenario`, `--off-record`), `parkbench analyze`, and `parkbench serve`. |
-| `dotenv.py` | A zero-dep `.env` loader the CLI calls at startup (D-033); real env vars take precedence. |
+| `dotenv.py` | A zero-dep `.env` loader the CLI calls at startup (D-033); real env vars take precedence. `load_dotenv_report()` returns a `DotenvLoad` recording which keys it **set** vs. which the OS environment already **shadowed**, so the precedence is observable (D-072); `load_dotenv()` is the unchanged thin wrapper. |
+| `doctor.py` | `parkbench doctor` (D-072) — the setup diagnosis: runtime, **config provenance** (which of OS env / `.env` / in-code default each setting came from, incl. shadowing), the reused `export-profiles --check`, and an opt-in one-call `--live` LLM probe. Reporting only; secrets are never emitted. |
 
 ## Utility model (D-016)
 
@@ -229,7 +230,10 @@ The default model for the bare `llm` agent is the `DEFAULT_MODEL` module constan
 
 The CLI **auto-loads a `.env`** from the working directory at startup (D-033), so dropping
 `OPENROUTER_API_KEY=…` (and optionally `OPENROUTER_MODEL=…`) in a local `.env` is enough — no manual
-`export` needed. Real environment variables (and CI secrets) override the file.
+`export` needed. Real environment variables (and CI secrets) override the file. **That precedence is
+a footgun if it is invisible** (D-068 lost a session to an OS-env key shadowing a different `.env`
+key), so `parkbench doctor` reports the effective source of every setting — see
+[Setup doctor](#setup-doctor-parkbench-doctor) below.
 
 ### Run a live negotiation
 
@@ -298,6 +302,56 @@ the other half of the `live-profiles` task.
   asserts the served JSON **equals the CLI producer's JSON** for `radar`/`career`/`leaderboard`, plus
   the `404`/`400`/`405`/health/CORS behaviours. No external network.
 
+## Setup doctor (`parkbench doctor`)
+
+One command that answers *"is my setup actually live, and where is each setting coming from?"* — the
+question D-068 had no way to ask (a retired default model made every `--agent llm` run silently print
+heuristic numbers, while an OS-environment `OPENROUTER_API_KEY` silently shadowed a different key in
+the `.env`). Implemented in `src/parkbench/doctor.py`; stdlib-only, deterministic, reporting-only (no
+ride/scoring/fixture code is touched).
+
+```bash
+parkbench doctor                 # full report; makes NO network calls
+parkbench doctor --no-fixtures   # skip the ~15 s fixture provenance check
+parkbench doctor --live          # additionally make ONE real OpenRouter call
+parkbench doctor --json          # machine-readable, stamped with benchmark_version (D-061)
+```
+
+What it reports:
+
+| Section | Content |
+|---|---|
+| **runtime** | Python version/implementation/interpreter, the imported `parkbench` package's **path** + whether it is an *editable* install, and `BENCHMARK_VERSION`. The path line catches the git-worktree trap: standing in one checkout while `import parkbench` resolves to another (every run/test there silently exercises the other tree). |
+| **config provenance** | For each setting the engine reads (`OPENROUTER_API_KEY`, `OPENROUTER_MODEL`), the **source of the effective value** — `OS env` / `.env` / in-code default — and an explicit `.env value SHADOWED (differs)` when the OS environment is overriding a *different* value in the file. |
+| **llm model** | The effective model id for the bare `llm` agent, its source, and the in-code default. |
+| **checks** | One `[ok]` / `[warn]` / `[fail]` / `[skip]` line per diagnosis, plus a one-line verdict. |
+
+- **Secrets hygiene.** A secret's *content is never emitted* — not in the text report, not in `--json`
+  (`"value": null` for secrets). Only presence, source, character count and a shape hint
+  (`does NOT look like an OpenRouter key`) are shown, and every known secret value is scrubbed out of
+  borrowed text such as a provider error message. Both the effective **and** the shadowed `.env`
+  value are scrubbed — a shadowed key is still a real credential.
+- **Provenance is knowable only because `dotenv` records it.** After `cli.main()` has loaded the
+  `.env`, a file-sourced value is indistinguishable from an OS-env one in `os.environ`; doctor reads
+  `dotenv.last_load()` (the `DotenvLoad` from that startup load) rather than guessing.
+- **Fixture provenance reuses `export.py`.** The `export-profiles --check` logic is called, not
+  reimplemented, so a drifted spectator fixture fails here too (this is the slow part, ~15 s — skip it
+  with `--no-fixtures`).
+- **`--live` is opt-in and goes through the real agent.** It builds `make_agent("llm")` and plays
+  **one** move, so it exercises the same provider, prompt and parser a scored run does — a separate
+  "just ping the API" check could pass while real runs still fell back (the D-068 failure mode). It
+  reports `live` vs. a silent fallback *and the reason* (`LLMAgent.last_fallback_error`, added for
+  this: `act` swallows every exception by design, which made the cause unrecoverable in-process).
+  **Without `--live`, doctor makes zero network calls** — asserted in the tests by a tripwire over
+  `urllib.request.urlopen`.
+- **Exit code.** `0` unless something is *actually broken* — fixture drift/missing, or a `--live`
+  probe that did not reach a model. Advisories (no API key, a shadowed `.env` value, a package
+  imported from another tree) are **warnings**: they colour the report, not the exit code.
+
+`tests/test_doctor.py` covers all of it offline (the live path is stubbed, never called for real),
+including the headline case: an OS-env value shadowing a different `.env` value is reported, and
+neither secret appears in the text or the JSON.
+
 ## Replay viewer (D-028)
 
 `viewer/index.html` is a single static file — no build step, no dependencies, opens directly via
@@ -312,6 +366,8 @@ fixture and `viewer/README.md` documents usage.
 ```bash
 uv venv && uv pip install -e ".[dev]"      # or: python -m venv .venv && pip install -e ".[dev]"
 pytest                                      # 57 tests
+parkbench doctor                            # diagnose the local setup + where every setting comes from
+parkbench doctor --live                     # ...and prove the llm agent is genuinely live (one API call)
 parkbench run --agent heuristic --seed 1    # run the suite, print a profile, write a run log
 parkbench run --agent greedy --seed 1       # compare a weaker strategy
 parkbench analyze --seed 1                  # inspect one scenario's optimum
