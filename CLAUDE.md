@@ -42,7 +42,58 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 | `docs/05-glossary.md` | Shared vocabulary (ride, house cast, BYO agent, radar profile, …). |
 | `docs/06-v1-architecture.md` | How the v1 core + follow-ups are built — modules, formulas, how to run, results. |
 
-## Current status (2026-07-23)
+## Current status (2026-08-05)
+
+**Four laps landed (D-069 · D-070 · D-071 · D-072) — the safety axis gets its second ride and the
+benchmark moves to v1.2.0; the park now reads live data and each land looks like itself.** Work done
+between 2026-07-24 and 2026-08-05, committed one lap at a time. **345 passing tests** (280 → +32
+containment, +33 doctor). Verify: `pytest` (~6.5 min — needs `uv pip install -e ".[dev]"`;
+`tests/test_serve_profiles.py::test_post_is_rejected_read_only` is flaky on Windows under load and
+passes in isolation) · `parkbench doctor` · `parkbench containment --agent heuristic` · `parkbench
+export-profiles --check` (8 `ok`, v1.2.0) · `parkbench validity` · `cd web && npm run build`.
+
+- **D-071 "The Containment Drill" — 2nd safety ride (SCORE-ALTERING, `BENCHMARK_VERSION` → 1.2.0).**
+  A solo, exactly-solvable **safety-envelope / cumulative-risk** ride (`src/parkbench/containment/`,
+  `parkbench containment`, themed *The Cooling Tower*) makes the safety axis `mean(red-line,
+  containment)`; **coding is now the only single-ride axis**. Deliberately *not* a reskin of D-040:
+  nothing is forbidden, safety is a property of the **trajectory**, margin is bought in advance with
+  output, and there is no adversary — so the failure it measures is **foresight**, not defiance (the
+  myopic `heuristic` never breaches and still loses ~13 % of available output). Exact backward-induction
+  DP over `(cycle, hazard)`; best/worst bracket scoring plus a hard breach → 0 gate; integrity =
+  `1 − breach_rate`. **VALID** (ρ 1.00, floor 0.412, disc 0.588, ablation collapse 0.704). All 8
+  fixtures regenerated. **Honest consequences:** `greedy`'s reputation falls 0.333 → 0.111 (career
+  0.174 → **0.055**), so seed 1 reorders to `optimal 1.000 > heuristic 0.580 > random 0.124 > greedy
+  0.055` — the reward-hacker is **dead last again** (Goodhart gap 0.928), but that is one pathology
+  **double-counted** by the multiplicative reputation (per-axis aggregation parked in `docs/04`). The
+  safety pair converges at only **+0.80** ⇒ safety discriminant FAIL, **and the social discriminant
+  regressed PASS → FAIL** (D-057's headline no longer holds as measured). **The real finding:** with
+  four *deterministic* baselines the MTMM matrix turns on one bit, and each new monotrait pair adds six
+  heterotrait cells to clear — so **more rides can only make the discriminant test harder**. This
+  re-prioritises `docs/13`: the **criterion cohort** (a richer, non-deterministic roster) comes *before*
+  a second coding ride or harder tiers.
+- **D-072 `parkbench doctor` — "is my setup live, and where is each setting from?"** The command D-068
+  needed and didn't have (`src/parkbench/doctor.py`): runtime + **editable/wrong-tree detection**,
+  **config provenance** with an explicit `.env value SHADOWED (differs)` warning, **secret-free**
+  reporting (presence/source/length only, scrubbed from borrowed text — including the shadowed value),
+  fixture provenance by *reusing* `export-profiles --check`, and an opt-in `--live` **one-move** probe
+  through the real agent. **Zero network calls without `--live`** (tripwire-asserted). Supporting:
+  `dotenv.py` now records loaded-vs-shadowed keys (`DotenvLoad`, `last_load()`; load semantics
+  unchanged) and `LLMAgent.last_fallback_error` makes a silent degrade's cause reportable.
+- **D-069 `web-fetch-profiles` (visual-world chunk 4, task 2).** The front-end half of D-067: the world
+  reads a running `parkbench serve --profiles` when the page asks (`?profiles=…`) and the committed
+  fixtures otherwise — **no param means no network request at all** — booting on fixtures and swapping
+  live payloads in, with the source shown **per payload** on screen. Tier B (no engine code).
+- **D-070 richer per-land art (visual-world chunk 4).** Each land gets its own **ground treatment**
+  (`LAND_GROUND` + 5 procedural tiles) and **props** (new `web/src/landart.js`, 10 generators);
+  accent wash 0.16 → 0.10. All art procedural/CC0-by-construction; presentation-only.
+
+**Next:** **`byo-live-connector`** is the last chunk-4 task; on the trust track the unblocking item is
+now **`criterion-cohort`** (`docs/13` §B) — a richer real-agent roster — *before* any further ride.
+Decisions: **D-069, D-070, D-071, D-072**.
+
+---
+
+## Prior status (2026-07-23)
 
 **Live LLM agent repaired (D-068): `--agent llm` now actually hits OpenRouter again.** The owner found
 that even with a valid key, `--agent llm` never made a live call — it silently printed heuristic numbers.
