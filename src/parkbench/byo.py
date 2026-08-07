@@ -58,3 +58,34 @@ RUN_TIMEOUT_S = 120.0
 #: The one ride the v1 BYO wire can score (``docs/09-byo-protocol.md`` "Scope").
 WIRE_RIDE = "negotiation"
 WIRE_AXIS = "social"
+
+
+class _WireCounter(Agent):
+    """Transparent proxy that counts the turns the BYO client answered over the wire.
+
+    Wraps the agent being driven so the captured run can report *how much protocol traffic actually
+    happened* — the one honest signal that a profile came from the wire rather than from a fixture.
+    It delegates everything and decides nothing, so the wrapped agent's behaviour (and therefore the
+    score) is untouched.
+    """
+
+    def __init__(self, inner: Agent) -> None:
+        self.inner = inner
+        self.name = inner.name
+        self.version = getattr(inner, "version", None) or "0"
+        self.turns = 0
+        self.matches = 0
+
+    def reset(self, seed: int = 0, total_rounds: int = 8) -> None:
+        self.matches += 1
+        self.inner.reset(seed=seed, total_rounds=total_rounds)
+
+    def act(self, obs: Observation) -> Action:
+        self.turns += 1
+        return self.inner.act(obs)
+
+    def config(self) -> dict:
+        return self.inner.config()
+
+    def identity(self) -> AgentIdentity:
+        return self.inner.identity()
