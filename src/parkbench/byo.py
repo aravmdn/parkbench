@@ -89,3 +89,54 @@ class _WireCounter(Agent):
 
     def identity(self) -> AgentIdentity:
         return self.inner.identity()
+
+
+@dataclass(frozen=True)
+class ByoRun:
+    """A completed live BYO run: the wire's own result, shaped for the spectator surfaces.
+
+    ``profile`` is a real :class:`~parkbench.radar.RadarProfile` — built from the single ride the
+    wire could score — so ``axes`` / ``missing_axes`` / ``skipped_rides`` are computed by the same
+    roll-up code a baseline goes through, not re-derived here.
+    """
+
+    identity: AgentIdentity
+    profile: RadarProfile
+    n_scenarios: int
+    round_cap: int
+    #: Structural wire provenance (deterministic — no clock, no port). See the module docstring.
+    wire: dict = field(default_factory=dict)
+
+    @property
+    def agent(self) -> str:
+        return self.profile.agent
+
+    @property
+    def seed(self) -> int:
+        return self.profile.seed
+
+    @property
+    def score(self) -> float:
+        """The negotiation efficiency this run earned (the only score the wire can produce)."""
+        return self.profile.results[0].score if self.profile.results else 0.0
+
+    def to_dict(self) -> dict:
+        """The radar-shaped JSON the ``web/`` world consumes for its BYO trainer.
+
+        Identical in shape to ``parkbench radar --json`` (so the front-end needs no second reader),
+        plus the three BYO markers the spectator surfaces key off: ``byo``, ``identity`` (D-038) and
+        ``live`` — with ``source`` recording *how* it was obtained.
+        """
+        radar = self.profile.to_dict()
+        return {
+            "agent": radar["agent"],
+            "byo": True,
+            "live": True,
+            "identity": self.identity.to_dict(),
+            "seed": radar["seed"],
+            "axes": radar["axes"],
+            "missing_axes": radar["missing_axes"],
+            "rides": radar["rides"],
+            "skipped_rides": radar["skipped_rides"],
+            "source": dict(self.wire),
+        }
