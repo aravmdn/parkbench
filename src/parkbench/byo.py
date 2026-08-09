@@ -140,3 +140,14 @@ class ByoRun:
             "skipped_rides": radar["skipped_rides"],
             "source": dict(self.wire),
         }
+
+
+def _other_ride_names() -> list[str]:
+    """Every registered ride the BYO wire cannot score, in registry order.
+
+    Imported lazily (as :mod:`parkbench.radar` does) so importing this module never forces the whole
+    ride graph to load — and so the list stays correct as rides are added.
+    """
+    from .rides import RIDE_REGISTRY
+
+    return [name for name in RIDE_REGISTRY if name != WIRE_RIDE]
