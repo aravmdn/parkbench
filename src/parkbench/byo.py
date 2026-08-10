@@ -151,3 +151,101 @@ def _other_ride_names() -> list[str]:
     from .rides import RIDE_REGISTRY
 
     return [name for name in RIDE_REGISTRY if name != WIRE_RIDE]
+
+
+def run_byo_negotiation(
+    agent: Agent,
+    *,
+    seed: int = 1,
+    n_scenarios: int = 12,
+    round_cap: int = 8,
+    byo_name: str = DEFAULT_BYO_NAME,
+    byo_version: Optional[str] = None,
+    host: str = "127.0.0.1",
+    write_log: bool = False,
+    timeout: float = RUN_TIMEOUT_S,
+) -> ByoRun:
+    """Drive ``agent`` through the negotiation ride **over the wire** and capture its profile.
+
+    Binds a real :class:`~parkbench.server.ParkServer` on an ephemeral loopback port, drives it with
+    the reference client, waits for the run to finish and rolls the result up into a
+    :class:`ByoRun`. Every observation and action crosses the socket, so this exercises the published
+    protocol end-to-end rather than approximating it.
+
+    ``agent`` is whatever plays the BYO side. Over the wire the park cannot tell a genuine third
+    party from a built-in stand-in — that indistinguishability *is* the protocol's guarantee (D-015),
+    and it is what lets this ship as an offline-verifiable test: point it at a built-in agent here,
+    at someone else's HTTP client in the wild.
+
+    ``byo_name`` / ``byo_version`` label the run for attribution (D-038). The ``config_hash`` is the
+    driven agent's real one, so two differently-configured BYO agents stay distinguishable.
+
+    Raises ``RuntimeError`` if the park side fails or does not finish inside ``timeout``.
+    """
+    # Imported lazily: the connector is an optional slice, and the core CLI should not pay for HTTP.
+    from .client import drive_agent
+    from .rides import NegotiationRide
+    from .server import ParkServer
+    from .suite import Suite
+
+    counter = _WireCounter(agent)
+    suite = Suite(seed=seed, n_scenarios=n_scenarios, round_cap=round_cap)
+    server = ParkServer(
+        suite, host=host, port=0, agent_name=byo_name, write_log=write_log
+    ).start()
+    try:
+        drive_agent(server.base_url, counter)
+        try:
+            profile, records = server.wait(timeout=timeout)
+        except AssertionError:
+            # ParkServer.wait asserts on a profile that never arrived (i.e. we hit `timeout`).
+            # A hung wire is an operational failure, not a broken invariant — say so plainly.
+            raise RuntimeError(f"BYO run did not finish within {timeout}s") from None
+    finally:
+        server.stop()
+
+    # Shape the negotiation leg exactly as `NegotiationRide.evaluate` does, so a wired leg and an
+    # in-process leg are indistinguishable downstream (asserted in tests/test_byo.py).
+    result = RideResult(
+        ride=NegotiationRide.name,
+        axis=NegotiationRide.axis,
+        agent=byo_name,
+        score=profile.efficiency.mean,
+        detail={
+            "efficiency": profile.efficiency.mean,
+            "own_value": profile.own_value.mean,
+            "deal_rate": profile.deal_rate,
+            # Same neutral integrity the in-process ride declares: walking away is legitimate.
+            "integrity": 1.0,
+        },
+    )
+    # Build the roll-up through the real RadarProfile so the covered/missing axis split and the
+    # skipped-ride list are the radar's own logic, not a second opinion.
+    radar_profile = RadarProfile(
+        agent=byo_name,
+        seed=seed,
+        axis_scores={WIRE_AXIS: result.score},
+        results=[result],
+        skipped=_other_ride_names(),
+    )
+    inner_identity = counter.identity()
+    identity = AgentIdentity(
+        name=byo_name,
+        version=byo_version or inner_identity.version,
+        config_hash=inner_identity.config_hash,
+    )
+    return ByoRun(
+        identity=identity,
+        profile=radar_profile,
+        n_scenarios=n_scenarios,
+        round_cap=round_cap,
+        wire={
+            "mode": "live",
+            "protocol": "http/json",
+            "spec": "docs/09-byo-protocol.md",
+            "ride": WIRE_RIDE,
+            "matches": len(records),
+            "turns": counter.turns,
+            "driver": counter.name,
+        },
+    )
