@@ -249,3 +249,34 @@ def run_byo_negotiation(
             "driver": counter.name,
         },
     )
+
+
+def run_byo_from_name(agent_name: str, **kwargs) -> ByoRun:
+    """:func:`run_byo_negotiation` for an agent named in the negotiation registry.
+
+    Convenience for the CLI and the ``/byo`` endpoint — the wire is agent-agnostic, so any built-in
+    negotiator can stand in for a third party while the protocol path stays identical.
+    """
+    from .agents import make_agent
+
+    return run_byo_negotiation(make_agent(agent_name), **kwargs)
+
+
+def render_byo_run(run: ByoRun) -> str:
+    """A compact text summary of a captured live BYO run (the CLI's default output)."""
+    ident = run.identity
+    lines = [
+        f"BYO live run - '{ident.name}'  (seed={run.seed})",
+        "",
+        f"  identity      : {ident.name} v{ident.version} #{ident.config_hash}  (D-038)",
+        f"  wire          : {run.wire.get('protocol')} per {run.wire.get('spec')}"
+        f"  ({run.wire.get('matches')} matches, {run.wire.get('turns')} turns answered)",
+        f"  driven by     : {run.wire.get('driver')}",
+        "",
+        f"  negotiation   : {run.score:.6f}   (efficiency; the only ride this wire can score)",
+        f"  covered axes  : {', '.join(run.profile.covered_axes) or '(none)'}",
+        f"  missing axes  : {', '.join(run.profile.missing_axes) or '(none)'}   "
+        f"[not reachable over the v1 BYO wire]",
+        f"  skipped rides : {', '.join(run.profile.skipped) or '(none)'}",
+    ]
+    return "\n".join(lines)
