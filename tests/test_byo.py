@@ -61,3 +61,35 @@ def test_wired_run_matches_the_in_process_ride_for_a_seed_dependent_agent():
     wired = _run("random", seed=3)
     assert wired.profile.results[0].score == NegotiationRide().evaluate("random", 3).score
 
+
+def test_payload_is_deterministic():
+    """Same agent + same seed => byte-identical JSON. No clock, no port, no run-to-run drift."""
+    first = run_byo_from_name("heuristic", seed=2).to_dict()
+    second = run_byo_from_name("heuristic", seed=2).to_dict()
+    assert json.dumps(first, sort_keys=True) == json.dumps(second, sort_keys=True)
+    payload = json.dumps(first)
+    assert "captured_at" not in payload and "timestamp" not in payload
+    # The ephemeral port is run mechanics, never run results.
+    assert "port" not in payload
+
+
+# --- the profile is honest about what the wire could measure -------------------------------
+
+
+def test_profile_covers_only_the_social_axis():
+    """The v1 wire carries negotiation only, so exactly one axis is covered and three are missing."""
+    run = _run("heuristic", seed=1)
+    assert run.profile.covered_axes == ["social"]
+    assert run.profile.missing_axes == ["economic", "coding", "safety"]
+    payload = run.to_dict()
+    assert set(payload["axes"]) == {"social"}
+    assert payload["missing_axes"] == ["economic", "coding", "safety"]
+
+
+def test_every_other_registered_ride_is_reported_skipped():
+    """Rides the wire cannot reach are named, not silently dropped — and the list tracks the registry."""
+    run = _run("heuristic", seed=1)
+    expected = [name for name in RIDE_REGISTRY if name != "negotiation"]
+    assert run.profile.skipped == expected
+    assert run.to_dict()["skipped_rides"] == expected
+
