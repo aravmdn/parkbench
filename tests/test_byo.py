@@ -93,3 +93,33 @@ def test_every_other_registered_ride_is_reported_skipped():
     assert run.profile.skipped == expected
     assert run.to_dict()["skipped_rides"] == expected
 
+
+def test_payload_carries_the_byo_and_live_markers():
+    payload = _run("heuristic", seed=1).to_dict()
+    assert payload["byo"] is True
+    assert payload["live"] is True
+    assert payload["agent"] == DEFAULT_BYO_NAME
+
+
+def test_source_block_records_structural_wire_provenance():
+    payload = _run("heuristic", seed=1).to_dict()
+    source = payload["source"]
+    assert source["mode"] == "live"
+    assert source["protocol"] == "http/json"
+    assert source["spec"] == "docs/09-byo-protocol.md"
+    assert source["ride"] == "negotiation"
+    # 12 scenarios x 4 house personas, and one answered turn per act() across the wire.
+    assert source["matches"] == 48
+    assert source["turns"] > 0
+    assert source["driver"] == "heuristic"
+
+
+def test_payload_shape_matches_a_radar_payload():
+    """The front-end reads one shape: a BYO payload is a radar payload plus the BYO markers."""
+    byo = _run("heuristic", seed=1).to_dict()
+    radar = build_radar("heuristic", seed=1).to_dict()
+    assert set(radar).issubset(set(byo))
+
+
+# --- identity (D-038) ----------------------------------------------------------------------
+
