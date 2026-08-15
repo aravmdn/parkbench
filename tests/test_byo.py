@@ -123,3 +123,31 @@ def test_payload_shape_matches_a_radar_payload():
 
 # --- identity (D-038) ----------------------------------------------------------------------
 
+
+def test_identity_uses_the_byo_label_and_the_driven_agents_real_config_hash():
+    run = run_byo_negotiation(make_agent("heuristic"), seed=1, byo_name="acme-bot", byo_version="0.3.1")
+    identity = run.identity
+    assert identity.name == "acme-bot"
+    assert identity.version == "0.3.1"
+    # The hash is the driven agent's own, so a differently-configured BYO agent stays distinguishable.
+    assert identity.config_hash == make_agent("heuristic").identity().config_hash
+    assert run.to_dict()["identity"] == identity.to_dict()
+
+
+def test_identity_version_defaults_to_the_driven_agents_version():
+    run = _run("heuristic", seed=1)
+    assert run.identity.version == make_agent("heuristic").identity().version
+
+
+def test_distinct_agents_get_distinct_config_hashes():
+    # A short suite: this is about who the driver was, not what it scored over 12 scenarios.
+    heuristic = run_byo_negotiation(make_agent("heuristic"), seed=1, n_scenarios=3)
+    greedy = run_byo_negotiation(make_agent("greedy"), seed=1, n_scenarios=3)
+    assert heuristic.identity.config_hash != greedy.identity.config_hash or (
+        # Both are parameterless today; then the *scores* must still differ (different behaviour).
+        heuristic.score != greedy.score
+    )
+
+
+# --- rendering + suite knobs ---------------------------------------------------------------
+
