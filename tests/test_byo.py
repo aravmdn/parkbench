@@ -151,3 +151,28 @@ def test_distinct_agents_get_distinct_config_hashes():
 
 # --- rendering + suite knobs ---------------------------------------------------------------
 
+
+def test_render_names_the_missing_axes_rather_than_hiding_them():
+    text = render_byo_run(_run("heuristic", seed=1))
+    assert "acme-bot" in text
+    assert "negotiation" in text
+    for axis in ("economic", "coding", "safety"):
+        assert axis in text
+    assert "docs/09-byo-protocol.md" in text
+
+
+def test_scenario_count_is_honoured():
+    run = run_byo_from_name("heuristic", seed=1, n_scenarios=2)
+    assert run.n_scenarios == 2
+    assert run.to_dict()["source"]["matches"] == 8  # 2 scenarios x 4 personas
+
+
+def test_run_writes_no_log_by_default(tmp_path, monkeypatch):
+    """A captured profile must not litter `runs/` — logging is opt-in for the connector."""
+    monkeypatch.chdir(tmp_path)
+    run_byo_from_name("heuristic", seed=1, n_scenarios=1)
+    assert not (tmp_path / "runs").exists()
+
+
+# --- the CLI surface (`parkbench byo-run`) -------------------------------------------------
+
