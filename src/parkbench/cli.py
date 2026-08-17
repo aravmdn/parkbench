@@ -8,6 +8,7 @@
   parkbench leaderboard — rank agents by career score (D-042).
   parkbench export-profiles — regenerate/--check the web/ + viewer/ spectator fixtures (D-062).
   parkbench doctor  — diagnose the local setup + where every setting comes from (D-072).
+  parkbench byo-run — drive a BYO agent over the wire and capture its live profile (D-073).
 """
 
 from __future__ import annotations
@@ -125,7 +126,8 @@ def _serve_profiles(args: argparse.Namespace) -> None:
     print(f"listening on {server.base_url}  (default seed={args.seed})")
     print("  GET /radar?agent=<name>[&seed=N]   GET /career?agent=<name>[&seed=N]")
     print("  GET /leaderboard[?seed=N]          GET /health")
-    print("\nserving radar/career/leaderboard JSON (Ctrl+C to stop)...\n")
+    print("  GET /byo?agent=<driver>[&name=<label>][&scenarios=N]   (live BYO run, D-073)")
+    print("\nserving radar/career/leaderboard/byo JSON (Ctrl+C to stop)...\n")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -265,6 +267,42 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         print()
     # 0 = healthy (warnings included); non-zero only when something is actually broken.
     return report.exit_code
+
+
+def cmd_byo_run(args: argparse.Namespace) -> int:
+    # Imported lazily so the core CLI carries no dependency on the HTTP slice unless used (D-073).
+    from .byo import render_byo_run, run_byo_from_name
+
+    run = run_byo_from_name(
+        args.agent,
+        seed=args.seed,
+        n_scenarios=args.scenarios,
+        round_cap=args.round_cap,
+        byo_name=args.name,
+        byo_version=args.byo_version,
+    )
+    payload = {"benchmark_version": BENCHMARK_VERSION, **run.to_dict()}
+
+    if args.out:
+        from pathlib import Path
+
+        target = Path(args.out)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        # Canonical LF + 2-space indent + trailing newline: identical to what `export-profiles`
+        # writes, so a captured run drops straight into web/src/fixtures/ without reformatting.
+        with open(target, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(json.dumps(payload, indent=2) + "\n")
+
+    if args.json:
+        _emit_json(run.to_dict())
+        return 0
+
+    print()
+    print(render_byo_run(run))
+    if args.out:
+        print(f"\n  wrote: {args.out}")
+    print()
+    return 0
 
 
 def cmd_validity(args: argparse.Namespace) -> None:
@@ -646,6 +684,35 @@ def build_parser() -> argparse.ArgumentParser:
     )
     dr.add_argument("--json", action="store_true", help="Emit the diagnosis as JSON instead of text.")
     dr.set_defaults(func=cmd_doctor, fixtures=True)
+
+    # Live BYO connector (D-073): drive a bring-your-own agent through the REAL docs/09 wire and
+    # capture the completed run as the radar-shaped JSON the world's BYO trainer renders — so the
+    # spectator surfaces can show a live third-party run instead of a hand-authored stand-in.
+    from .byo import DEFAULT_BYO_NAME
+
+    br = sub.add_parser(
+        "byo-run",
+        help="Drive a BYO agent over the HTTP/JSON wire and capture its live profile (D-073).",
+    )
+    br.add_argument(
+        "--agent", default="heuristic", choices=sorted(AGENT_REGISTRY),
+        help="The negotiator driven over the wire (the stand-in for a third party's client).",
+    )
+    br.add_argument(
+        "--name", default=DEFAULT_BYO_NAME,
+        help=f"BYO label recorded for the run (default: {DEFAULT_BYO_NAME}).",
+    )
+    br.add_argument(
+        "--byo-version", dest="byo_version", default=None,
+        help="BYO version for the D-038 identity (default: the driven agent's version).",
+    )
+    br.add_argument("--seed", type=int, default=1, help="Suite seed (selects the scenario set).")
+    br.add_argument("--scenarios", type=int, default=12)
+    br.add_argument("--round-cap", type=int, default=8, dest="round_cap")
+    br.add_argument("--out", default=None, metavar="PATH",
+                    help="Also write the captured profile JSON to PATH (canonical LF, 2-space).")
+    br.add_argument("--json", action="store_true", help="Emit the captured profile as JSON.")
+    br.set_defaults(func=cmd_byo_run)
     return p
 
 
