@@ -176,3 +176,44 @@ def test_run_writes_no_log_by_default(tmp_path, monkeypatch):
 
 # --- the CLI surface (`parkbench byo-run`) -------------------------------------------------
 
+
+def test_cli_json_is_the_connector_payload_plus_the_version_stamp(capsys):
+    assert cli.main(["byo-run", "--scenarios", "2", "--json"]) == 0
+    out = json.loads(capsys.readouterr().out)
+    assert out.pop("benchmark_version") == BENCHMARK_VERSION
+    assert out == run_byo_from_name("heuristic", seed=1, n_scenarios=2).to_dict()
+
+
+def test_cli_text_output_names_what_the_wire_could_not_measure(capsys):
+    assert cli.main(["byo-run", "--scenarios", "2"]) == 0
+    out = capsys.readouterr().out
+    assert "BYO live run" in out
+    assert "missing axes" in out
+    assert "negotiation" in out
+
+
+def test_cli_out_writes_a_drop_in_fixture(tmp_path, capsys):
+    target = tmp_path / "nested" / "radar-byo-live.json"
+    assert cli.main(["byo-run", "--scenarios", "2", "--out", str(target)]) == 0
+    capsys.readouterr()
+
+    raw = target.read_bytes()
+    assert b"\r\n" not in raw  # canonical LF, like every exported fixture
+    assert raw.endswith(b"\n")
+    payload = json.loads(raw.decode("utf-8"))
+    # Same stamped shape the fixtures carry, so it drops into web/src/fixtures/ as-is.
+    assert payload["benchmark_version"] == BENCHMARK_VERSION
+    assert payload["byo"] is True and payload["live"] is True
+    assert payload["axes"]["social"] > 0
+
+
+def test_cli_labels_flow_into_the_identity(capsys):
+    argv = ["byo-run", "--scenarios", "2", "--name", "acme-bot-2", "--byo-version", "9.9", "--json"]
+    assert cli.main(argv) == 0
+    out = json.loads(capsys.readouterr().out)
+    assert out["agent"] == "acme-bot-2"
+    assert out["identity"] == {
+        "name": "acme-bot-2",
+        "version": "9.9",
+        "config_hash": make_agent("heuristic").identity().config_hash,
+    }
