@@ -2,8 +2,8 @@
 
 A stored/shared score is meaningless without knowing which generation of scenario generators and
 scoring produced it. These tests pin the stamp's shape and assert every ``--json`` emission point
-(radar, career, leaderboard, validity) routes through it — cheaply, by stubbing the heavy builders —
-plus one real end-to-end radar run.
+(radar, career, leaderboard, validity, byo-run) routes through it — cheaply, by stubbing the heavy
+builders — plus one real end-to-end radar run.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ def test_emit_json_stamps_the_version_first_and_leaves_the_payload_intact(capsys
 
 
 class _StubProfile:
-    """Just enough surface for cmd_radar/cmd_career/cmd_leaderboard/cmd_validity's --json paths."""
+    """Just enough surface for the cmd_* --json paths (radar/career/leaderboard/validity/byo-run)."""
 
     agent = "stub"
     career_score = 1.0
@@ -38,7 +38,8 @@ class _StubProfile:
 
 
 def test_every_json_command_is_stamped(monkeypatch, capsys):
-    """All four --json emission points carry the version (heavy builders stubbed for speed)."""
+    """All five --json emission points carry the version (heavy builders stubbed for speed)."""
+    import parkbench.byo
     import parkbench.career
     import parkbench.radar
     import parkbench.validity
@@ -48,11 +49,14 @@ def test_every_json_command_is_stamped(monkeypatch, capsys):
     monkeypatch.setattr(
         parkbench.validity, "build_validity_report", lambda *a, **k: _StubProfile()
     )
+    # byo-run's payload crosses a socket for real; stub the connector so this stays a stamp test.
+    monkeypatch.setattr(parkbench.byo, "run_byo_from_name", lambda *a, **k: _StubProfile())
     for argv in (
         ["radar", "--agent", "heuristic", "--json"],
         ["career", "--agent", "heuristic", "--json"],
         ["leaderboard", "--agents", "heuristic", "--json"],
         ["validity", "--json"],
+        ["byo-run", "--json"],
     ):
         assert cli.main(argv) == 0
         out = json.loads(capsys.readouterr().out)
