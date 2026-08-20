@@ -19,6 +19,7 @@ Routes (GET only; the whole surface is read-only):
   GET /radar?agent=<name>&seed=<int>     -> radar --json for that agent
   GET /career?agent=<name>&seed=<int>    -> career --json for that agent
   GET /leaderboard?seed=<int>            -> leaderboard --json (default roster)
+  GET /byo?agent=<driver>&name=<label>   -> a LIVE bring-your-own run, captured over the wire (D-073)
   GET /health                            -> {"status": "ok", "service": "parkbench-profiles", ...}
 
 ``agent`` defaults to ``heuristic`` and ``seed`` to the server's default (1) — matching the CLI
@@ -28,6 +29,20 @@ exactly as the CLI's ``_emit_json`` prints it (``benchmark_version`` first), so 
 pin the served payloads to the CLI forever (see ``tests/test_serve_profiles.py``). Responses carry a
 permissive ``Access-Control-Allow-Origin: *`` header so the Vite-served ``web/`` app can ``fetch``
 cross-origin — safe because the surface is read-only and exposes only public benchmark scores.
+
+``/byo`` (D-073) is the live counterpart for the world's **bring-your-own** trainer: it captures a
+real run over the ``docs/09`` negotiation wire via :func:`parkbench.byo.run_byo_from_name` and serves
+the same radar-shaped JSON ``parkbench byo-run --json`` prints. Two deliberate limits keep an
+HTTP-reachable route from becoming a lever on the operator's machine:
+
+- **Only deterministic, offline drivers** (:func:`byo_drivers`) may be named. The ``llm`` agents are
+  excluded on purpose — they spend the operator's OpenRouter budget, and a route that lets a caller
+  trigger outbound paid API calls is not something a "read-only" endpoint should offer.
+- **The suite size is bounded** (:data:`MAX_BYO_SCENARIOS`), so no request can ask for an unbounded
+  run. A default 12-scenario capture takes ~1 s over loopback.
+
+Still read-only in the sense that matters: the run is deterministic, writes no log, and mutates no
+server state — the same request twice returns the same bytes.
 """
 
 from __future__ import annotations
@@ -42,6 +57,24 @@ from . import BENCHMARK_VERSION
 
 DEFAULT_SEED = 1
 DEFAULT_AGENT = "heuristic"  # matches the CLI's radar/career --agent default
+
+#: Upper bound on ``/byo?scenarios=`` — a served run must stay bounded work (see the module docstring).
+MAX_BYO_SCENARIOS = 24
+
+
+def byo_drivers() -> set[str]:
+    """Negotiators the ``/byo`` route may drive over the wire: deterministic + offline only.
+
+    The ``llm`` variants are deliberately excluded — they would let an HTTP caller spend the
+    operator's API budget. Computed lazily so importing this module stays cheap.
+    """
+    from .agents import AGENT_REGISTRY, LLM_MODEL_PREFIX
+
+    return {
+        name
+        for name in AGENT_REGISTRY
+        if name != "llm" and not name.startswith(LLM_MODEL_PREFIX)
+    }
 
 
 def known_agents() -> set[str]:
@@ -85,6 +118,42 @@ def build_profile_payload(kind: str, agent: Optional[str] = None, seed: int = DE
         raise ValueError(f"unknown profile kind: {kind!r}")
     # Stamp first, exactly like cli._emit_json — a stored/served score is never version-ambiguous.
     return {"benchmark_version": BENCHMARK_VERSION, **payload}
+
+
+def build_byo_payload(
+    driver: str = DEFAULT_AGENT,
+    byo_name: Optional[str] = None,
+    seed: int = DEFAULT_SEED,
+    n_scenarios: int = 12,
+) -> dict:
+    """Capture a **live** BYO run over the wire and return it stamped (D-073).
+
+    Identical bytes to ``parkbench byo-run --json`` for the same arguments — the connector is the
+    single producer, this only transports and stamps it (see :mod:`parkbench.byo`).
+
+    Raises ``LookupError`` for a name no ride knows, and ``ValueError`` for a *known* agent this
+    route refuses to drive (the paid ``llm`` variants) or a scenario count outside
+    ``1..MAX_BYO_SCENARIOS``; the handler turns both into a ``400``.
+    """
+    from .byo import DEFAULT_BYO_NAME, run_byo_from_name
+
+    if driver not in byo_drivers():
+        # Separated on purpose: "I've never heard of it" and "I won't run it" are different answers.
+        if driver in known_agents():
+            raise ValueError(
+                f"agent {driver!r} cannot be driven over /byo "
+                "(deterministic offline negotiators only)"
+            )
+        raise LookupError(driver)
+    if not 1 <= n_scenarios <= MAX_BYO_SCENARIOS:
+        raise ValueError(f"scenarios must be 1..{MAX_BYO_SCENARIOS}")
+    run = run_byo_from_name(
+        driver,
+        seed=seed,
+        n_scenarios=n_scenarios,
+        byo_name=byo_name or DEFAULT_BYO_NAME,
+    )
+    return {"benchmark_version": BENCHMARK_VERSION, **run.to_dict()}
 
 
 def _make_handler(default_seed: int):
