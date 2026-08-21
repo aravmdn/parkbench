@@ -172,9 +172,16 @@ def _make_handler(default_seed: int):
             self.end_headers()
             self.wfile.write(body)
 
+        def _int_from(self, query: dict, key: str, default: int) -> int:
+            """Parse an integer query param, naming the offending param in the 400 (not just "seed")."""
+            raw = query.get(key, [str(default)])[0]
+            try:
+                return int(raw)
+            except ValueError:
+                raise ValueError(f"bad {key}") from None
+
         def _seed_from(self, query: dict) -> int:
-            raw = query.get("seed", [str(default_seed)])[0]
-            return int(raw)  # ValueError bubbles up to the do_GET handler -> 400
+            return self._int_from(query, "seed", default_seed)
 
         def _agent_from(self, query: dict) -> str:
             agent = query.get("agent", [DEFAULT_AGENT])[0] or DEFAULT_AGENT
@@ -193,7 +200,7 @@ def _make_handler(default_seed: int):
                         "status": "ok",
                         "service": "parkbench-profiles",
                         "benchmark_version": BENCHMARK_VERSION,
-                        "routes": ["/radar", "/career", "/leaderboard", "/health"],
+                        "routes": ["/radar", "/career", "/leaderboard", "/byo", "/health"],
                     },
                 )
                 return
@@ -201,16 +208,28 @@ def _make_handler(default_seed: int):
                 if path == "/leaderboard":
                     self._send(200, build_profile_payload("leaderboard", seed=self._seed_from(query)))
                     return
+                if path == "/byo":
+                    # A live capture over the docs/09 wire (~1 s), not a stored fixture (D-073).
+                    self._send(
+                        200,
+                        build_byo_payload(
+                            driver=query.get("agent", [DEFAULT_AGENT])[0] or DEFAULT_AGENT,
+                            byo_name=query.get("name", [None])[0] or None,
+                            seed=self._seed_from(query),
+                            n_scenarios=self._int_from(query, "scenarios", 12),
+                        ),
+                    )
+                    return
                 if path in ("/radar", "/career"):
                     kind = path.lstrip("/")
                     agent = self._agent_from(query)
                     seed = self._seed_from(query)
                     self._send(200, build_profile_payload(kind, agent=agent, seed=seed))
                     return
-            except ValueError:  # bad ?seed=
-                self._send(400, {"error": f"bad seed in {self.path!r}"})
+            except ValueError as exc:  # bad ?seed= / ?scenarios= (value or range)
+                self._send(400, {"error": f"{exc} in {self.path!r}"})
                 return
-            except LookupError as exc:  # unknown ?agent=
+            except LookupError as exc:  # unknown ?agent= (or a driver /byo won't run)
                 self._send(400, {"error": f"unknown agent {str(exc)!r}"})
                 return
             self._send(404, {"error": f"unknown path {self.path!r}"})
