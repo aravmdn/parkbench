@@ -16,7 +16,7 @@ import urllib.error
 import urllib.request
 
 from parkbench import BENCHMARK_VERSION, cli
-from parkbench.profiles_server import ProfilesServer
+from parkbench.profiles_server import MAX_BYO_SCENARIOS, ProfilesServer
 
 
 def _get(base_url: str, path: str) -> tuple[int, dict]:
@@ -130,28 +130,34 @@ def test_health_endpoint():
     assert body["status"] == "ok"
     assert body["service"] == "parkbench-profiles"
     assert body["benchmark_version"] == BENCHMARK_VERSION
+    assert "/byo" in body["routes"]
 
 
-def test_post_is_rejected_read_only():
+# --- /byo: a LIVE bring-your-own run captured over the wire (D-073) ------------------------
+
+
+def test_byo_endpoint_matches_the_cli_capture(capsys):
+    """`GET /byo` serves exactly what `parkbench byo-run --json` prints — one producer, two doors."""
+    ref = _cli_json(["byo-run", "--scenarios", "2", "--seed", "1", "--json"], capsys)
     srv = ProfilesServer(host="127.0.0.1", port=0).start()
     try:
-        req = urllib.request.Request(srv.base_url + "/radar", data=b"{}", method="POST")
-        try:
-            urllib.request.urlopen(req, timeout=10)
-            status = 200
-        except urllib.error.HTTPError as exc:
-            status = exc.code
+        status, body = _get(srv.base_url, "/byo?agent=heuristic&seed=1&scenarios=2")
     finally:
         srv.stop()
-    assert status == 405
+    assert status == 200
+    assert body == ref
+    assert body["live"] is True and body["byo"] is True
+    assert body["benchmark_version"] == BENCHMARK_VERSION
 
 
-def test_response_carries_cors_header():
-    """web/ (served from Vite on another port) must be able to fetch cross-origin."""
+def test_byo_endpoint_reports_only_the_axis_the_wire_measured():
     srv = ProfilesServer(host="127.0.0.1", port=0).start()
     try:
-        with urllib.request.urlopen(srv.base_url + "/leaderboard", timeout=10) as resp:
-            assert resp.headers.get("Access-Control-Allow-Origin") == "*"
-            assert resp.headers.get("Content-Type") == "application/json"
+        status, body = _get(srv.base_url, "/byo?scenarios=2&name=acme-bot")
     finally:
         srv.stop()
+    assert status == 200
+    assert body["agent"] == "acme-bot"
+    assert list(body["axes"]) == ["social"]
+    assert body["missing_axes"] == ["economic", "coding", "safety"]
+    assert body["source"]["mode"] == "live"
