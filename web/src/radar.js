@@ -94,12 +94,29 @@ function drawRadarShape(k, data) {
     k.drawLine({ p1: k.vec2(CX, CY), p2: vertex(k, i, 1), width: 1, color: mid });
   }
 
-  const values = AXES.map((a) => data.axes[a.axis] ?? 0);
+  // An axis with no contributing ride is **absent** from `axes` (the engine's own convention — see
+  // RadarProfile.missing_axes). It is drawn at the centre because there is nowhere else to put it,
+  // so it must never *read* as a score of 0.000: the label and vertex go dim and the value says n/a.
+  // A live BYO run reaches only the negotiation ride, so three of its four axes land here.
+  const axes = data.axes || {};
+  const covered = AXES.map((a) => a.axis in axes);
+  const values = AXES.map((a) => axes[a.axis] ?? 0);
   const pts = AXES.map((_, i) => vertex(k, i, values[i]));
   k.drawPolygon({ pts, color: light, opacity: 0.45, outline: { width: 2, color: paper } });
 
   for (let i = 0; i < AXES.length; i++) {
-    k.drawCircle({ pos: pts[i], radius: 2.5, color: k.Color.fromHex(AXES[i].accent) });
+    const on = covered[i];
+    if (on) {
+      k.drawCircle({ pos: pts[i], radius: 2.5, color: k.Color.fromHex(AXES[i].accent) });
+    } else {
+      // Hollow, dim marker: "nothing was measured here", not "measured and scored zero".
+      k.drawCircle({
+        pos: pts[i],
+        radius: 2.5,
+        color: k.Color.fromHex(PALETTE.ink),
+        outline: { width: 1, color: mid },
+      });
+    }
     const lab = vertex(k, i, 1.2);
     k.drawText({
       text: AXES[i].axis.toUpperCase(),
@@ -107,15 +124,16 @@ function drawRadarShape(k, data) {
       size: 8,
       anchor: "center",
       font: "monospace",
-      color: k.Color.fromHex(AXES[i].accent),
+      color: on ? k.Color.fromHex(AXES[i].accent) : mid,
+      opacity: on ? 1 : 0.75,
     });
     k.drawText({
-      text: values[i].toFixed(3),
+      text: on ? values[i].toFixed(3) : "n/a",
       pos: k.vec2(lab.x, lab.y + 4),
       size: 7,
       anchor: "center",
       font: "monospace",
-      color: paper,
+      color: on ? paper : mid,
     });
   }
 }
