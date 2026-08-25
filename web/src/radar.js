@@ -225,8 +225,16 @@ function drawBadges(k, agent) {
 // A BYO agent has no career leg on the official leaderboard, so where a baseline shows its reputation
 // + gym badges, a BYO shows its D-038 identity (name · version · config_hash — read straight from the
 // run's JSON) and a plain note that it isn't ranked. Presentation only (D-012).
-function drawByoIdentity(k, identity) {
-  const id = identity || {};
+//
+// When the payload came from `/byo` (D-073) it is a **live** run captured over the negotiation wire,
+// so the note also says how much protocol traffic backs it and which rides it could not reach — the
+// wire carries negotiation only (docs/09), and a spectator should not have to guess why three axes
+// read `n/a`.
+function drawByoIdentity(k, data) {
+  const id = (data && data.identity) || {};
+  const source = (data && data.source) || {};
+  const live = !!(data && data.live);
+  const missing = (data && data.missing_axes) || [];
   const parts = ["BYO AGENT"];
   if (id.version) parts.push("v" + id.version);
   if (id.config_hash) parts.push("#" + id.config_hash);
@@ -250,12 +258,41 @@ function drawByoIdentity(k, identity) {
   });
   k.drawText({
     text: "bring-your-own agent — not on the official leaderboard",
-    pos: k.vec2(CX, 260),
+    pos: k.vec2(CX, 250),
     size: 7,
     anchor: "center",
     font: "monospace",
     color: k.Color.fromHex(PALETTE.mid),
   });
+
+  // How the run was obtained, stated plainly: a real wire capture reports its own traffic, and then
+  // says which axes it could not reach — so the three `n/a` corners are explained, not mysterious.
+  if (live) {
+    k.drawText({
+      text:
+        "LIVE WIRE · " +
+        (source.matches ?? "?") +
+        " matches · " +
+        (source.turns ?? "?") +
+        " turns · " +
+        (source.protocol || "http/json"),
+      pos: k.vec2(CX, 261),
+      size: 7,
+      anchor: "center",
+      font: "monospace",
+      color: k.Color.fromHex(BYO_HEX),
+    });
+    if (missing.length) {
+      k.drawText({
+        text: "wire scores " + (source.ride || "negotiation") + " only — " + missing.join("/") + " n/a",
+        pos: k.vec2(CX, 270),
+        size: 6,
+        anchor: "center",
+        font: "monospace",
+        color: k.Color.fromHex(PALETTE.mid),
+      });
+    }
+  }
 }
 
 function drawStats(k, agent) {
@@ -297,7 +334,7 @@ function drawStats(k, agent) {
   });
 
   drawRadarShape(k, data);
-  if (byo) drawByoIdentity(k, data.identity);
+  if (byo) drawByoIdentity(k, data);
   else drawBadges(k, agent);
 
   k.drawText({
