@@ -3,7 +3,9 @@
 // Two data paths, one shape:
 //
 //   1. **live**    — `fetch`ed from a running `parkbench serve --profiles` endpoint (D-067), which
-//                    serves the *verbatim* `radar --json` / `leaderboard --json` bytes the CLI emits.
+//                    serves the *verbatim* `radar --json` / `leaderboard --json` bytes the CLI emits,
+//                    plus `/byo` (D-073), which plays a **live** bring-your-own run over the
+//                    negotiation wire on demand and returns the completed profile.
 //   2. **fixture** — the committed `src/fixtures/*.json` (regenerated verbatim from the versioned CLI
 //                    by `parkbench export-profiles`, D-062), so the world still boots with no server.
 //
@@ -48,11 +50,20 @@ const DATA_TIMEOUT_MS = 20000;
 
 export const AGENT_ORDER = ["heuristic", "greedy", "optimal", "random", "acme-bot"];
 
-// `acme-bot` is a bring-your-own third-party agent, not part of the engine's baseline roster — the
-// endpoint would 400 on it — so it always stays on its committed run fixture, even in live mode.
+// `acme-bot` is a bring-your-own third-party agent, not part of the engine's baseline roster, so it
+// is not on `/radar` — it has its own route. `/byo` (D-073) *plays a run over the negotiation wire on
+// demand* and returns the completed profile, so in live mode the BYO trainer shows a real third-party
+// run instead of the committed `radar-byo.json` stand-in.
 export const BYO_AGENTS = new Set(["acme-bot"]);
 
 const LIVE_AGENTS = AGENT_ORDER.filter((a) => !BYO_AGENTS.has(a));
+
+/**
+ * The *driver* for a live BYO capture: the negotiator the park drives over its own wire to stand in
+ * for a third party's HTTP client (the protocol cannot tell them apart — that is the point, D-015).
+ * The run is attributed to the trainer's own name, which is passed as `?name=`.
+ */
+const BYO_DRIVER = "heuristic";
 
 /**
  * The radar store. Seeded with the committed fixtures and **mutated in place** when live data lands,
@@ -180,6 +191,23 @@ export async function loadProfiles(search) {
   const jobs = [
     ...LIVE_AGENTS.map((agent) =>
       fetchJson(base + "/radar?agent=" + encodeURIComponent(agent), DATA_TIMEOUT_MS)
+        .then((data) => {
+          if (!isRadar(data)) return false;
+          RADARS[agent] = data;
+          SOURCE.radar[agent] = "live";
+          return true;
+        })
+        .catch(() => false),
+    ),
+    ...[...BYO_AGENTS].map((agent) =>
+      fetchJson(
+        base +
+          "/byo?agent=" +
+          encodeURIComponent(BYO_DRIVER) +
+          "&name=" +
+          encodeURIComponent(agent),
+        DATA_TIMEOUT_MS,
+      )
         .then((data) => {
           if (!isRadar(data)) return false;
           RADARS[agent] = data;
