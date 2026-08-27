@@ -37,7 +37,7 @@ step, run the read-only profiles endpoint (a stdlib `http.server`, presentation-
 same producers' JSON the CLI does, with the `benchmark_version` stamp, and never computes a score):
 
 ```sh
-parkbench serve --profiles --port 8080   # GET /radar?agent=… /career?agent=… /leaderboard /health
+parkbench serve --profiles --port 8080   # GET /radar?agent=… /career?agent=… /leaderboard /byo /health
 ```
 
 Every response is the **verbatim** `parkbench <cmd> --json` output (byte-parity is pinned by
@@ -73,8 +73,12 @@ How it behaves:
   screen subtitle and the Hall of Fame footer end in `· live` or `· fixture` (plus a `● LIVE` /
   `○ FIXTURE` chip in the corner), and the park HUD shows `data: live` / `data: fixture`. Tags are
   **per payload**, so a partial upgrade can never lie about the rest.
-- The **BYO** trainer (`acme-bot`) always stays on its committed run fixture — it isn't part of the
-  engine's baseline roster, so there is nothing live to ask the endpoint for.
+- The **BYO** trainer (`acme-bot`) is live too (D-073). It isn't on the engine's baseline roster, so it
+  has its own route: `GET /byo` *plays a bring-your-own run over the negotiation wire on demand* and
+  returns the completed profile. In live mode the BYO stats screen shows that real run; offline it
+  falls back to the committed `radar-byo.json` like everything else. Because the v1 BYO wire carries
+  **negotiation only** (`../docs/09-byo-protocol.md`), a live BYO profile honestly covers **one axis** —
+  the other three draw as dimmed **`n/a`**, not as `0.000`, with the reason printed underneath.
 - One honest wrinkle: if you *ask* for live data (`?profiles=…`) and the endpoint is **down**, the
   browser logs its own `net::ERR_CONNECTION_REFUSED` line for the failed probe. That is the browser's
   network log, not an app error (the app logs a single `console.info` saying it fell back). The plain
