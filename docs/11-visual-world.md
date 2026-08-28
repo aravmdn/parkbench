@@ -116,5 +116,26 @@ now reads that endpoint when the page asks for it (`?profiles=…`) and the comm
 with the source surfaced on screen (see "Data flow" above). Verified Tier-B headless with the endpoint
 up (5/5 payloads live, zero console errors) and down (fixture fallback, world still renders) — shots in
 `autoloop/shots/2026-08-05-2020/`, including a run against `serve --profiles --seed 7` whose **seed-7**
-numbers appear in no committed fixture, proving the live path end to end. Remaining chunk-4 tasks:
-`byo-live-connector` and `richer-land-art`.
+numbers appear in no committed fixture, proving the live path end to end. `richer-land-art` landed
+2026-08-05 (**D-070**): each land got its own ground treatment + procedural props, so the four lands
+read as different places rather than four tints.
+
+**Chunk 4 COMPLETE (2026-08-29) — `byo-live-connector` landed (D-073).** The park's BYO trainer now
+shows a **live** third-party run instead of a hand-authored stand-in: `src/parkbench/byo.py` drives a
+BYO agent through the real `docs/09` wire (a `ParkServer` on an ephemeral loopback port + the reference
+client), and the world fetches it from the new `/byo` route — **6/6 payloads live**, up from 5/5.
+
+The honest half is the interesting half. The v1 BYO wire carries **negotiation only**, so a live BYO
+profile covers **one axis**: `social` scored, `economic`/`coding`/`safety` in `missing_axes`. The stats
+screen therefore learned a distinction it never needed while every agent was fully covered — an
+**uncovered axis draws as a dimmed `n/a` with a hollow vertex**, never as `0.000` — and the BYO panel
+prints its wire provenance (`LIVE WIRE · 48 matches · 187 turns · http/json`) over
+`wire scores negotiation only`. The captured profile is **strictly narrower** than the fixture it
+replaces, which claimed five ride scores it had no way to earn. Widening it needs BYO connectors for
+the solo rides (roadmap #5, still open) — which is also why `acme-bot` stays correctly *absent* from
+the Hall of Fame: a career score multiplies integrity across all rides, and a one-ride agent has no
+such product. Shots + notes: `autoloop/shots/2026-08-29-1040/`.
+
+**Next:** the visual world has no queued chunk. The unblocking project-level item is the trust track's
+**`criterion-cohort`** (`docs/13` §B) — and note that the solo-ride BYO connectors this chunk just
+made load-bearing would supply exactly the richer, non-deterministic roster that cohort needs.

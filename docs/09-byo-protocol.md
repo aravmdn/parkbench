@@ -1,6 +1,6 @@
 # 09 — BYO agent protocol (HTTP/JSON)
 
-**Status:** Living · **Last updated:** 2026-06-04
+**Status:** Living · **Last updated:** 2026-08-29
 
 This is the wire spec a third party implements to bring their own (BYO) agent to Parkbench's
 negotiation ride over HTTP/JSON. It is the documented contract for the server built in **D-027**
@@ -159,6 +159,61 @@ Reproducibility is the whole project's foundation, so the protocol preserves it:
 - The park is the single source of timing/turn order; the agent never advances the clock. There is no
   hidden state on the wire beyond what the observation carries.
 
+## Capturing a live run for the spectator surfaces (D-073)
+
+The world (`web/`) has rendered a BYO trainer since **D-063**, but its numbers were a hand-authored
+`radar-byo.json` stand-in. The **live connector** (`src/parkbench/byo.py`) closes that gap: it binds a
+real `ParkServer` on an ephemeral loopback port, drives it with the reference client, and shapes the
+completed run into the same radar-shaped JSON `parkbench radar --json` emits.
+
+```sh
+parkbench byo-run                                  # capture + print a summary
+parkbench byo-run --json                           # the radar-shaped payload, version-stamped
+parkbench byo-run --name acme-bot --byo-version 0.3.1 --out web/src/fixtures/radar-byo.json
+parkbench serve --profiles --port 8080             # ... or serve one on demand:
+#   GET /byo?agent=<driver>[&name=<label>][&seed=N][&scenarios=N]
+```
+
+Everything crosses a socket, so a captured run exercises the spec above end-to-end. Two properties
+make it usable as a benchmark artifact:
+
+- **It reproduces the in-process ride exactly.** Driving `heuristic` over the wire yields the same
+  score *and* the same `detail` as `NegotiationRide.evaluate("heuristic", seed)` — pinned in
+  `tests/test_byo.py`. The connector transports; it never re-scores (D-012).
+- **It is deterministic.** The payload carries no timestamp and no port, so the same agent at the
+  same seed produces byte-identical JSON. Provenance is recorded *structurally* instead — a `source`
+  block with the protocol, the spec path, the ride, and the match/turn counts.
+
+### What a live BYO profile can honestly claim
+
+Scope, restated as a consequence: **the v1 wire carries the negotiation ride only**, so a captured
+BYO profile covers exactly **one axis**.
+
+| Field | Value for a live BYO run |
+|---|---|
+| `axes` | `{"social": <negotiation efficiency>}` — nothing else |
+| `missing_axes` | `["economic", "coding", "safety"]` |
+| `skipped_rides` | every other registered ride (none of them can score a wire-reached agent) |
+
+That is *narrower* than the stand-in it replaces, which claimed scores on all five rides it had no
+way to earn. Narrow-and-true beats wide-and-invented, so the front-end draws the uncovered axes as
+dimmed **`n/a`** rather than as a score of `0.000`, and prints why. Widening a BYO profile past one
+axis needs BYO connectors for the **solo** rides — still open, below.
+
+### Who may be driven, and why it is restricted
+
+The wire cannot tell a genuine third-party client from a built-in negotiator standing in for one —
+that indistinguishability *is* the protocol's guarantee (D-015), and it is what lets the connector
+ship as an offline-verifiable test. The **`/byo` HTTP route** is deliberately narrower than the
+library call:
+
+- **Deterministic, offline drivers only.** The `llm` variants are refused with a `400`: a GET that
+  can spend the operator's OpenRouter budget does not belong on a "read-only" endpoint.
+- **Bounded work.** `?scenarios=` is capped (`MAX_BYO_SCENARIOS`), so no single request can ask for
+  an unbounded run. A default 12-scenario capture takes ~1 s over loopback.
+
+The library function has neither restriction — it is called by someone who already has the machine.
+
 ## Security & trust
 
 - The park **never executes the agent's code** — the agent runs on the agent's own machine and only
@@ -176,3 +231,8 @@ Documented here, deferred in code: auth + transport security for public hosting;
 Schema for the messages; and BYO connectors for the **solo** rides (submit-an-artifact for coding, a
 move endpoint for economic/safety/commons) so the whole park — not just negotiation — is reachable by
 a third party. See [`03-roadmap.md`](03-roadmap.md) #5.
+
+The solo-ride connectors are now the *binding* limit rather than a nice-to-have: D-073 made a live
+BYO profile real, and it is a **one-axis** profile precisely because they don't exist. Until they do,
+no BYO agent can be placed on the career leaderboard (a career needs `integrity` from every ride), so
+a third party can be measured on the social axis and nowhere else.
