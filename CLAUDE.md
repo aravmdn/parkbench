@@ -42,7 +42,60 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 | `docs/05-glossary.md` | Shared vocabulary (ride, house cast, BYO agent, radar profile, …). |
 | `docs/06-v1-architecture.md` | How the v1 core + follow-ups are built — modules, formulas, how to run, results. |
 
-## Current status (2026-08-05)
+## Current status (2026-08-29)
+
+> **⚠️ The tree is DIRTY on purpose.** This lap is complete and verified but **not committed** — the
+> owner asked for the work to be left ready to split into commits. Suggested split (in order) is in
+> `autoloop/HANDOFF.md` **NEXT ACTION**. `main` was in sync with `origin/main` at `e3a763e` before it.
+
+**One lap done (D-073) — the park's bring-your-own trainer stops showing invented numbers, and
+visual-world chunk 4 is COMPLETE.** `src/parkbench/byo.py` drives a BYO agent through the **real**
+`docs/09` HTTP/JSON wire — a `ParkServer` on an ephemeral loopback port driven by the reference client,
+so every observation and action crosses a socket — and captures the completed run as the radar-shaped
+JSON the spectator surfaces already read. Surfaced three ways: **`parkbench byo-run`** [`--json`]
+[`--out`], a **`/byo` route** on `serve --profiles`, and the `web/` world (now **6/6 payloads live**,
+up from 5/5). **369 passing tests** (+23: 18 connector · 5 endpoint). Purely additive: **no ride,
+scoring, fixture or `BENCHMARK_VERSION` change** — benchmark stays v1.2.0, `export-profiles --check`
+stays 8/8 `ok`, committed baselines byte-identical. (The prior block's "345" was off by one; the true
+pre-lap baseline is **346** — see D-073 for the arithmetic.)
+
+- **It transports; it does not re-score.** The run is played by the existing `engine`/`suite`, scored
+  by the existing `scoring`, and rolled up by a real `RadarProfile`, so a wired leg is **byte-identical**
+  to `NegotiationRide.evaluate(...)` — `detail` included, and also for the seed-dependent `random`
+  agent (which exercises the `new_match` re-seed hop). The payload is **deterministic**: no timestamp,
+  no port, so the same agent at the same seed emits byte-identical JSON. Provenance is structural
+  instead — a `source` block (protocol · spec path · ride · 48 matches · 187 turns).
+- **The honest result is a *narrower* profile.** The v1 BYO wire carries **negotiation only**
+  (`docs/09` scope), so a live BYO profile covers exactly one axis: `social` scored,
+  `economic`/`coding`/`safety` in `missing_axes`, every other ride in `skipped_rides`. The stats screen
+  therefore learned a distinction it never needed while every agent was fully covered — an **uncovered
+  axis draws as a dimmed `n/a` with a hollow vertex, never as `0.000`** — and prints why
+  (`wire scores negotiation only`). The hand-authored `radar-byo.json` it replaces claimed scores on
+  all five rides it had no way to earn; **strictly narrower and true beats wider and invented.**
+  `acme-bot` stays correctly *absent* from the Hall of Fame: a career multiplies integrity across all
+  rides, and a one-ride agent has no such product.
+- **`/byo` is deliberately narrower than the library call.** Only **deterministic, offline** negotiators
+  may be driven — the `llm` variants get a `400` (a GET must not be able to spend the operator's
+  OpenRouter budget), with "never heard of it" and "won't run it" reported as different errors — and
+  `?scenarios=` is capped at `MAX_BYO_SCENARIOS`. The library function has neither restriction.
+- **What this sharpens:** BYO connectors for the **solo** rides (roadmap #5) are now the *binding* limit
+  on measuring a third party at all — and they are also what would supply the richer, non-deterministic
+  roster the trust track's `criterion-cohort` needs. Recorded in `docs/09` "Still open" and `docs/13`.
+
+**Verify:** `pytest` (~7 min — needs `uv pip install -e ".[dev]"`;
+`tests/test_serve_profiles.py::test_post_is_rejected_read_only` is flaky on Windows under load and
+passes in isolation) · `ruff check src tests` · `parkbench byo-run` · `parkbench byo-run --json` ·
+`parkbench serve --profiles` then `GET /byo?agent=heuristic&name=acme-bot` ·
+`parkbench export-profiles --check` (8 `ok`, v1.2.0) · `cd web && npm run build`. Tier-B shots + notes:
+`autoloop/shots/2026-08-29-1040/`.
+
+**Next:** the visual world has **no queued chunk**. The unblocking item is the trust track's
+**`criterion-cohort`** (`docs/13` §B — needs a one-time online real-agent step), with solo-ride BYO
+connectors as its natural prerequisite (above). Decision: **D-073**.
+
+---
+
+## Prior status (2026-08-05)
 
 **Four laps landed (D-069 · D-070 · D-071 · D-072) — the safety axis gets its second ride and the
 benchmark moves to v1.2.0; the park now reads live data and each land looks like itself.** Work done

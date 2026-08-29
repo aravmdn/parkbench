@@ -1731,3 +1731,70 @@ exit code.
 **Verify:** `parkbench doctor` · `parkbench doctor --json` · `parkbench doctor --live` (needs a key;
 verified live on this box: one call to `google/gemma-4-26b-a4b-it:free` returned a usable move) ·
 `pytest tests/test_doctor.py tests/test_dotenv.py` (25 + 10).
+
+### D-073 · 2026-08-29 · Live BYO connector — the world's third-party trainer stops being a stand-in
+
+**Decision:** Add a **live bring-your-own connector** (new `src/parkbench/byo.py`, `parkbench byo-run`,
+a `/byo` route on the profiles endpoint, new `tests/test_byo.py`) that drives a BYO agent through the
+**real** `docs/09` HTTP/JSON wire and captures the completed run as the radar-shaped JSON the
+spectator surfaces already read — replacing the hand-authored `web/src/fixtures/radar-byo.json`
+stand-in whenever a live run is available. Completes visual-world **chunk 4**.
+
+**Why:** D-063 put a BYO trainer in the park, but its numbers were invented: a hand-written fixture
+claiming scores on all five rides. That is exactly the kind of "wide and unearned" number this project
+exists to refuse. The wire, the reference client and the endpoint all already existed (D-027, D-047,
+D-067) — the only missing piece was the ~150 lines that join them and shape the result.
+
+**How it stays honest:**
+- **The connector transports; it never scores.** The run is played by the existing `engine`/`suite`,
+  scored by the existing `scoring`, and rolled up by a real `RadarProfile` — so a wired leg is
+  *byte-identical* to `NegotiationRide.evaluate(...)`, `detail` included (asserted, including for the
+  seed-dependent `random` agent, which exercises the `new_match` re-seed hop).
+- **The profile is one axis wide, and says so.** The v1 wire carries negotiation only (`docs/09`
+  scope), so a live BYO profile covers `social` and lists `economic`/`coding`/`safety` in
+  `missing_axes` with every other ride in `skipped_rides`. The stats screen draws those three as
+  dimmed **`n/a`** with hollow vertices — never as a score of `0.000` — and prints
+  `wire scores negotiation only`. **The captured profile is strictly narrower than the fixture it
+  replaces; that is the point.**
+- **It is deterministic.** No timestamp, no port in the payload: same agent + same seed => byte-identical
+  JSON, like every other Parkbench result. Provenance is structural instead — a `source` block with
+  protocol, spec path, ride, and match/turn counts (48 matches / 187 turns at the default suite).
+- **Identity is real (D-038).** `name`/`version` are the operator's BYO labels; `config_hash` is the
+  driven agent's own, so two differently-configured BYO agents stay distinguishable.
+
+**The `/byo` route is deliberately narrower than the library call.** An HTTP GET that can spend the
+operator's OpenRouter budget does not belong on a read-only endpoint, so only **deterministic, offline**
+negotiators may be driven (the `llm` variants get a `400` that distinguishes "never heard of it" from
+"won't run it"), and `?scenarios=` is capped at `MAX_BYO_SCENARIOS`. The library function has neither
+restriction — it is called by someone who already has the machine.
+
+**Front-end (Tier B, presentation-only):** `profiles.js` fetches `/byo` for BYO agents in live mode and
+keeps the committed fixture as the offline fallback — the world now reports **6/6 payloads live** (was
+5/5). `radar.js` learned the covered-vs-missing distinction, which is why the change is visible on the
+BYO screen and invisible on a fully-covered baseline.
+
+**Scope discipline:** stdlib-only (D-023), **purely additive** — no ride, scoring, fixture or
+`BENCHMARK_VERSION` change; committed baselines stay byte-identical and `export-profiles --check`
+stays 8/8 `ok` at v1.2.0.
+
+**Rejected:** (a) *simulating* the wire in-process to make the capture faster — the whole value is that
+a real socket proves the published protocol works, and 1.1 s is not a cost worth that loss;
+(b) padding the BYO profile's three uncovered axes with the old fixture's invented numbers so the radar
+"looks complete" — the exact dishonesty this lap removes; (c) putting `acme-bot` on the career
+leaderboard — a career multiplies `integrity` across *all* rides, and a one-ride agent has no such
+product (it stays correctly absent from the Hall of Fame); (d) a timestamp in the `source` block for
+"real" provenance — it would break determinism for no benefit the structural counts don't already give.
+
+**369 passing tests** (+23: 18 connector · 5 endpoint). *Bookkeeping note:* the pre-lap baseline is
+**346**, not the 345 the D-069..D-072 status block claimed — D-072's own entry already records 281 (=
+280 + D-068's `llm` test) + 33 = 314, and +32 containment gives 346. The headline was off by one; the
+suite was always right.
+
+**Verify:** `parkbench byo-run` · `parkbench byo-run --json` · `parkbench serve --profiles` then
+`GET /byo?agent=heuristic&name=acme-bot` · `pytest tests/test_byo.py tests/test_serve_profiles.py`
+(18 + 15) · `ruff check src tests` · `cd web && npm run build`. Tier-B shots + notes:
+`autoloop/shots/2026-08-29-1040/`.
+
+**Docs touched:** `09-byo-protocol.md` (the capture section + the sharpened "still open" note),
+`11-visual-world.md`, `web/README.md`, `autoloop/backlog.md` (chunk 4 complete), `autoloop/HANDOFF.md`,
+root `CLAUDE.md`.

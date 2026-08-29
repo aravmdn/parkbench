@@ -163,7 +163,7 @@ the base the next two build on, so keep it first.
   committed fixtures otherwise, with the source shown on screen per payload. Verified headless
   with the endpoint up (5/5 payloads live, 0 console errors) and down (fixture fallback, world
   still renders). Shots: `autoloop/shots/2026-08-05-2020/`.
-- [ ] `byo-live-connector` — Render a **live** third-party (BYO) run in the world rather than a
+- [x] `byo-live-connector` — Render a **live** third-party (BYO) run in the world rather than a
   hand-authored fixture: drive a BYO agent through the negotiation wire per `docs/09-byo-protocol.md`
   (reuse `parkbench serve` + `client.drive_agent`, or a small in-process helper), capture the resulting
   profile JSON, and surface it as the `acme-bot`-style "BYO"-chipped trainer's data (replacing the
@@ -171,6 +171,18 @@ the base the next two build on, so keep it first.
   completed-run JSON (not a committed fixture) drives the BYO trainer's stats screen, the flow is
   documented, any engine-side helper is stdlib-only + tested with `pytest` green + baselines
   byte-identical, the build is clean, and a screenshot is committed (Tier A+B).
+  ✅ landed (D-073) — `src/parkbench/byo.py` (`run_byo_negotiation`) binds a real `ParkServer` on an
+  ephemeral loopback port and drives it with `client.drive_agent`, so every observation/action crosses
+  a socket; the result is shaped by a real `RadarProfile` and is **byte-identical to
+  `NegotiationRide.evaluate(...)`**, `detail` included (asserted, incl. the seed-dependent `random`
+  agent). Surfaces: `parkbench byo-run [--json] [--out]` + a `/byo` route on `serve --profiles`
+  (deterministic-offline drivers only — `llm` is refused so a GET can't spend the operator's API
+  budget — and `?scenarios=` capped). Front-end fetches it (**6/6 payloads live**, was 5/5).
+  **Honest outcome:** the wire scores negotiation only, so a live BYO profile covers **one axis** and
+  the stats screen now draws uncovered axes as dimmed **`n/a`** (never `0.000`) with the reason
+  printed — strictly narrower than the fixture it replaces, which invented five ride scores. **369
+  tests** (+23); purely additive (no ride/scoring/fixture/version change). Shots:
+  `autoloop/shots/2026-08-29-1040/`.
 - [x] `richer-land-art` — Upgrade the four lands' placeholder art beyond flat accent tints: per-land
   tilesets/props that make Society Square / Market Midway / Maker's Workshop / Safety Gauntlet visually
   distinct (procedural + original/CC0-by-construction — extend `pixels.js`, no ripped assets, per the
@@ -186,8 +198,11 @@ the base the next two build on, so keep it first.
   trainers still patrol + gym entry still fires (`The Commons Carousel` 0.951). Shots:
   `autoloop/shots/2026-08-05-2022/`.
 
-> **Chunk 4 first task landed on `main`** (`serve-profiles-endpoint`, D-067). **Next up:**
-> `web-fetch-profiles` (needs the endpoint), then `byo-live-connector`, then `richer-land-art`.
+> **Chunk 4 COMPLETE** (`serve-profiles-endpoint` D-067 · `web-fetch-profiles` D-069 · `richer-land-art`
+> D-070 · `byo-live-connector` D-073). The visual world has no queued chunk. **Next up** is the trust
+> track's `criterion-cohort` below — and note D-073 sharpened the case for it: BYO connectors for the
+> **solo** rides (roadmap #5) are now the binding limit on measuring a third party at all, and they are
+> also what would supply the richer, non-deterministic roster the criterion cohort needs.
 
 ## Now (trust track — validity, roadmap #6)
 
