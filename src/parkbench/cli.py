@@ -2,13 +2,16 @@
 
   parkbench run     — run an agent through the negotiation suite and print its profile.
   parkbench analyze — print a single scenario's optimum (for debugging / inspection).
-  parkbench serve   — host a run over HTTP/JSON so a bring-your-own agent connects (D-027).
+  parkbench serve   — host a run over HTTP/JSON so a bring-your-own agent connects: the
+                      negotiation wire (D-027), --ride <name> for a solo ride (D-074), or
+                      --profiles for the read-only profile endpoint (D-067).
   parkbench radar   — roll every ride up into the agent's diagnostic radar profile (D-037).
   parkbench career  — the radar weighted by cross-ride reputation (D-041).
   parkbench leaderboard — rank agents by career score (D-042).
   parkbench export-profiles — regenerate/--check the web/ + viewer/ spectator fixtures (D-062).
   parkbench doctor  — diagnose the local setup + where every setting comes from (D-072).
-  parkbench byo-run — drive a BYO agent over the wire and capture its live profile (D-073).
+  parkbench byo-run — drive a BYO agent over the wire(s) and capture its live profile
+                      (D-073 negotiation; D-074 adds the solo wire via --rides).
 """
 
 from __future__ import annotations
@@ -126,10 +129,48 @@ def _serve_profiles(args: argparse.Namespace) -> None:
     print(f"listening on {server.base_url}  (default seed={args.seed})")
     print("  GET /radar?agent=<name>[&seed=N]   GET /career?agent=<name>[&seed=N]")
     print("  GET /leaderboard[?seed=N]          GET /health")
-    print("  GET /byo?agent=<driver>[&name=<label>][&scenarios=N]   (live BYO run, D-073)")
+    print("  GET /byo?agent=<driver>[&name=<label>][&scenarios=N][&rides=all]")
+    print("      (live BYO run: negotiation only, D-073; rides=all sweeps every wire, D-074)")
     print("\nserving radar/career/leaderboard/byo JSON (Ctrl+C to stop)...\n")
     try:
         server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nstopped.\n")
+    finally:
+        server.stop()
+
+
+def _serve_solo(args: argparse.Namespace) -> None:
+    # --ride <name> => host ONE solo ride on the plan wire (D-074) instead of the negotiation wire.
+    # Same "the park drives the loop" contract, different message shape (docs/09 "The solo wire").
+    from .solo_client import drive_solo_agent
+    from .solo_protocol import spec_for
+    from .solo_server import SoloParkServer
+
+    spec = spec_for(args.ride)  # fail fast, by name, before binding a socket
+    server = SoloParkServer(
+        args.ride, seed=args.seed, host=args.host, port=args.port, agent_name=args.agent_name
+    ).start()
+    print(f"\nParkbench - solo ride '{spec.ride}' ({spec.task}) over HTTP/JSON (D-074)")
+    print(f"axis={spec.axis}  seed={args.seed}")
+    print(f"listening on {server.base_url}")
+    print("  GET  /scenario   POST /plan   GET /health")
+    print(f"the external agent is '{args.agent_name}'.\n")
+
+    try:
+        if args.local_agent is not None:
+            # Convenience: drive the ride in-process with a built-in agent over the wire, exactly
+            # as `serve --local-agent` does for negotiation.
+            from importlib import import_module
+
+            print(f"driving with local agent '{args.local_agent}' over HTTP...\n")
+            agent = import_module(f".{args.ride}", __package__).make_agent(args.local_agent)
+            drive_solo_agent(server.base_url, agent)
+        else:
+            print("waiting for an external agent to connect (Ctrl+C to stop)...\n")
+        result = server.wait()
+        print(f"run complete for agent: {result.agent}")
+        print(f"  {result.ride} score: {result.score:.6f}   [optimum = 1.000]\n")
     except KeyboardInterrupt:
         print("\nstopped.\n")
     finally:
@@ -140,6 +181,9 @@ def cmd_serve(args: argparse.Namespace) -> None:
     if getattr(args, "profiles", False):
         # --profiles => the read-only radar/career/leaderboard HTTP endpoint, not the negotiation wire.
         _serve_profiles(args)
+        return
+    if getattr(args, "ride", None):
+        _serve_solo(args)
         return
     # Imported lazily so the core CLI has no dependency on the HTTP slice unless used.
     from .server import ParkServer
@@ -271,16 +315,29 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 def cmd_byo_run(args: argparse.Namespace) -> int:
     # Imported lazily so the core CLI carries no dependency on the HTTP slice unless used (D-073).
-    from .byo import render_byo_run, run_byo_from_name
+    from .byo import render_byo_run, run_byo_from_name, run_byo_profile
 
-    run = run_byo_from_name(
-        args.agent,
-        seed=args.seed,
-        n_scenarios=args.scenarios,
-        round_cap=args.round_cap,
-        byo_name=args.name,
-        byo_version=args.byo_version,
-    )
+    if args.rides == "negotiation":
+        # The D-073 default: one leg over the negotiation wire, byte-identical payload to before.
+        run = run_byo_from_name(
+            args.agent,
+            seed=args.seed,
+            n_scenarios=args.scenarios,
+            round_cap=args.round_cap,
+            byo_name=args.name,
+            byo_version=args.byo_version,
+        )
+    else:
+        # D-074: sweep every wire the park has — negotiation plus the four solo rides.
+        run = run_byo_profile(
+            args.agent,
+            seed=args.seed,
+            n_scenarios=args.scenarios,
+            round_cap=args.round_cap,
+            byo_name=args.name,
+            byo_version=args.byo_version,
+            rides=None if args.rides == "all" else tuple(args.rides.split(",")),
+        )
     payload = {"benchmark_version": BENCHMARK_VERSION, **run.to_dict()}
 
     if args.out:
@@ -539,14 +596,25 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--round-cap", type=int, default=8, dest="round_cap")
     s.add_argument("--agent-name", default="byo-http", dest="agent_name",
                    help="Label recorded for the external test agent (side A).")
-    s.add_argument("--local-agent", choices=sorted(AGENT_REGISTRY), default=None,
-                   dest="local_agent",
+    # The union of the negotiation roster and the solo rides' (each ride owns its own, D-035): with
+    # --ride the name is resolved against *that* ride's roster, which is where `optimal` lives.
+    s.add_argument("--local-agent",
+                   choices=sorted(set(AGENT_REGISTRY) | {"random", "greedy", "heuristic", "optimal"}),
+                   default=None, dest="local_agent",
                    help="Drive the run in-process with a built-in agent over HTTP (for testing).")
     s.add_argument("--no-log", action="store_true", help="Do not write a run log.")
     s.add_argument(
         "--profiles", action="store_true",
         help="Serve a read-only radar/career/leaderboard JSON endpoint instead of the negotiation "
              "wire (--seed sets the default seed; other run flags are ignored).",
+    )
+    from .solo_protocol import SOLO_RIDES
+
+    s.add_argument(
+        "--ride", choices=sorted(SOLO_RIDES), default=None,
+        help="Host this SOLO ride on the plan wire (GET /scenario, POST /plan) instead of the "
+             "negotiation wire (D-074). --local-agent drives it in-process for a self-test. "
+             "Ignored if --profiles is also given (that flag wins).",
     )
     s.set_defaults(func=cmd_serve)
 
@@ -692,11 +760,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     br = sub.add_parser(
         "byo-run",
-        help="Drive a BYO agent over the HTTP/JSON wire and capture its live profile (D-073).",
+        help="Drive a BYO agent over the HTTP/JSON wire(s) and capture its live profile "
+             "(D-073 negotiation; --rides all adds the solo wire, D-074).",
     )
     br.add_argument(
-        "--agent", default="heuristic", choices=sorted(AGENT_REGISTRY),
-        help="The negotiator driven over the wire (the stand-in for a third party's client).",
+        "--agent", default="heuristic",
+        choices=sorted(set(AGENT_REGISTRY) | {"random", "greedy", "heuristic", "optimal"}),
+        help="The agent driven over the wire(s) - the stand-in for a third party's client. "
+             "Resolved per ride from that ride's own roster (D-035), so 'optimal' works for a "
+             "solo-only --rides selection but not for the negotiation wire, which has no optimal.",
     )
     br.add_argument(
         "--name", default=DEFAULT_BYO_NAME,
@@ -706,8 +778,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--byo-version", dest="byo_version", default=None,
         help="BYO version for the D-038 identity (default: the driven agent's version).",
     )
+    br.add_argument(
+        "--rides", default="negotiation",
+        help="Which wires to drive: 'negotiation' (default, the D-073 single-leg capture), 'all' "
+             "(every wire - adds the four solo rides, D-074, for a three-axis profile), or a "
+             "comma-separated subset e.g. 'negotiation,safety,containment'.",
+    )
     br.add_argument("--seed", type=int, default=1, help="Suite seed (selects the scenario set).")
-    br.add_argument("--scenarios", type=int, default=12)
+    br.add_argument("--scenarios", type=int, default=12,
+                    help="Negotiation scenarios; the solo rides use their own fixed suite size.")
     br.add_argument("--round-cap", type=int, default=8, dest="round_cap")
     br.add_argument("--out", default=None, metavar="PATH",
                     help="Also write the captured profile JSON to PATH (canonical LF, 2-space).")
