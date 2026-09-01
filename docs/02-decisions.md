@@ -1798,3 +1798,101 @@ suite was always right.
 **Docs touched:** `09-byo-protocol.md` (the capture section + the sharpened "still open" note),
 `11-visual-world.md`, `web/README.md`, `autoloop/backlog.md` (chunk 4 complete), `autoloop/HANDOFF.md`,
 root `CLAUDE.md`.
+
+---
+
+### D-074 · 2026-08-30 · The solo BYO wire — a third party becomes measurable on three axes, not one
+
+**Decision:** Add a **second BYO wire** for the park's four *plan-shaped* solo rides — new
+`src/parkbench/solo_protocol.py` (message shapes), `solo_server.py` (`SoloParkServer`,
+`GET /scenario` · `POST /plan` · `GET /health`), `solo_client.py` (`drive_solo_agent`), new
+`tests/test_solo_wire.py` — and sweep it from the connector: `parkbench byo-run --rides all`,
+`byo.run_byo_profile(...)`, and `GET /byo?rides=all`. Also `parkbench serve --ride <name>` so a
+genuine third party can host one solo ride the way `serve` already hosts negotiation.
+
+**Why:** D-073 made a live BYO profile real and, in doing so, made its narrowness impossible to
+ignore: **one axis**, because the negotiation wire was the only wire. `docs/09` "Still open" and
+`docs/13` both named the solo connectors as the *binding* limit on measuring a third party at all —
+ahead of more rides, ahead of the criterion cohort that needs a richer roster. This is that item.
+
+**What it buys, exactly:** the wire carries `economic` · `exchange` · `safety` · `containment` —
+which happens to be **both** rides on the economic axis and **both** rides on the safety axis. So a
+swept BYO profile covers `social` · `economic` · `safety`, and two of those three are not merely
+present but **numerically identical to a built-in baseline's** (asserted). `social` is the partial
+one: `negotiation` is reachable, `commons` is not, so a swept social axis is one ride where a
+baseline's is the mean of two. The asymmetry is tested, not glossed.
+
+**Why a second wire and not an extension of the first:** the negotiation `Observation` is a *partial*
+view of a *shared* state that evolves with a counterpart's moves — D-016's information asymmetry is
+the point of that ride. A solo scenario has no counterpart and nothing hidden. Threading it through
+`Observation`/`Action` would mean inventing an empty history, a null standing offer and a meaningless
+`rounds_left`: a worse spec, not a smaller one. Two honest shapes, one shared *design* (**the park
+drives the loop**), so a third-party implementer still learns the pattern once.
+
+**How it stays honest:**
+- **It transports; the ride scores.** `SoloParkServer` runs
+  `RIDE_REGISTRY[ride].evaluate(agent_name, seed, agent=<bridge>)` — the ride's own code path handed a
+  different agent object — so there is no second scoring implementation to drift. **All 16
+  combinations** (4 rides × 4 baselines) are byte-identical to in-process, `detail` included; the
+  seed-dependent `random` baseline is included on purpose, because parity there is what proves the
+  `new_scenario` re-seed hop reproduces the suite exactly.
+- **A wrong plan is not an HTTP error.** The transport validates only the *shape* (a list of ints).
+  An over-budget subset, a non-permutation, a red-line crossing and an envelope breach are all
+  well-formed answers the **ride** prices at 0 with its integrity signal. Rejecting them at the
+  transport layer would hide real failures behind a `400` and silently inflate a BYO agent's score by
+  dropping its worst answers — asserted with a `TakeEverything` agent that scores 0.
+- **The adversarial injection crosses the wire verbatim, lie included.** Sanitising it would score
+  the safety ride instead of transporting it; resisting in-band manipulation is what that ride
+  measures.
+- **The rides with no wire are named, not omitted.** `commons` (multi-agent, sequential) and `coding`
+  (submit-an-artifact + sandbox) appear in `skipped_rides` *and* in a `source.unreachable` block with
+  the reason. A test asserts every registered ride is on a wire or on that list, so a ride added later
+  cannot silently skip the BYO surface.
+- **Still no career.** Three axes is closer to complete but a career multiplies `integrity` across
+  *every* ride (D-041), so a BYO agent remains correctly off the leaderboard. The remaining two
+  connectors are what would change that — restated in `docs/09` "Still open".
+- **Deterministic.** No clock, no port: same agent at the same seed emits byte-identical JSON.
+
+**The one engine-side change:** the four solo rides' `evaluate` gained an optional `agent=` seam
+(hand in the agent *object* instead of a roster name). It is inert when omitted, so the registry path
+— and therefore every committed baseline — is byte-for-byte untouched. `evaluate(x, s) ==
+evaluate(x, s, agent=None)` is asserted for all four.
+
+**Small sharp edges handled rather than left:** rosters differ per ride (D-035 — the negotiation
+cast has no `optimal`, because nothing plays a negotiation perfectly), so a sweep resolves **every**
+driver up front and fails with a message naming the ride and the agent, before a socket is bound
+rather than half-way through. And a sweep that drives only solo rides can name an agent the
+negotiation roster lacks, whose ride-side class predates D-038 and has no `identity()`; the identity
+falls back to hashing the driver name — still deterministic, still per-driver distinct.
+
+**`/byo?rides=` is deliberately narrower than the library call.** The route takes an *enumerated*
+choice (`negotiation` | `all`), not a free-form ride list, so the work one GET can ask for stays
+predictable; the existing driver allow-list and `MAX_BYO_SCENARIOS` cap still apply.
+`run_byo_profile(rides=...)` accepts any subset.
+
+**Scope discipline:** stdlib-only (D-023), **purely additive** — no ride mechanics, scoring, fixture
+or `BENCHMARK_VERSION` change; committed baselines byte-identical, `export-profiles --check` stays
+8/8 `ok` at v1.2.0. `parkbench byo-run` with no flags still emits the exact D-073 payload, so the
+world's committed BYO fixture and the front-end are untouched (Tier A only, no `web/` change).
+
+**Rejected:** (a) forcing the solo rides through the negotiation wire for "one protocol" — see above;
+(b) validating plan *content* on the wire — it would hide the failures the rides exist to price;
+(c) a `commons` connector in the same lap — it needs the turn loop, which is a different shape and a
+different lap; (d) faking the missing `coding` axis so the swept radar "looks complete" — the same
+dishonesty D-073 removed; (e) making `/byo?rides=` accept an arbitrary list — unpredictable served
+work for no gain the enumerated choice doesn't give.
+
+**416 passing tests** (+47: 369 -> 416).
+
+**Verify:** `pytest tests/test_solo_wire.py` (47) · `pytest` · `ruff check src tests` ·
+`parkbench byo-run --rides all` · `parkbench byo-run --rides all --json` ·
+`parkbench serve --ride containment --port 0 --local-agent optimal` ·
+`parkbench export-profiles --check` (8 `ok`, v1.2.0) · `parkbench radar --agent heuristic`
+(unchanged).
+
+**Docs touched:** `09-byo-protocol.md` (two-wire scope table, the new "The solo wire" section,
+"Rides no wire carries", the rewritten honesty table + "Still open"), `03-roadmap.md` (#5),
+`05-glossary.md` (solo wire · unreachable ride), `06-v1-architecture.md` (module inventory),
+`13-external-validity-plan.md` (§E: the criterion cohort is partly unblocked), `README.md`,
+`web/README.md`, `autoloop/backlog.md` (a new roadmap-#5 chunk), `autoloop/HANDOFF.md`,
+`autoloop/log.md`, root `CLAUDE.md`.

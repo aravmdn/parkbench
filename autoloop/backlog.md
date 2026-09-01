@@ -245,7 +245,37 @@ Tier A (stdlib-only, keep `pytest` green + baselines byte-identical).
 - [ ] `criterion-cohort` — Fill the `criterion_validity()` scaffold (D-064) with a real cohort — needs a
   **one-time online** step scoring real agents on Parkbench **and** an external benchmark (coding↔HumanEval
   is the strongest partly-offline match). **Done when:** a non-placeholder cohort reports a correlation +
-  CI, and a test guards it (Tier A + one online data-collection step).
+  CI, and a test guards it (Tier A + one online data-collection step). *Partly unblocked by D-074:* a
+  third-party agent is now scorable on three axes over the wire, so a cohort no longer has to be
+  built from in-process baselines alone.
+
+## Now (BYO ecosystem — roadmap #5)
+
+Decomposed 2026-08-30 after D-074 landed the solo wire. The park now has two BYO wires covering five
+of seven rides; these are the remaining two connectors and the hardening behind them. Engine work is
+Tier A (stdlib-only, `pytest` green, baselines byte-identical).
+
+- [ ] `commons-byo-connector` — Put the **`commons`** ride on a BYO wire. It is multi-agent and
+  sequential (contribute per round while watching the society's history), so it needs a turn loop like
+  the negotiation wire's — `GET /observation` carrying `{round_idx, history, scenario}` and
+  `POST /action` carrying a contribution — not the one-shot `/scenario`+`/plan` shape. **Done when:** a
+  wired `commons` leg is byte-identical to `CommonsRide.evaluate(...)` for all four baselines, the
+  sweep's `social` axis becomes the same mean of two rides a baseline gets, and `docs/09` documents the
+  third wire (Tier A).
+- [ ] `coding-byo-connector` — Put the **`coding`** ride on a BYO wire: submit-an-artifact (the answer
+  is a source file, not a plan), so the wire hands out the task + signature and takes back code that the
+  **existing** sandbox (D-043/D-048) runs — the connector must add no new execution path. **Done when:**
+  a wired coding leg equals `CodingRide.evaluate(...)`, the untrusted-code path is unchanged and still
+  confined, and `docs/09` documents it (Tier A). *This is the last axis a BYO agent cannot reach, and*
+  *with `commons` it is what unlocks a BYO **career** — the roll-up needs `integrity` from every ride.*
+- [ ] `byo-world-sweep` — Surface the three-axis capture in the world: fetch `/byo?rides=all` for the
+  BYO trainer so its stats screen shows social/economic/safety live with only `coding` dimmed to `n/a`,
+  and update the wire note (which currently reads "wire scores negotiation only"). **Done when:** the
+  world renders a swept BYO profile live, the fixture fallback still boots, build clean, screenshot
+  committed (Tier B; no engine code — the endpoint already serves it).
+- [ ] `byo-protocol-schema` — Publish a **JSON Schema** for both wires' messages so a third party can
+  validate their client offline. **Done when:** schemas exist for the negotiation and solo message
+  shapes, a test validates real captured messages against them, and `docs/09` links them (Tier A).
 
 - [x] `convergent-validity` — Show the ride scores correlate with a measure already trusted. Offline
   first cut: correlate the two **social** rides (negotiation, commons) across a shared agent set + a

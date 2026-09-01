@@ -7,27 +7,31 @@
 
 ---
 
-**Updated:** 2026-08-29
+**Updated:** 2026-09-01
 **Loop state:** IDLE
 
-**Active task:** — (none; `byo-live-connector` complete, **uncommitted in the working tree**)
-**Acceptance criteria:** met — see D-073 in `../docs/02-decisions.md`.
-**Task branch:** none — worked directly on `main`, **not yet committed** at the owner's request
-(the work is staged to be split into ~5 commits: connector module + tests · `byo-run` CLI · `/byo`
-route · `web/` rendering + shots · docs/status).
-**Tree state:** DIRTY · on `main` (in sync with `origin/main` at `e3a763e` before this lap)
-**Last durable commit:** `e3a763e` (docs: update CLAUDE.md status for D-069..D-072)
+**Active task:** — (none; `solo-ride-byo-connectors` complete and **committed**)
+**Acceptance criteria:** met — see D-074 in `../docs/02-decisions.md`.
+**Task branch:** none — worked directly on `main`. Built 2026-08-30, held uncommitted at the owner's
+request, landed 2026-09-01 as the five commits listed in **NEXT ACTION** below.
+**Tree state:** CLEAN · on `main`
+**Last durable commit:** the D-074 docs commit (this file)
 
-**This lap (2026-08-29): `byo-live-connector` — D-073, visual-world chunk 4 COMPLETE.** A live BYO run
-over the real `docs/09` wire replaces the hand-authored `radar-byo.json` stand-in in the world:
-`src/parkbench/byo.py` (+ `parkbench byo-run`, + a `/byo` route on `serve --profiles`, + `web/`
-rendering). A wired leg is byte-identical to the in-process `NegotiationRide` (`detail` included) and
-the payload is deterministic (no clock, no port). **Honest outcome:** the v1 wire scores negotiation
-only ⇒ a live BYO profile covers **one axis**, so the stats screen now draws uncovered axes as dimmed
-**`n/a`** rather than `0.000` — strictly narrower than the fixture it replaces, and that is the point.
-`acme-bot` stays correctly absent from the Hall of Fame (a career multiplies integrity across *all*
-rides). **369 passing tests** (+23); purely additive — no ride/scoring/fixture/`BENCHMARK_VERSION`
-change. Tier-B shots: `shots/2026-08-29-1040/`.
+**This lap (2026-08-30): the solo BYO wire — D-074.** The park gains a **second** BYO wire so a third
+party stops being a one-axis agent. `src/parkbench/solo_protocol.py` (message shapes) ·
+`solo_server.py` (`SoloParkServer`: `GET /scenario` · `POST /plan` · `GET /health`) ·
+`solo_client.py` (`drive_solo_agent`) carry the four **plan-shaped** solo rides — `economic` ·
+`exchange` · `safety` · `containment` = both economic-axis rides and both safety-axis rides. Surfaced
+as `parkbench byo-run --rides all|<subset>`, `parkbench serve --ride <name>`, `GET /byo?rides=all`,
+and `byo.run_byo_profile(...)`. **A swept BYO profile covers `social` · `economic` · `safety`**, and
+the `economic`/`safety` axes are *numerically identical* to a baseline's (both their rides are on the
+wire); `social` stays partial because `commons` has no wire. All **16** wired legs (4 rides × 4
+baselines) are byte-identical to in-process, `detail` included — the server runs the ride's own
+`evaluate(..., agent=<bridge>)`, the lap's only engine change (an optional seam, inert when omitted).
+`commons` and `coding` are **named with reasons** in `skipped_rides` + `source.unreachable`, guarded
+by a test; a BYO agent still earns **no career**. **416 passing tests** (+47); purely additive — no
+ride/scoring/fixture/`BENCHMARK_VERSION` change, and bare `byo-run` still emits the exact D-073
+payload, so `web/` is untouched (Tier A only).
 
 **Last integrated (2026-07-22, batch 2):** two parallel laps, merged + verified *together*, **bench →
 v1.1.0**:
@@ -50,22 +54,23 @@ clean. Prior batch: D-063/064/065 (now the first "Prior status" block in `CLAUDE
 mechanism (`autoloop/LOCAL_DRIVER_PROMPT.md`). The **cloud-cron routine (D-054) stays DESIGNED +
 UNARMED**.
 
-**NEXT ACTION:** **Commit the working tree** — the lap is complete and verified but deliberately
-uncommitted (owner asked for the work to be split into commits by hand). Suggested split, in order:
-1. `src/parkbench/byo.py` + `tests/test_byo.py` (the connector)
-2. `src/parkbench/cli.py` `byo-run` + `tests/test_versioning.py` (the CLI surface)
-3. `src/parkbench/profiles_server.py` + `tests/test_serve_profiles.py` (the `/byo` route)
-4. `web/src/profiles.js` + `web/src/radar.js` + `autoloop/shots/2026-08-29-1040/` (Tier B)
-5. docs: `02-decisions.md` (D-073) · `09` · `11` · `README.md` · `web/README.md` · backlog · this file
-   · root `CLAUDE.md`
+**NEXT ACTION:** — D-074 is **landed**. It went in as five commits on `main`:
+1. `solo_protocol.py` + the `agent=` seam on the four solo `ride.py` files
+2. `solo_server.py` + `solo_client.py`
+3. `byo.py` (the sweep) + `cli.py` (`byo-run --rides`, `serve --ride`)
+4. `profiles_server.py` (`/byo?rides=all`) + `tests/test_solo_wire.py`
+5. docs: `02-decisions.md` (D-074) · `09` · `03` · `05` · `06` · `13` · `README.md` · backlog
+   · this file · root `CLAUDE.md`
 
-After that, the visual world has **no queued chunk** (chunk 4 is complete). The unblocking item is the
-trust track's **`criterion-cohort`** (`docs/13` §B — needs a one-time online real-agent step). D-073
-sharpened the case for the prerequisite: **BYO connectors for the solo rides** (roadmap #5) are now the
-binding limit on measuring a third party at all (a BYO agent can only be scored on `social`, and so can
-never appear on the career leaderboard), *and* they are what would supply the richer non-deterministic
-roster the criterion cohort needs. Loose end still open: the economic/safety/social **discriminant
-FAILs** (D-066/D-071) — per `docs/13` §E more rides cannot fix them; only a richer roster can.
+After that, the queue's top is the new **roadmap-#5 chunk** in [`backlog.md`](backlog.md):
+`commons-byo-connector` → `coding-byo-connector` (together they unlock a BYO **career** — the roll-up
+needs `integrity` from every ride), plus a Tier-B `byo-world-sweep` to show the three-axis capture in
+the world and `byo-protocol-schema`. On the trust track the unblocking item is still the
+**`criterion-cohort`** (`docs/13` §B — needs a one-time online real-agent step); D-074 partly unblocks
+it (an external agent is now scorable on three axes) but its own binding constraint — a richer,
+non-deterministic roster — is unchanged. Loose end still open: the economic/safety/social
+**discriminant FAILs** (D-066/D-071) — per `docs/13` §E more rides cannot fix them; only a richer
+roster can.
 
 **Blockers / needs-owner:** the uncommitted tree above is the only one. Optional: the D-065
 `llm:<model-id>` agents run **live** only if `.env`'s `OPENROUTER_API_KEY` is valid — present as of

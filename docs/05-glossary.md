@@ -46,7 +46,16 @@ Shared vocabulary for the project. Keep terms here so docs can link to a single 
 - **Reservation floor** — the minimum share of its own maximum a house persona will accept; relaxes
   over the rounds. Distinct floors per persona make per-persona outcomes distinguishable (D-031).
 - **Wire protocol (HTTP/JSON)** — the park-hosted, agent-polled HTTP API a BYO agent uses to be
-  scored over the network: `GET /observation`, `POST /action` (D-015 / D-027).
+  scored over the network. There are two, sharing one design (*the park drives the loop*): the
+  **negotiation wire** (`GET /observation`, `POST /action` — D-015 / D-027) and the **solo wire**
+  (`GET /scenario`, `POST /plan` — D-074).
+- **Solo wire** — the BYO wire for the park's *plan-shaped* rides (`economic` · `exchange` · `safety`
+  · `containment`): the park hands over a whole, fully-observable scenario and the agent returns a
+  **plan** (a list of integer indices). Covers both economic-axis rides and both safety-axis rides,
+  so a BYO agent driven over both wires has a **three-axis** profile (D-074).
+- **Unreachable ride** — a registered ride no BYO wire carries, named with its reason on every
+  captured profile rather than silently omitted: `commons` (multi-agent + sequential) and `coding`
+  (submit-an-artifact). They are why a BYO agent can be profiled but not given a **career** (D-074).
 - **Run log** — the per-run `run.json` (suite + profile + per-match transcripts) written to `runs/`;
   the replay viewer's input. Versioned via `schema_version` (D-029).
 - **Subprocess-isolated harness** — the coding ride runs untrusted candidate code in a separate,

@@ -379,6 +379,17 @@ re-prioritises the remaining sequence: item **#4 (a real criterion cohort)** —
 supplies a richer, non-deterministic agent roster — should now come **before** item #5's remaining
 half (a second coding ride) and before item #6.
 
+> ⟶ **Partly unblocked by D-074 (2026-08-30).** The prerequisite this plan kept naming — that a
+> third-party agent could be scored on more than one axis at all — is now largely met: the **solo BYO
+> wire** carries `economic` · `exchange` · `safety` · `containment`, so an external agent can be
+> measured on `social` · `economic` · `safety` over HTTP, with `economic` and `safety` numerically
+> identical to a baseline's. A criterion cohort therefore no longer has to be assembled from
+> in-process baselines alone. Two gaps remain before a cohort member can be a *full* park citizen:
+> `commons` and `coding` still have no wire, so an external agent's `social` axis is one ride instead
+> of two, its `coding` axis is absent, and it can hold no **career** (the roll-up needs `integrity`
+> from every ride). For the MTMM matrix specifically, the binding constraint is unchanged — a richer,
+> non-deterministic *roster*, which is exactly §B.
+
 ## D · What this plan does **not** claim
 
 - It does **not** claim criterion validity is achieved — only that the instrument to measure it now

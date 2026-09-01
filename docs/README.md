@@ -25,7 +25,7 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
 | 06 | [`06-v1-architecture.md`](06-v1-architecture.md) | How the v1 core is built — modules, scoring formulas, how to run, results. | Stable |
 | 07 | [`07-multi-ride.md`](07-multi-ride.md) | Post-v1: the ride abstraction, the radar roll-up, and added rides. | Living |
 | 08 | [`08-theming.md`](08-theming.md) | The creative skin (roadmap #4): the park theme, `parkbench map`, and the landing page. | Living |
-| 09 | [`09-byo-protocol.md`](09-byo-protocol.md) | The BYO agent HTTP/JSON wire protocol (roadmap #5) — endpoints, message shapes, determinism, and how a **live** run is captured for the spectator surfaces (D-073). | Living |
+| 09 | [`09-byo-protocol.md`](09-byo-protocol.md) | The BYO agent HTTP/JSON wire protocols (roadmap #5) — the **negotiation** wire and the **solo** wire (D-074), their message shapes and determinism contracts, how a **live** run is captured for the spectator surfaces (D-073), and the two rides no wire carries. | Living |
 | 10 | [`10-autoloop.md`](10-autoloop.md) | Charter for the autonomous **build** loop (D-049/D-051) — local fresh-worker-per-lap, work queue, the two verification tiers, guardrails, push-to-main rules, kill switch. | Living |
 | 11 | [`11-visual-world.md`](11-visual-world.md) | The Pokémon-style visual spectator world (D-050) — the metaphor↔engine mapping, the engine↔front-end JSON split, the Kaplay stack, the art policy. | Draft |
 | 12 | [`12-validity.md`](12-validity.md) | The validity harness (D-055) — proving each ride *measures capability* via a known-ability ladder + resists gaming; metrics, thresholds, results, and the honest remaining gaps. | Living |
@@ -146,6 +146,19 @@ keep them updated as things change. See the root [`../CLAUDE.md`](../CLAUDE.md) 
   four deterministic baselines, each added within-axis pair makes Campbell-Fiske separation strictly
   harder. Recorded honestly in `12-validity.md` and `13-external-validity-plan.md` §E, which
   re-prioritises the **criterion cohort** (a richer real-agent roster) ahead of more rides.
+- **2026-08-30** — **The solo BYO wire** (D-074, `09-byo-protocol.md`): a **second** BYO wire
+  (`src/parkbench/solo_protocol.py` · `solo_server.py` · `solo_client.py`; `GET /scenario` ·
+  `POST /plan`) carries the four *plan-shaped* solo rides — `economic` · `exchange` · `safety` ·
+  `containment`, i.e. **both** rides on the economic axis and **both** on the safety axis. A BYO
+  agent driven over both wires (`parkbench byo-run --rides all`, `GET /byo?rides=all`) therefore has
+  a **three-axis** profile where D-073 gave it one, and its `economic`/`safety` axes are *numerically
+  identical* to a built-in baseline's (only `social` stays partial — `commons` has no wire). All 16
+  wired legs (4 rides × 4 baselines) are byte-identical to in-process, `detail` included, because the
+  server runs the ride's own `evaluate(..., agent=<bridge>)` — the lap's only engine-side change, an
+  optional seam that is inert when omitted. The two rides no wire carries (`commons`: sequential and
+  multi-agent; `coding`: submit-an-artifact) are **named with reasons** in the payload and guarded by
+  a test, and a BYO agent still earns **no career** (that needs `integrity` from every ride). **416
+  passing tests** (+47); purely additive — no ride/scoring/fixture/`BENCHMARK_VERSION` change.
 - **2026-08-29** — **Live BYO connector** (D-073, `09-byo-protocol.md` + `11-visual-world.md`):
   `src/parkbench/byo.py` drives a bring-your-own agent through the **real** HTTP/JSON wire (a
   `ParkServer` on an ephemeral loopback port + the reference client) and captures the completed run as

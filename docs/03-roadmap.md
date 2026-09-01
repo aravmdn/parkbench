@@ -29,13 +29,20 @@ Directional only — sequence and detail will firm up as v1 is built and learned
    (lands = axes, attractions = rides), a `parkbench map` command, and a themed landing page
    `viewer/park.html`. See [`08-theming.md`](08-theming.md). Still to do: richer per-ride art and
    possibly **live/served profiles** for mindshare.
-5. **Grow the BYO ecosystem.** A first HTTP/JSON connection protocol exists (D-027) and is now
+5. **Grow the BYO ecosystem.** A first HTTP/JSON connection protocol exists (D-027) and is
    **documented as a wire spec** (D-047, [`09-byo-protocol.md`](09-byo-protocol.md)) so a third party
-   can implement an agent in any language. The coding harness is **sandboxed + time-bounded** (D-043)
-   and now also **environment/cwd-confined** (D-048, no inherited secrets, throwaway working dir) so it
-   is safer to point at untrusted BYO code. Next: harden the protocol for public hosting (auth/TLS/rate
-   limiting + a published JSON Schema), BYO connectors for the **solo** rides, and a **full OS sandbox**
-   (filesystem/network jails, CPU/memory caps) for untrusted code — the one anti-gaming item still open.
+   can implement an agent in any language; a **live connector** captures a real wire run as a
+   spectator-ready profile (D-073). The park now has **two wires**: the negotiation wire and, since
+   D-074, a **solo wire** (`GET /scenario` · `POST /plan`) carrying `economic` · `exchange` · `safety`
+   · `containment` — *both* rides on the economic axis and *both* on the safety axis — so a BYO agent
+   is measurable on **three of the four axes** (`byo-run --rides all`), up from one. The coding harness
+   is **sandboxed + time-bounded** (D-043) and **environment/cwd-confined** (D-048, no inherited
+   secrets, throwaway working dir) so it is safer to point at untrusted BYO code. Next: the last two
+   connectors — a turn-loop wire for **`commons`** and a submit-an-artifact wire for **`coding`**,
+   which together are what would let a BYO agent earn a *career* (the roll-up needs `integrity` from
+   every ride) — then harden the protocol for public hosting (auth/TLS/rate limiting + a published
+   JSON Schema), and a **full OS sandbox** (filesystem/network jails, CPU/memory caps) for untrusted
+   code — the one anti-gaming item still open.
 6. **Earn *validity*, not just reproducibility (the trust track).** The whole vision is *trusted*
    measurement, and trust hinges on **construct validity** — that a ride's score measures the
    capability it is named for. First down-payment landed (D-055, [`12-validity.md`](12-validity.md)):

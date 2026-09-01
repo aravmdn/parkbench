@@ -42,11 +42,74 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 | `docs/05-glossary.md` | Shared vocabulary (ride, house cast, BYO agent, radar profile, …). |
 | `docs/06-v1-architecture.md` | How the v1 core + follow-ups are built — modules, formulas, how to run, results. |
 
-## Current status (2026-08-29)
+## Current status (2026-09-01)
 
-> **⚠️ The tree is DIRTY on purpose.** This lap is complete and verified but **not committed** — the
-> owner asked for the work to be left ready to split into commits. Suggested split (in order) is in
-> `autoloop/HANDOFF.md` **NEXT ACTION**. `main` was in sync with `origin/main` at `e3a763e` before it.
+> **Landed as five commits** on `main`: (1) `solo_protocol.py` + the `agent=` seam, (2)
+> `solo_server.py` + `solo_client.py`, (3) `byo.py` sweep + `byo-run --rides` + `serve --ride`,
+> (4) `/byo?rides=all` + `tests/test_solo_wire.py`, (5) docs. (The lap itself was built on
+> 2026-08-30 and held uncommitted at the owner's request.)
+
+**One lap done (D-074) — the park has a *second* BYO wire, and a third party is now measurable on
+three axes instead of one.** D-073 made a live BYO profile real and, in doing so, made its narrowness
+impossible to ignore: one axis, because negotiation was the only wire. This lap builds the missing
+one. `src/parkbench/solo_protocol.py` · `solo_server.py` · `solo_client.py` carry the four
+**plan-shaped** solo rides over `GET /scenario` · `POST /plan` — `economic` · `exchange` · `safety` ·
+`containment`, which is **both** rides on the economic axis and **both** on the safety axis. Surfaced
+four ways: **`parkbench byo-run --rides all`** (or any subset), **`parkbench serve --ride <name>`**
+(host one solo ride for a real third party), **`GET /byo?rides=all`**, and the library
+`byo.run_byo_profile(...)`. **416 passing tests** (+47). Purely additive: **no ride mechanics,
+scoring, fixture or `BENCHMARK_VERSION` change** — benchmark stays v1.2.0, `export-profiles --check`
+stays 8/8 `ok`, committed baselines byte-identical, and bare `parkbench byo-run` still emits the exact
+D-073 payload (so `web/` is untouched — Tier A only).
+
+- **It transports; the ride scores.** `SoloParkServer` runs
+  `RIDE_REGISTRY[ride].evaluate(agent_name, seed, agent=<bridge>)` — the ride's own code path handed a
+  different agent object — so there is no second scoring implementation to drift. **All 16
+  combinations (4 rides × 4 baselines) are byte-identical to in-process**, `detail` included; the
+  seed-dependent `random` baseline is in there on purpose, because parity there proves the
+  `new_scenario` re-seed hop reproduces the suite exactly. The lone engine-side change is that
+  optional `agent=` seam, inert when omitted (`evaluate(x, s) == evaluate(x, s, agent=None)` asserted).
+- **Two axes are now *complete*, not merely present.** A swept BYO profile's `economic` and `safety`
+  axes are **numerically identical** to a built-in baseline's, because both rides on each are on the
+  wire. `social` is the partial one — `negotiation` is reachable, `commons` is not — so a swept social
+  axis is one ride where a baseline's is the mean of two. That asymmetry is asserted, not glossed.
+- **A wrong plan is not an HTTP error.** The transport validates only the *shape* (a list of ints). An
+  over-budget subset, a non-permutation, a red-line crossing and an envelope breach are well-formed
+  answers the **ride** prices at 0 with its integrity signal; rejecting them at the transport layer
+  would hide real failures behind a `400` and silently inflate a BYO score. Same reasoning keeps the
+  safety ride's adversarial **injection on the wire verbatim, lie included**.
+- **The two rides with no wire are named, not omitted.** `commons` (multi-agent, sequential) and
+  `coding` (submit-an-artifact + sandbox) appear in `skipped_rides` *and* in a `source.unreachable`
+  block with the reason, and a test asserts every registered ride is on a wire or on that list — so a
+  ride added later cannot silently skip the BYO surface. **A BYO agent still earns no career**: the
+  roll-up multiplies `integrity` across *every* ride (D-041), so three axes is closer to complete but
+  still correctly off the leaderboard.
+- **`/byo?rides=` is deliberately narrower than the library call** — an enumerated `negotiation`|`all`,
+  not a free-form ride list, so the work one GET can ask for stays predictable (the driver allow-list
+  and `MAX_BYO_SCENARIOS` cap still apply). `run_byo_profile(rides=...)` accepts any subset.
+- **What this sharpens:** the last two connectors (`commons` turn-loop, `coding` submit-an-artifact)
+  are now the only thing between a third party and a **career** — decomposed into
+  `autoloop/backlog.md` as a new roadmap-#5 chunk, alongside a Tier-B task to show the swept profile
+  in the world. `docs/13` records that the criterion cohort is *partly* unblocked (an external agent
+  is now scorable on three axes) while its own binding constraint — a richer, non-deterministic
+  roster — is unchanged.
+
+**Verify:** `pytest` (416, ~8 min — needs `uv pip install -e ".[dev]"`;
+`tests/test_serve_profiles.py::test_post_is_rejected_read_only` is flaky on Windows under load and
+passes in isolation) · `ruff check src tests` · `parkbench byo-run --rides all` ·
+`parkbench byo-run --rides all --json` · `parkbench serve --ride containment --port 0 --local-agent
+optimal` · `parkbench export-profiles --check` (8 `ok`, v1.2.0) · `parkbench radar --agent heuristic`
+(unchanged).
+
+**Next:** `commons-byo-connector` then `coding-byo-connector` (`autoloop/backlog.md`, roadmap #5) —
+together they unlock a BYO **career**. On the trust track the unblocking item is still the
+**`criterion-cohort`** (`docs/13` §B — needs a one-time online real-agent step). Decision: **D-074**.
+
+---
+
+## Prior status (2026-08-29)
+
+> *(Landed as five commits, `bb06c38`..`607afd7`.)*
 
 **One lap done (D-073) — the park's bring-your-own trainer stops showing invented numbers, and
 visual-world chunk 4 is COMPLETE.** `src/parkbench/byo.py` drives a BYO agent through the **real**
