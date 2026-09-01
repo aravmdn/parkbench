@@ -19,7 +19,9 @@ Routes (GET only; the whole surface is read-only):
   GET /radar?agent=<name>&seed=<int>     -> radar --json for that agent
   GET /career?agent=<name>&seed=<int>    -> career --json for that agent
   GET /leaderboard?seed=<int>            -> leaderboard --json (default roster)
-  GET /byo?agent=<driver>&name=<label>   -> a LIVE bring-your-own run, captured over the wire (D-073)
+  GET /byo?agent=<driver>&name=<label>[&rides=all]
+                                         -> a LIVE bring-your-own run captured over the wire:
+                                            negotiation only (D-073), or every wire (D-074)
   GET /health                            -> {"status": "ok", "service": "parkbench-profiles", ...}
 
 ``agent`` defaults to ``heuristic`` and ``seed`` to the server's default (1) — matching the CLI
@@ -32,7 +34,9 @@ cross-origin — safe because the surface is read-only and exposes only public b
 
 ``/byo`` (D-073) is the live counterpart for the world's **bring-your-own** trainer: it captures a
 real run over the ``docs/09`` negotiation wire via :func:`parkbench.byo.run_byo_from_name` and serves
-the same radar-shaped JSON ``parkbench byo-run --json`` prints. Two deliberate limits keep an
+the same radar-shaped JSON ``parkbench byo-run --json`` prints. With ``?rides=all`` it instead drives
+**every** wire the park has (D-074 adds the four solo rides), returning the three-axis profile —
+about five times the work, still bounded and still deterministic. Three deliberate limits keep an
 HTTP-reachable route from becoming a lever on the operator's machine:
 
 - **Only deterministic, offline drivers** (:func:`byo_drivers`) may be named. The ``llm`` agents are
@@ -40,6 +44,9 @@ HTTP-reachable route from becoming a lever on the operator's machine:
   trigger outbound paid API calls is not something a "read-only" endpoint should offer.
 - **The suite size is bounded** (:data:`MAX_BYO_SCENARIOS`), so no request can ask for an unbounded
   run. A default 12-scenario capture takes ~1 s over loopback.
+- **``rides`` is an enumerated choice**, not a free-form ride list: ``negotiation`` or ``all``. The
+  library call :func:`parkbench.byo.run_byo_profile` accepts any subset; the route does not, so the
+  work a request can ask for stays predictable.
 
 Still read-only in the sense that matters: the run is deterministic, writes no log, and mutates no
 server state — the same request twice returns the same bytes.
@@ -125,17 +132,23 @@ def build_byo_payload(
     byo_name: Optional[str] = None,
     seed: int = DEFAULT_SEED,
     n_scenarios: int = 12,
+    rides: str = "negotiation",
 ) -> dict:
-    """Capture a **live** BYO run over the wire and return it stamped (D-073).
+    """Capture a **live** BYO run over the wire(s) and return it stamped (D-073, D-074).
 
     Identical bytes to ``parkbench byo-run --json`` for the same arguments — the connector is the
     single producer, this only transports and stamps it (see :mod:`parkbench.byo`).
 
+    ``rides`` selects how much of the park to drive: ``"negotiation"`` (the default single-leg
+    capture, D-073) or ``"all"`` (every wire — adds the four solo rides, D-074, for a three-axis
+    profile). ``"all"`` is roughly five times the work of the default and is bounded by the same
+    ``MAX_BYO_SCENARIOS`` cap, so it stays a fixed, small amount of local compute per request.
+
     Raises ``LookupError`` for a name no ride knows, and ``ValueError`` for a *known* agent this
-    route refuses to drive (the paid ``llm`` variants) or a scenario count outside
-    ``1..MAX_BYO_SCENARIOS``; the handler turns both into a ``400``.
+    route refuses to drive (the paid ``llm`` variants), a scenario count outside
+    ``1..MAX_BYO_SCENARIOS``, or an unknown ``rides`` value; the handler turns both into a ``400``.
     """
-    from .byo import DEFAULT_BYO_NAME, run_byo_from_name
+    from .byo import DEFAULT_BYO_NAME, run_byo_from_name, run_byo_profile
 
     if driver not in byo_drivers():
         # Separated on purpose: "I've never heard of it" and "I won't run it" are different answers.
@@ -147,12 +160,24 @@ def build_byo_payload(
         raise LookupError(driver)
     if not 1 <= n_scenarios <= MAX_BYO_SCENARIOS:
         raise ValueError(f"scenarios must be 1..{MAX_BYO_SCENARIOS}")
-    run = run_byo_from_name(
-        driver,
-        seed=seed,
-        n_scenarios=n_scenarios,
-        byo_name=byo_name or DEFAULT_BYO_NAME,
-    )
+    # A free-form ride list is not offered here: the enumerated choice keeps the served work
+    # predictable, and the library call (`run_byo_profile(rides=...)`) has no such restriction.
+    if rides not in ("negotiation", "all"):
+        raise ValueError("rides must be 'negotiation' or 'all'")
+    if rides == "all":
+        run = run_byo_profile(
+            driver,
+            seed=seed,
+            n_scenarios=n_scenarios,
+            byo_name=byo_name or DEFAULT_BYO_NAME,
+        )
+    else:
+        run = run_byo_from_name(
+            driver,
+            seed=seed,
+            n_scenarios=n_scenarios,
+            byo_name=byo_name or DEFAULT_BYO_NAME,
+        )
     return {"benchmark_version": BENCHMARK_VERSION, **run.to_dict()}
 
 
@@ -217,6 +242,7 @@ def _make_handler(default_seed: int):
                             byo_name=query.get("name", [None])[0] or None,
                             seed=self._seed_from(query),
                             n_scenarios=self._int_from(query, "scenarios", 12),
+                            rides=query.get("rides", ["negotiation"])[0] or "negotiation",
                         ),
                     )
                     return
