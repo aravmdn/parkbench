@@ -41,8 +41,80 @@ profile**. Purpose: become a *trusted, reproducible* place to measure agents. Fu
 | `docs/04-open-questions.md` | Deferred (often borderline-technical) questions to resolve later. |
 | `docs/05-glossary.md` | Shared vocabulary (ride, house cast, BYO agent, radar profile, …). |
 | `docs/06-v1-architecture.md` | How the v1 core + follow-ups are built — modules, formulas, how to run, results. |
+| `docs/09-byo-protocol.md` | The three BYO HTTP/JSON wires (negotiation · solo/plan · commons), their message shapes and determinism contracts. |
+| `docs/12-validity.md` | The validity harness: what is measured, the thresholds, the results, and the honest gaps. |
+| `docs/13-external-validity-plan.md` | The external half of validity — criterion cohort, monotrait pairs, the discriminant findings. |
 
-## Current status (2026-09-01)
+## Current status (2026-09-02)
+
+**One lap done (D-075) — the park's *third* BYO wire, and every axis a third party can reach is now
+*complete* rather than merely present.** D-074 took a live BYO profile from one axis to three and
+left exactly one asymmetry behind: `social` was the partial axis, one ride over the wire where a
+baseline got the mean of two. It was recorded honestly rather than hidden — but a benchmark whose
+external and internal numbers differ on one axis is a benchmark with an asterisk. This lap removes
+it. `src/parkbench/commons_protocol.py` · `commons_server.py` · `commons_client.py` carry the
+`commons` ride over `GET /observation` · `POST /contribution` as a **turn loop over a fully public
+game**. Surfaced as **`parkbench serve --ride commons`** and folded into every sweep
+(**`byo-run --rides all`** now drives six legs, plus `--rides commons`, `GET /byo?rides=all`, and
+`byo.run_byo_profile(...)`). **440 passing tests** (+24). Purely additive: **no ride mechanics,
+scoring, fixture or `BENCHMARK_VERSION` change** — benchmark stays v1.2.0, `export-profiles --check`
+stays 8/8 `ok`, committed baselines byte-identical, and bare `parkbench byo-run` still emits the exact
+D-073 payload (verified byte for byte), so `web/` is untouched — Tier A only.
+
+- **The headline is an equality, not a coverage count.** A swept BYO profile's three axes are
+  **numerically identical** to the same baseline's radar — at seed 1 for the `heuristic` driver:
+  `social` 0.9631180639047241 · `economic` 0.9804167854489221 · `safety` 0.7686518095569819, digit
+  for digit. The test that used to assert `social` was the odd one out now asserts the opposite and
+  stronger thing. `coding` is still unreachable, which is a **missing** axis — a cleaner claim than
+  a partial one.
+- **A third *shape*, because neither existing wire fits — and each fails for the opposite reason.**
+  The negotiation wire has the right rhythm (a turn loop) and the wrong information model: it is
+  built around a **private** utility table and a standing offer, where a commons round is fully
+  public. The plan wire has the right information model and the wrong rhythm: one instance out, one
+  plan back, which would turn a reciprocity game into an open-loop guess and quietly change what the
+  ride scores. Three honest shapes, **one shared design** (the park drives the loop), so a
+  third-party implementer still learns the pattern once. This is the last shape the park needs.
+- **`new_game` is sent once per game, not once per round** — the lap's load-bearing detail. A commons
+  game spans several turns and the suite re-seeds once per game, so the agent's RNG must carry across
+  that game's rounds; re-seeding per round would produce a *different but still plausible* score. All
+  four baselines are pinned byte-identical to in-process, `random` **included precisely because** it
+  is the only one that can catch this, and a second test pins the *mechanism* (the observed
+  `(round_idx, was_reset)` sequence) so a future break is readable from the failure.
+- **The whole society is on the wire; nothing helpful is.** `history` carries every player's
+  contribution per round, because the house's grim-trigger reciprocator is only visible through it
+  and noticing it *is* the skill the ride scores. But no response bracket, best-response sequence,
+  running payoff or cast hint — an in-process baseline cannot see those, so a BYO agent must not.
+  A 10,000-unit contribution is **clamped and scored**, not rejected with a `400`.
+- **One list became two, and the narrower one is what a profile reports.**
+  `solo_protocol.UNREACHABLE_RIDES` stays the *plan wire's* own limit and still lists `commons` —
+  correctly, since that ride is unreachable by that wire and reachable by its own. A captured
+  profile's `source.unreachable` now reads the new `byo.NO_WIRE_RIDES` (rides with no wire at all =
+  `coding`). Continuing to call `commons` unreachable after scoring it would be exactly the stale
+  claim these lists exist to prevent. The registry guard is widened to all three wires and now also
+  asserts the two sets never overlap.
+- **What this sharpens:** `coding` is the **only** ride without a wire and therefore the only thing
+  between a third party and a **career**. That makes the career rule worth settling *deliberately* —
+  all rides, or all *reachable* rides? — rather than letting the answer fall out of whichever
+  connector lands last; raised in `docs/04-open-questions.md`. On the trust track, `docs/13` now
+  records that an external cohort member's three axes are directly *comparable* to a baseline's,
+  while restating that comparable axes make a cohort member usable and do **not** make one exist —
+  the `criterion-cohort` (§B, a one-time online real-agent step) is still the binding constraint, and
+  now the one with nothing in front of it.
+
+**Verify:** `pytest` (440, ~9 min — needs `uv pip install -e ".[dev]"`;
+`tests/test_serve_profiles.py::test_post_is_rejected_read_only` is flaky on Windows under load and
+passes in isolation) · `ruff check src tests` · `parkbench byo-run --rides all` ·
+`parkbench byo-run --rides commons --json` · `parkbench serve --ride commons --port 0 --local-agent
+optimal` · `parkbench export-profiles --check` (8 `ok`, v1.2.0) · `parkbench radar --agent heuristic`
+(unchanged).
+
+**Next:** `coding-byo-connector` (`autoloop/backlog.md`, roadmap #5) — but settle the
+career-completeness question in `docs/04` first. On the trust track the unblocking item is still the
+**`criterion-cohort`** (`docs/13` §B — needs a one-time online real-agent step). Decision: **D-075**.
+
+---
+
+## Prior status (2026-09-01)
 
 > **Landed as five commits** on `main`: (1) `solo_protocol.py` + the `agent=` seam, (2)
 > `solo_server.py` + `solo_client.py`, (3) `byo.py` sweep + `byo-run --rides` + `serve --ride`,

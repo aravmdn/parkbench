@@ -1896,3 +1896,117 @@ work for no gain the enumerated choice doesn't give.
 `13-external-validity-plan.md` (§E: the criterion cohort is partly unblocked), `README.md`,
 `web/README.md`, `autoloop/backlog.md` (a new roadmap-#5 chunk), `autoloop/HANDOFF.md`,
 `autoloop/log.md`, root `CLAUDE.md`.
+
+---
+
+### D-075 · 2026-09-02 · The commons BYO wire — every reachable axis becomes *complete*
+
+**Decision:** Add a **third BYO wire**, for the `commons` ride — new
+`src/parkbench/commons_protocol.py` (message shapes), `commons_server.py` (`CommonsParkServer`,
+`GET /observation` · `POST /contribution` · `GET /health`), `commons_client.py`
+(`drive_commons_agent`), new `tests/test_commons_wire.py` — and fold it into the sweep, so
+`parkbench byo-run --rides all`, `byo.run_byo_profile(...)` and `GET /byo?rides=all` drive six legs
+instead of five. Also `parkbench serve --ride commons`, alongside the four plan-shaped rides.
+
+**Why:** D-074 took a live BYO profile from one axis to three and left exactly one asymmetry behind:
+`social` was the partial axis, one ride over the wire where a baseline got the mean of two. That was
+recorded honestly rather than hidden — but a benchmark whose external and internal numbers differ on
+one axis is a benchmark with an asterisk. This removes the asterisk.
+
+**What it buys, exactly:** a swept BYO profile's `social` axis is now the same mean of the same two
+rides a baseline's is, so **all three reachable axes are numerically identical to a built-in
+baseline's** — at seed 1 for the `heuristic` driver: `social` 0.9631180639047241, `economic`
+0.9804167854489221, `safety` 0.7686518095569819. There is no longer a "complete on two, partial on a
+third" caveat to carry. `coding` remains **missing**, which is a different and cleaner claim than
+partial: the axis is absent, not understated.
+
+**Why a third wire and not a reuse of one of the two:** neither fits, and each fails for the opposite
+reason.
+- The **negotiation** wire has the right *rhythm* (a turn loop) and the wrong *information model*: it
+  is built around an agent's **private** utility table and a counterpart's standing offer (D-016's
+  asymmetry is the point of that ride). A commons round is fully public — every contribution is
+  visible the moment it is made. Reusing it would mean shipping a "private" field that is not private
+  and a standing-offer field that does not exist.
+- The **solo/plan** wire has the right *information model* (the agent sees everything) and the wrong
+  rhythm: one instance out, one plan back. The commons ride is sequential on purpose; answering round
+  by round *while watching the society* is the skill being measured. A one-shot plan would turn a
+  reciprocity game into an open-loop guess and quietly change what the ride scores.
+
+Three honest shapes, one shared *design* (**the park drives the loop**), so a third-party implementer
+still learns the pattern once. This is the last shape the park needs — `coding` is
+submit-an-artifact, which is a fourth, and it is the only ride left without a wire.
+
+**The load-bearing detail — `new_game` is sent once per game, not once per round.** A commons game
+spans several turns, and the suite re-seeds the agent once per game, so the agent's RNG must carry
+across that game's rounds. Re-seeding every round would restart it mid-game and produce a *different
+but still plausible* score — the failure mode that a parity test catches and a smoke test does not.
+All four baselines are pinned byte-identical to in-process, `random` included **precisely because**
+it is the only one that can catch this; a second test pins the mechanism (the observed
+`(round_idx, was_reset)` sequence) so a future break is readable from the failure rather than from a
+number.
+
+**The whole society is on the wire.** `history` carries every player's contribution per round, not
+just the agent's own past. The house cast contains a grim-trigger reciprocator, and noticing it *is*
+the social skill the ride scores — a trimmed or summarised history would score the ride at the
+transport layer by making the reciprocator invisible. Equally, nothing *helpful* is sent: no response
+bracket, no best-response sequence, no running payoff, no hint about which cast member reacts. An
+in-process baseline cannot see those, so a BYO agent must not.
+
+**A bad answer is not an HTTP error**, same rule as the plan wire. Contributing 0 forever is legal
+free-riding that the reciprocator punishes and the score reflects; an out-of-range number is
+**clamped** by the ride exactly as it is for a built-in agent (asserted with an agent that contributes
+10,000 every round and is scored, not rejected). Rejecting either with a `400` would hide a real
+result behind a transport error and inflate a BYO score.
+
+**The engine-side change** is the same inert `agent=` seam D-074 added to the four plan-shaped rides,
+now on `CommonsRide.evaluate`. Omitted everywhere else, so the registry path — and every committed
+baseline — is byte-for-byte untouched; `evaluate(x, s) == evaluate(x, s, agent=None)` is asserted.
+
+**One list became two, and the narrower one is what a profile reports.**
+`solo_protocol.UNREACHABLE_RIDES` is the *plan wire's* own limit and still lists `commons` —
+correctly, because that ride is unreachable **by that wire** and reachable by its own. What a captured
+profile's `source.unreachable` reports is the new `byo.NO_WIRE_RIDES`: rides no wire carries at all,
+now just `coding`. Continuing to call `commons` unreachable after scoring it would have been exactly
+the kind of stale claim these lists exist to prevent. The registry guard is widened accordingly and
+now also asserts the two sets do not overlap.
+
+**Sweep order is now derived, not listed.** `_all_wire_rides()` reads the ride registry's own order
+minus `NO_WIRE_RIDES`, so a newly registered ride is either driven or named as unreachable — it
+cannot be quietly dropped by someone forgetting a second edit.
+
+**Still no career**, and now for a single reason. The career roll-up (D-041) multiplies `integrity`
+across *every* ride; exactly one is unreachable, so the product does not exist and a BYO agent stays
+correctly off the leaderboard. **This is the moment to decide deliberately** whether a career should
+require *all* rides or only all *reachable* ones — recorded in `docs/09` "Still open" and
+`docs/04-open-questions.md` — rather than letting the answer fall out of whichever connector lands
+last.
+
+**Scope discipline:** stdlib-only (D-023), **purely additive** — no ride mechanics, scoring, fixture
+or `BENCHMARK_VERSION` change; committed baselines byte-identical, `export-profiles --check` stays
+8/8 `ok` at v1.2.0. Bare `parkbench byo-run` still emits the exact D-073 payload, verified byte for
+byte against the committed code, so the world's committed BYO fixture and the front-end are untouched
+(Tier A only, no `web/` change).
+
+**Rejected:** (a) extending the negotiation wire with an "empty utilities" mode — a private field
+that is never private is a worse spec, not a smaller one; (b) a one-shot "contribution plan" on the
+solo wire, which would have been cheap and would have measured a different capability; (c) sending
+the response bracket or a cast hint in the observation "to help implementers" — a shortcut no
+in-process agent has; (d) rejecting out-of-range contributions with a `400` — it would drop an
+agent's worst answers and inflate its score; (e) dropping `commons` from
+`solo_protocol.UNREACHABLE_RIDES` now that it has a wire — that list is about *that* wire, and
+editing it would have made it lie about the plan wire's actual scope.
+
+**440 passing tests** (+24: 416 -> 440).
+
+**Verify:** `pytest tests/test_commons_wire.py` (24) · `pytest` · `ruff check src tests` ·
+`parkbench byo-run --rides all` · `parkbench byo-run --rides commons --json` ·
+`parkbench serve --ride commons --port 0 --local-agent optimal` ·
+`parkbench export-profiles --check` (8 `ok`, v1.2.0) · `parkbench radar --agent heuristic`
+(unchanged).
+
+**Docs touched:** `09-byo-protocol.md` (three-wire scope table, the new "The commons wire" section,
+the one-row "Rides no wire carries" + the two-lists note, the rewritten honesty table, "Still open"),
+`03-roadmap.md` (#5), `04-open-questions.md` (the career-completeness rule), `05-glossary.md`
+(commons wire · unreachable ride), `06-v1-architecture.md` (module inventory),
+`13-external-validity-plan.md`, `autoloop/backlog.md`, `autoloop/HANDOFF.md`, `autoloop/log.md`,
+root `CLAUDE.md`.

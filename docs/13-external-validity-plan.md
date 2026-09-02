@@ -379,16 +379,27 @@ re-prioritises the remaining sequence: item **#4 (a real criterion cohort)** —
 supplies a richer, non-deterministic agent roster — should now come **before** item #5's remaining
 half (a second coding ride) and before item #6.
 
-> ⟶ **Partly unblocked by D-074 (2026-08-30).** The prerequisite this plan kept naming — that a
-> third-party agent could be scored on more than one axis at all — is now largely met: the **solo BYO
-> wire** carries `economic` · `exchange` · `safety` · `containment`, so an external agent can be
-> measured on `social` · `economic` · `safety` over HTTP, with `economic` and `safety` numerically
-> identical to a baseline's. A criterion cohort therefore no longer has to be assembled from
-> in-process baselines alone. Two gaps remain before a cohort member can be a *full* park citizen:
-> `commons` and `coding` still have no wire, so an external agent's `social` axis is one ride instead
-> of two, its `coding` axis is absent, and it can hold no **career** (the roll-up needs `integrity`
-> from every ride). For the MTMM matrix specifically, the binding constraint is unchanged — a richer,
-> non-deterministic *roster*, which is exactly §B.
+> ⟶ **Partly unblocked by D-074 (2026-08-30) and D-075 (2026-09-02).** The prerequisite this plan
+> kept naming — that a third-party agent could be scored on more than one axis at all — is now met on
+> three of the four axes. The **solo BYO wire** carries `economic` · `exchange` · `safety` ·
+> `containment` and the **commons wire** carries the second social ride, so an external agent can be
+> measured on `social` · `economic` · `safety` over HTTP with **every one of those axes numerically
+> identical to a baseline's** — not merely present. A criterion cohort therefore no longer has to be
+> assembled from in-process baselines alone, and an external member's three axes are directly
+> comparable to a built-in member's rather than being a narrower quantity that happens to share a
+> name.
+>
+> One gap remains before a cohort member can be a *full* park citizen: `coding` still has no wire, so
+> an external agent's `coding` axis is absent and it can hold no **career** (the roll-up needs
+> `integrity` from every ride — see the open question in
+> [`04-open-questions.md`](04-open-questions.md) about whether that rule should stay as written).
+>
+> **What this does not fix, and it matters here:** for the MTMM matrix specifically the binding
+> constraint is *unchanged*. §E's finding is that with four deterministic baselines the matrix turns
+> on one bit, and adding wires does not add agents. Comparable axes make an external cohort member
+> *usable*; they do not make one *exist*. §B — a richer, non-deterministic roster, which needs a
+> one-time online real-agent step — is still the item that unblocks this track, and it is now the
+> item with no remaining prerequisites in front of it.
 
 ## D · What this plan does **not** claim
 

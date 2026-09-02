@@ -89,6 +89,18 @@ below (D-027–D-030)._
   endpoint instead of importing a build-time fixture (the chunk-4 `web-fetch-profiles` task); the
   offline fixture path stays as the fallback.
 
+- **Should a BYO **career** require *every* ride, or every *reachable* one?** (raised 2026-09-02 by
+  D-075.) The career roll-up (D-041) multiplies an `integrity` signal across all seven rides, so an
+  agent that cannot be run on one of them has no such product and stays off the leaderboard. With
+  D-074 and D-075 that rule now excludes a BYO agent for a **single** missing ride (`coding`), where
+  it used to exclude it for two — and once the `coding` connector lands the question disappears by
+  accident rather than by decision. Worth settling first, on its merits: requiring *all* rides keeps
+  the leaderboard's meaning uniform (one number, same seven rides, everyone) but makes ranking
+  hostage to protocol coverage; requiring all *reachable* rides would rank a three-axis agent against
+  four-axis ones, which is a comparison the radar deliberately refuses to make. A third option is a
+  **separate** BYO board with its own stated coverage. Nothing should be changed until this is
+  decided — the current behaviour is correct under the current rule, not an oversight.
+
 ## Resolved
 
 - **2026-07-05** — **Discriminative validity + gaming resistance made measurable** resolved (partial —

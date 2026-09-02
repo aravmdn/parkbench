@@ -251,17 +251,22 @@ Tier A (stdlib-only, keep `pytest` green + baselines byte-identical).
 
 ## Now (BYO ecosystem — roadmap #5)
 
-Decomposed 2026-08-30 after D-074 landed the solo wire. The park now has two BYO wires covering five
-of seven rides; these are the remaining two connectors and the hardening behind them. Engine work is
-Tier A (stdlib-only, `pytest` green, baselines byte-identical).
+Decomposed 2026-08-30 after D-074 landed the solo wire; `commons-byo-connector` landed 2026-09-02
+(D-075). The park now has **three** BYO wires covering six of seven rides, and every axis they reach
+is complete. What is left is the last connector and the hardening behind it. Engine work is Tier A
+(stdlib-only, `pytest` green, baselines byte-identical).
 
-- [ ] `commons-byo-connector` — Put the **`commons`** ride on a BYO wire. It is multi-agent and
+- [x] `commons-byo-connector` — Put the **`commons`** ride on a BYO wire. It is multi-agent and
   sequential (contribute per round while watching the society's history), so it needs a turn loop like
-  the negotiation wire's — `GET /observation` carrying `{round_idx, history, scenario}` and
-  `POST /action` carrying a contribution — not the one-shot `/scenario`+`/plan` shape. **Done when:** a
-  wired `commons` leg is byte-identical to `CommonsRide.evaluate(...)` for all four baselines, the
-  sweep's `social` axis becomes the same mean of two rides a baseline gets, and `docs/09` documents the
-  third wire (Tier A).
+  the negotiation wire's — not the one-shot `/scenario`+`/plan` shape. ✅ landed (D-075):
+  `commons_protocol.py` · `commons_server.py` (`GET /observation` · `POST /contribution` ·
+  `GET /health`) · `commons_client.py`, plus `serve --ride commons` and the sweep. All four baselines
+  byte-identical to in-process (`random` included — it is the one that catches a mistimed re-seed;
+  `new_game` is sent once per game, not per round). The swept `social` axis is now the same mean of
+  the same two rides a baseline gets, so **all three reachable axes match a baseline exactly**. +24
+  tests (440 green), ruff clean, baselines byte-identical, bare `byo-run` payload unchanged.
+  *Note for the next connector:* `coding` is now the only ride with no wire, and therefore the only
+  thing between a BYO agent and a career — see the career-completeness question in `docs/04`.
 - [ ] `coding-byo-connector` — Put the **`coding`** ride on a BYO wire: submit-an-artifact (the answer
   is a source file, not a plan), so the wire hands out the task + signature and takes back code that the
   **existing** sandbox (D-043/D-048) runs — the connector must add no new execution path. **Done when:**

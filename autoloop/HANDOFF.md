@@ -7,17 +7,43 @@
 
 ---
 
-**Updated:** 2026-09-01
+**Updated:** 2026-09-02
 **Loop state:** IDLE
 
-**Active task:** — (none; `solo-ride-byo-connectors` complete and **committed**)
-**Acceptance criteria:** met — see D-074 in `../docs/02-decisions.md`.
-**Task branch:** none — worked directly on `main`. Built 2026-08-30, held uncommitted at the owner's
-request, landed 2026-09-01 as the five commits listed in **NEXT ACTION** below.
+**Active task:** — (none; `commons-byo-connector` complete and **committed**)
+**Acceptance criteria:** met — see D-075 in `../docs/02-decisions.md`.
+**Task branch:** none — worked directly on `main`, landed as seven commits.
 **Tree state:** CLEAN · on `main`
-**Last durable commit:** the D-074 docs commit (this file)
+**Last durable commit:** the D-075 docs commit (this file)
 
-**This lap (2026-08-30): the solo BYO wire — D-074.** The park gains a **second** BYO wire so a third
+**This lap (2026-09-02): the commons BYO wire — D-075.** The park gains its **third and last-shaped**
+BYO wire, and with it the `social` axis stops being the partial one.
+`src/parkbench/commons_protocol.py` (message shapes) · `commons_server.py` (`CommonsParkServer`:
+`GET /observation` · `POST /contribution` · `GET /health`) · `commons_client.py`
+(`drive_commons_agent`) carry the `commons` ride as a **turn loop over a fully public game** — which
+is neither shape the park already spoke: the negotiation wire is a turn loop over *hidden*
+information, and the solo wire is public but *one-shot*. Surfaced as `parkbench serve --ride commons`
+and folded into every sweep (`byo-run --rides all|commons`, `GET /byo?rides=all`,
+`byo.run_byo_profile(...)`), which now drives **six legs**.
+
+**The headline: every axis a BYO agent can reach is now numerically identical to a baseline's** — at
+seed 1 for `heuristic`, social 0.9631180639047241 · economic 0.9804167854489221 · safety
+0.7686518095569819, digit for digit. D-074 left one asymmetry (social was one ride where a baseline
+got the mean of two) and recorded it honestly; this removes it. All four baselines are byte-identical
+to in-process, `random` **included on purpose** — it is the only one that can catch a mistimed
+re-seed, and `new_game` is sent once per game (round 0), never per round, so an agent's RNG carries
+across a game's rounds. The wire's `history` carries the **whole society**, because the grim-trigger
+reciprocator is only visible through it; nothing *helpful* (bracket, best response, running payoff,
+cast hint) is sent, since an in-process baseline cannot see those either. **440 passing tests**
+(+24); purely additive — no ride/scoring/fixture/`BENCHMARK_VERSION` change, and bare `byo-run` still
+emits the exact D-073 payload (verified byte for byte), so `web/` is untouched (Tier A only).
+
+**Two lists, one narrower.** `solo_protocol.UNREACHABLE_RIDES` stays the *plan wire's* own limit and
+still lists `commons` — correctly, since that ride is unreachable by that wire and reachable by its
+own. What a captured profile reports is the new `byo.NO_WIRE_RIDES`: rides with no wire at all, now
+just `coding`.
+
+**Prior lap (2026-08-30): the solo BYO wire — D-074.** The park gains a **second** BYO wire so a third
 party stops being a one-axis agent. `src/parkbench/solo_protocol.py` (message shapes) ·
 `solo_server.py` (`SoloParkServer`: `GET /scenario` · `POST /plan` · `GET /health`) ·
 `solo_client.py` (`drive_solo_agent`) carry the four **plan-shaped** solo rides — `economic` ·
@@ -54,18 +80,16 @@ clean. Prior batch: D-063/064/065 (now the first "Prior status" block in `CLAUDE
 mechanism (`autoloop/LOCAL_DRIVER_PROMPT.md`). The **cloud-cron routine (D-054) stays DESIGNED +
 UNARMED**.
 
-**NEXT ACTION:** — D-074 is **landed**. It went in as five commits on `main`:
-1. `solo_protocol.py` + the `agent=` seam on the four solo `ride.py` files
-2. `solo_server.py` + `solo_client.py`
-3. `byo.py` (the sweep) + `cli.py` (`byo-run --rides`, `serve --ride`)
-4. `profiles_server.py` (`/byo?rides=all`) + `tests/test_solo_wire.py`
-5. docs: `02-decisions.md` (D-074) · `09` · `03` · `05` · `06` · `13` · `README.md` · backlog
-   · this file · root `CLAUDE.md`
+**NEXT ACTION:** — D-075 is **landed** (seven commits on `main`; D-074's five landed the day
+before). The queue's top is now the **last** connector:
 
-After that, the queue's top is the new **roadmap-#5 chunk** in [`backlog.md`](backlog.md):
-`commons-byo-connector` → `coding-byo-connector` (together they unlock a BYO **career** — the roll-up
-needs `integrity` from every ride), plus a Tier-B `byo-world-sweep` to show the three-axis capture in
-the world and `byo-protocol-schema`. On the trust track the unblocking item is still the
+`coding-byo-connector` in [`backlog.md`](backlog.md) — submit-an-artifact, and it must reuse the
+existing D-043/D-048 sandbox rather than add a second execution path. It is now the **only** thing
+between a third party and a **career**, which is why the career-completeness rule (all rides vs. all
+*reachable* rides) is worth settling **before** it lands rather than letting the answer fall out of
+the implementation — raised in [`../docs/04-open-questions.md`](../docs/04-open-questions.md). Also
+queued: a Tier-B `byo-world-sweep` to show the three-axis capture in the world (its wire note still
+reads "wire scores negotiation only") and `byo-protocol-schema`. On the trust track the unblocking item is still the
 **`criterion-cohort`** (`docs/13` §B — needs a one-time online real-agent step); D-074 partly unblocks
 it (an external agent is now scorable on three axes) but its own binding constraint — a richer,
 non-deterministic roster — is unchanged. Loose end still open: the economic/safety/social

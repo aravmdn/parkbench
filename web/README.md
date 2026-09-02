@@ -80,11 +80,12 @@ How it behaves:
   **negotiation only** by default (`../docs/09-byo-protocol.md`), so this live BYO profile honestly
   covers **one axis** — the other three draw as dimmed **`n/a`**, not as `0.000`, with the reason
   printed underneath.
-  > **Available but not yet wired into the world:** since D-074 the park has a **second** BYO wire for
-  > the four plan-shaped solo rides, and `GET /byo?rides=all` returns a **three-axis** capture
-  > (`social` · `economic` · `safety`, with only `coding` missing). The front-end still requests the
-  > single-leg form; switching it over — and updating the "wire scores negotiation only" note — is the
-  > queued `byo-world-sweep` task in `../autoloop/backlog.md`.
+  > **Available but not yet wired into the world:** the park now has **three** BYO wires — the solo
+  > wire for the four plan-shaped rides (D-074) and the commons wire (D-075) — so
+  > `GET /byo?rides=all` returns a **three-axis** capture (`social` · `economic` · `safety`, with only
+  > `coding` missing) whose every axis is *numerically identical* to a baseline's. The front-end still
+  > requests the single-leg form; switching it over — and updating the "wire scores negotiation only"
+  > note — is the queued `byo-world-sweep` task in `../autoloop/backlog.md`.
 - One honest wrinkle: if you *ask* for live data (`?profiles=…`) and the endpoint is **down**, the
   browser logs its own `net::ERR_CONNECTION_REFUSED` line for the failed probe. That is the browser's
   network log, not an app error (the app logs a single `console.info` saying it fell back). The plain
