@@ -19,7 +19,7 @@ Routes (GET only; the whole surface is read-only):
   GET /radar?agent=<name>&seed=<int>     -> radar --json for that agent
   GET /career?agent=<name>&seed=<int>    -> career --json for that agent
   GET /leaderboard?seed=<int>            -> leaderboard --json (default roster)
-  GET /byo?agent=<driver>&name=<label>[&rides=all]
+  GET /byo?agent=<driver>&name=<label>[&rides=all]   (rides=all drives all three wires)
                                          -> a LIVE bring-your-own run captured over the wire:
                                             negotiation only (D-073), or every wire (D-074)
   GET /health                            -> {"status": "ok", "service": "parkbench-profiles", ...}
@@ -35,9 +35,10 @@ cross-origin — safe because the surface is read-only and exposes only public b
 ``/byo`` (D-073) is the live counterpart for the world's **bring-your-own** trainer: it captures a
 real run over the ``docs/09`` negotiation wire via :func:`parkbench.byo.run_byo_from_name` and serves
 the same radar-shaped JSON ``parkbench byo-run --json`` prints. With ``?rides=all`` it instead drives
-**every** wire the park has (D-074 adds the four solo rides), returning the three-axis profile —
-about five times the work, still bounded and still deterministic. Three deliberate limits keep an
-HTTP-reachable route from becoming a lever on the operator's machine:
+**every** wire the park has (D-074 adds the four solo rides, D-075 adds commons), returning the
+three-axis profile whose axes match a baseline's exactly — about six times the work, still bounded
+and still deterministic. Three deliberate limits keep an HTTP-reachable route from becoming a lever
+on the operator's machine:
 
 - **Only deterministic, offline drivers** (:func:`byo_drivers`) may be named. The ``llm`` agents are
   excluded on purpose — they spend the operator's OpenRouter budget, and a route that lets a caller
@@ -140,9 +141,10 @@ def build_byo_payload(
     single producer, this only transports and stamps it (see :mod:`parkbench.byo`).
 
     ``rides`` selects how much of the park to drive: ``"negotiation"`` (the default single-leg
-    capture, D-073) or ``"all"`` (every wire — adds the four solo rides, D-074, for a three-axis
-    profile). ``"all"`` is roughly five times the work of the default and is bounded by the same
-    ``MAX_BYO_SCENARIOS`` cap, so it stays a fixed, small amount of local compute per request.
+    capture, D-073) or ``"all"`` (every wire — adds the four solo rides, D-074, and commons, D-075,
+    for a three-axis profile). ``"all"`` is roughly six times the work of the default and is bounded
+    by the same ``MAX_BYO_SCENARIOS`` cap, so it stays a fixed, small amount of local compute per
+    request.
 
     Raises ``LookupError`` for a name no ride knows, and ``ValueError`` for a *known* agent this
     route refuses to drive (the paid ``llm`` variants), a scenario count outside

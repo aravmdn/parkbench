@@ -3,15 +3,15 @@
   parkbench run     — run an agent through the negotiation suite and print its profile.
   parkbench analyze — print a single scenario's optimum (for debugging / inspection).
   parkbench serve   — host a run over HTTP/JSON so a bring-your-own agent connects: the
-                      negotiation wire (D-027), --ride <name> for a solo ride (D-074), or
-                      --profiles for the read-only profile endpoint (D-067).
+                      negotiation wire (D-027), --ride <name> for a single solo or commons
+                      ride (D-074/D-075), or --profiles for the read-only endpoint (D-067).
   parkbench radar   — roll every ride up into the agent's diagnostic radar profile (D-037).
   parkbench career  — the radar weighted by cross-ride reputation (D-041).
   parkbench leaderboard — rank agents by career score (D-042).
   parkbench export-profiles — regenerate/--check the web/ + viewer/ spectator fixtures (D-062).
   parkbench doctor  — diagnose the local setup + where every setting comes from (D-072).
   parkbench byo-run — drive a BYO agent over the wire(s) and capture its live profile
-                      (D-073 negotiation; D-074 adds the solo wire via --rides).
+                      (D-073 negotiation; --rides all sweeps all three wires, D-074/D-075).
 """
 
 from __future__ import annotations
@@ -130,7 +130,7 @@ def _serve_profiles(args: argparse.Namespace) -> None:
     print("  GET /radar?agent=<name>[&seed=N]   GET /career?agent=<name>[&seed=N]")
     print("  GET /leaderboard[?seed=N]          GET /health")
     print("  GET /byo?agent=<driver>[&name=<label>][&scenarios=N][&rides=all]")
-    print("      (live BYO run: negotiation only, D-073; rides=all sweeps every wire, D-074)")
+    print("      (live BYO run: negotiation only, D-073; rides=all sweeps every wire, D-074/D-075)")
     print("\nserving radar/career/leaderboard/byo JSON (Ctrl+C to stop)...\n")
     try:
         server.serve_forever()
@@ -177,13 +177,48 @@ def _serve_solo(args: argparse.Namespace) -> None:
         server.stop()
 
 
+def _serve_commons(args: argparse.Namespace) -> None:
+    # --ride commons => host the commons ride on its own turn-loop wire (D-075). Same "the park
+    # drives the loop" contract as the other two, third message shape (docs/09 "The commons wire").
+    from .commons_client import drive_commons_agent
+    from .commons_protocol import COMMONS_AXIS, COMMONS_RIDE, COMMONS_TASK
+    from .commons_server import CommonsParkServer
+
+    server = CommonsParkServer(
+        seed=args.seed, host=args.host, port=args.port, agent_name=args.agent_name
+    ).start()
+    print(f"\nParkbench - ride '{COMMONS_RIDE}' ({COMMONS_TASK}) over HTTP/JSON (D-075)")
+    print(f"axis={COMMONS_AXIS}  seed={args.seed}")
+    print(f"listening on {server.base_url}")
+    print("  GET  /observation   POST /contribution   GET /health")
+    print(f"the external agent is '{args.agent_name}'.\n")
+
+    try:
+        if args.local_agent is not None:
+            from .commons import make_agent
+
+            print(f"driving with local agent '{args.local_agent}' over HTTP...\n")
+            drive_commons_agent(server.base_url, make_agent(args.local_agent))
+        else:
+            print("waiting for an external agent to connect (Ctrl+C to stop)...\n")
+        result = server.wait()
+        print(f"run complete for agent: {result.agent}")
+        print(f"  {result.ride} score: {result.score:.6f}   [optimum = 1.000]\n")
+    except KeyboardInterrupt:
+        print("\nstopped.\n")
+    finally:
+        server.stop()
+
+
 def cmd_serve(args: argparse.Namespace) -> None:
     if getattr(args, "profiles", False):
         # --profiles => the read-only radar/career/leaderboard HTTP endpoint, not the negotiation wire.
         _serve_profiles(args)
         return
     if getattr(args, "ride", None):
-        _serve_solo(args)
+        # Two wires behind one flag: the ride's *shape* picks the message shape, so an operator
+        # hosting a ride does not have to know which of the two protocols it happens to speak.
+        _serve_commons(args) if args.ride == "commons" else _serve_solo(args)
         return
     # Imported lazily so the core CLI has no dependency on the HTTP slice unless used.
     from .server import ParkServer
@@ -611,10 +646,11 @@ def build_parser() -> argparse.ArgumentParser:
     from .solo_protocol import SOLO_RIDES
 
     s.add_argument(
-        "--ride", choices=sorted(SOLO_RIDES), default=None,
-        help="Host this SOLO ride on the plan wire (GET /scenario, POST /plan) instead of the "
-             "negotiation wire (D-074). --local-agent drives it in-process for a self-test. "
-             "Ignored if --profiles is also given (that flag wins).",
+        "--ride", choices=sorted(set(SOLO_RIDES) | {"commons"}), default=None,
+        help="Host this single ride instead of the negotiation wire: the four plan-shaped rides on "
+             "the plan wire (GET /scenario, POST /plan; D-074), or 'commons' on its turn-loop wire "
+             "(GET /observation, POST /contribution; D-075). --local-agent drives it in-process for "
+             "a self-test. Ignored if --profiles is also given (that flag wins).",
     )
     s.set_defaults(func=cmd_serve)
 
@@ -761,7 +797,7 @@ def build_parser() -> argparse.ArgumentParser:
     br = sub.add_parser(
         "byo-run",
         help="Drive a BYO agent over the HTTP/JSON wire(s) and capture its live profile "
-             "(D-073 negotiation; --rides all adds the solo wire, D-074).",
+             "(D-073 negotiation; --rides all adds the solo and commons wires, D-074/D-075).",
     )
     br.add_argument(
         "--agent", default="heuristic",
@@ -781,8 +817,9 @@ def build_parser() -> argparse.ArgumentParser:
     br.add_argument(
         "--rides", default="negotiation",
         help="Which wires to drive: 'negotiation' (default, the D-073 single-leg capture), 'all' "
-             "(every wire - adds the four solo rides, D-074, for a three-axis profile), or a "
-             "comma-separated subset e.g. 'negotiation,safety,containment'.",
+             "(every wire - adds commons and the four solo rides, D-074/D-075, for a three-axis "
+             "profile whose axes match a baseline's exactly), or a comma-separated subset e.g. "
+             "'negotiation,commons'.",
     )
     br.add_argument("--seed", type=int, default=1, help="Suite seed (selects the scenario set).")
     br.add_argument("--scenarios", type=int, default=12,
