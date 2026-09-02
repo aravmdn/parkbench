@@ -46,16 +46,23 @@ Shared vocabulary for the project. Keep terms here so docs can link to a single 
 - **Reservation floor** — the minimum share of its own maximum a house persona will accept; relaxes
   over the rounds. Distinct floors per persona make per-persona outcomes distinguishable (D-031).
 - **Wire protocol (HTTP/JSON)** — the park-hosted, agent-polled HTTP API a BYO agent uses to be
-  scored over the network. There are two, sharing one design (*the park drives the loop*): the
-  **negotiation wire** (`GET /observation`, `POST /action` — D-015 / D-027) and the **solo wire**
-  (`GET /scenario`, `POST /plan` — D-074).
+  scored over the network. There are three, sharing one design (*the park drives the loop*): the
+  **negotiation wire** (`GET /observation`, `POST /action` — D-015 / D-027), the **solo wire**
+  (`GET /scenario`, `POST /plan` — D-074) and the **commons wire** (`GET /observation`,
+  `POST /contribution` — D-075).
 - **Solo wire** — the BYO wire for the park's *plan-shaped* rides (`economic` · `exchange` · `safety`
   · `containment`): the park hands over a whole, fully-observable scenario and the agent returns a
-  **plan** (a list of integer indices). Covers both economic-axis rides and both safety-axis rides,
-  so a BYO agent driven over both wires has a **three-axis** profile (D-074).
+  **plan** (a list of integer indices). Covers both economic-axis rides and both safety-axis rides
+  (D-074).
+- **Commons wire** — the BYO wire for the `commons` ride (D-075): a turn loop over a **fully public**
+  game. The park sends the round index, the whole game and every player's contribution history; the
+  agent returns one integer. Distinct from the negotiation wire, which is a turn loop over *hidden*
+  information, and from the solo wire, which is public but one-shot. It completes the `social` axis,
+  so a BYO agent driven over all three wires has a **three-axis** profile whose every axis is
+  numerically identical to a baseline's.
 - **Unreachable ride** — a registered ride no BYO wire carries, named with its reason on every
-  captured profile rather than silently omitted: `commons` (multi-agent + sequential) and `coding`
-  (submit-an-artifact). They are why a BYO agent can be profiled but not given a **career** (D-074).
+  captured profile rather than silently omitted. Since D-075 there is exactly one: `coding`
+  (submit-an-artifact). It is why a BYO agent can be profiled but not given a **career**.
 - **Run log** — the per-run `run.json` (suite + profile + per-match transcripts) written to `runs/`;
   the replay viewer's input. Versioned via `schema_version` (D-029).
 - **Subprocess-isolated harness** — the coding ride runs untrusted candidate code in a separate,

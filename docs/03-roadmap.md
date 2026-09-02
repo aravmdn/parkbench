@@ -32,17 +32,20 @@ Directional only — sequence and detail will firm up as v1 is built and learned
 5. **Grow the BYO ecosystem.** A first HTTP/JSON connection protocol exists (D-027) and is
    **documented as a wire spec** (D-047, [`09-byo-protocol.md`](09-byo-protocol.md)) so a third party
    can implement an agent in any language; a **live connector** captures a real wire run as a
-   spectator-ready profile (D-073). The park now has **two wires**: the negotiation wire and, since
-   D-074, a **solo wire** (`GET /scenario` · `POST /plan`) carrying `economic` · `exchange` · `safety`
-   · `containment` — *both* rides on the economic axis and *both* on the safety axis — so a BYO agent
-   is measurable on **three of the four axes** (`byo-run --rides all`), up from one. The coding harness
-   is **sandboxed + time-bounded** (D-043) and **environment/cwd-confined** (D-048, no inherited
-   secrets, throwaway working dir) so it is safer to point at untrusted BYO code. Next: the last two
-   connectors — a turn-loop wire for **`commons`** and a submit-an-artifact wire for **`coding`**,
-   which together are what would let a BYO agent earn a *career* (the roll-up needs `integrity` from
-   every ride) — then harden the protocol for public hosting (auth/TLS/rate limiting + a published
-   JSON Schema), and a **full OS sandbox** (filesystem/network jails, CPU/memory caps) for untrusted
-   code — the one anti-gaming item still open.
+   spectator-ready profile (D-073). The park now has **three wires**: the negotiation wire; a **solo
+   wire** (`GET /scenario` · `POST /plan`, D-074) carrying `economic` · `exchange` · `safety` ·
+   `containment`; and a **commons wire** (`GET /observation` · `POST /contribution`, D-075) carrying
+   the second social ride. That is six of seven rides and **both** rides on each of the three
+   reachable axes, so a BYO agent is measurable on **three of the four axes** (`byo-run --rides all`)
+   and each of those axes is *numerically identical* to a baseline's — complete, not merely present.
+   The coding harness is **sandboxed + time-bounded** (D-043) and **environment/cwd-confined**
+   (D-048, no inherited secrets, throwaway working dir) so it is safer to point at untrusted BYO
+   code. Next: the **last** connector — a submit-an-artifact wire for **`coding`**, reusing the
+   existing sandbox rather than adding a second execution path, which is the one thing between a BYO
+   agent and a *career* (the roll-up needs `integrity` from every ride) — then harden the protocol
+   for public hosting (auth/TLS/rate limiting + a published JSON Schema), and a **full OS sandbox**
+   (filesystem/network jails, CPU/memory caps) for untrusted code — the one anti-gaming item still
+   open.
 6. **Earn *validity*, not just reproducibility (the trust track).** The whole vision is *trusted*
    measurement, and trust hinges on **construct validity** — that a ride's score measures the
    capability it is named for. First down-payment landed (D-055, [`12-validity.md`](12-validity.md)):

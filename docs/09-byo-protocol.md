@@ -1,35 +1,38 @@
 # 09 — BYO agent protocol (HTTP/JSON)
 
-**Status:** Living · **Last updated:** 2026-08-30
+**Status:** Living · **Last updated:** 2026-09-02
 
 This is the wire spec a third party implements to bring their own (BYO) agent to Parkbench over
 HTTP/JSON. Roadmap [#5](03-roadmap.md) is "grow the BYO ecosystem" — this doc is the "document the
 protocol" half of it.
 
-> **Scope.** There are **two wires**, because the park has two shapes of ride:
+> **Scope.** There are **three wires**, because the park has three shapes of ride:
 >
 > | Wire | Rides | Shape | Built in |
 > |---|---|---|---|
-> | **negotiation** (`/observation` · `/action`) | `negotiation` | turn-by-turn conversation | D-027 (`server.py` / `client.py`) |
-> | **solo** (`/scenario` · `/plan`) | `economic` · `exchange` · `safety` · `containment` | one puzzle out, one plan back | D-074 (`solo_server.py` / `solo_client.py`) |
+> | **negotiation** (`/observation` · `/action`) | `negotiation` | turn-by-turn conversation, private information | D-027 (`server.py` / `client.py`) |
+> | **solo/plan** (`/scenario` · `/plan`) | `economic` · `exchange` · `safety` · `containment` | one puzzle out, one plan back | D-074 (`solo_server.py` / `solo_client.py`) |
+> | **commons** (`/observation` · `/contribution`) | `commons` | turn-by-turn, fully public game | D-075 (`commons_server.py` / `commons_client.py`) |
 >
-> Between them that is **five of the park's seven rides**, covering the `social` axis, *both* rides
-> on the `economic` axis and *both* rides on the `safety` axis. The two rides with no wire are named
-> and explained in [Rides no wire carries](#rides-no-wire-carries) — they are not silently omitted.
+> Between them that is **six of the park's seven rides**, covering *both* rides on the `social` axis,
+> *both* on the `economic` axis and *both* on the `safety` axis — so every axis a wire reaches is
+> **complete**. The one ride with no wire is named and explained in
+> [Rides no wire carries](#rides-no-wire-carries) — it is not silently omitted.
 >
-> Both wires share one design (**the park drives the loop**), so a third party learns the pattern
-> once. Headings say which wire they belong to; anything before [The solo wire](#the-solo-wire) and
-> not marked "both wires" is the negotiation wire.
+> All three wires share one design (**the park drives the loop**), so a third party learns the
+> pattern once. Headings say which wire they belong to; anything before
+> [The solo wire](#the-solo-wire) and not marked "both wires" is the negotiation wire.
 
-## Design in one line (both wires)
+## Design in one line (all three wires)
 
 **The park drives the loop.** The agent is a pure HTTP **client**: it *polls* for work and *posts* its
 answer. The park runs the ride, owns everything the agent does not, and stays in control of timing —
 which is what keeps runs deterministic and reproducible (D-015). The agent needs **no inbound server**,
 so any language/framework that can make outbound HTTP calls can play.
 
-The two wires differ only in what "work" and "answer" are: an `Observation` and an `Action` on the
-negotiation wire, a whole scenario and a plan on the solo wire.
+The wires differ only in what "work" and "answer" are: an `Observation` and an `Action` on the
+negotiation wire, a whole scenario and a plan on the solo wire, a public round and a contribution on
+the commons wire.
 
 ## Starting a run (the negotiation wire)
 
@@ -286,18 +289,134 @@ so a wired leg equals an in-process leg exactly, `detail` included. The `agent=`
 only engine-side change D-074 made, and it is inert when omitted, which is why every committed
 baseline is byte-identical.
 
+## The commons wire
+
+**Status:** built (D-075). Ride: `commons`.
+
+The park's third and last message shape. The `commons` ride is a finitely-repeated public-goods game:
+the agent contributes some of its endowment each round while watching what the society did, and the
+house cast contains a **grim-trigger reciprocator** whose cooperation the agent has to earn and keep.
+Same design as the other two wires (**the park drives the loop**, the agent is a pure HTTP client, no
+inbound server needed), third message shape.
+
+### Why a third wire rather than reusing one of the two
+
+Neither existing wire fits, and each fails for the opposite reason:
+
+- The **negotiation** wire has the right *rhythm* (a turn loop) but is built around **hidden**
+  information: a private utility table and a counterpart's standing offer. A commons round is fully
+  public — every player's contribution is visible the moment it is made, and the payoff formula is
+  printed on the tin. Reusing it would mean shipping a "private" field that is not private and a
+  standing-offer field that does not exist.
+- The **solo/plan** wire has the right *publicity* (the agent sees everything) but the wrong rhythm:
+  one instance out, one plan back. The commons ride is sequential on purpose. Answering round by
+  round *while watching the society* is the skill being measured; a one-shot plan would turn a
+  reciprocity game into an open-loop guess and quietly change what the ride scores.
+
+Two honest shapes were better than one dishonest one for D-074, and the same reasoning gives a third
+here. What a third party learns once is the *pattern*, not the payload.
+
+### Starting a run
+
+```sh
+parkbench serve --ride commons --port 8080 --agent-name my-bot
+# listening on http://127.0.0.1:8080
+#   GET /observation   POST /contribution   GET /health
+parkbench serve --ride commons --port 0 --local-agent optimal   # in-process self-test
+```
+
+### Endpoints
+
+#### `GET /health`
+
+```json
+{"status": "ok", "ride": "commons", "agent": "my-bot"}
+```
+
+#### `GET /observation`
+
+Poll this. Three statuses, exactly as on the other two wires:
+
+```json
+{
+  "status": "your_turn",
+  "step": 3,
+  "ride": "commons",
+  "task": "public-goods",
+  "round_idx": 2,
+  "history": [[4, 8, 8, 0], [4, 8, 8, 0]],
+  "scenario": {
+    "task": "public-goods", "seed": 1,
+    "n_players": 4, "n_rounds": 6, "endowment": 8, "multiplier": 2.5,
+    "cast": ["cooperator", "reciprocator", "defector"]
+  },
+  "answer": {
+    "kind": "contribution", "of": "units from this round's endowment",
+    "range": [0, 8], "levels": [0, 4, 8],
+    "note": "one integer per round, clamped to [0, endowment]; contributing nothing is legal free-riding and is priced by the ride, not rejected here"
+  },
+  "new_game": {"seed": 1000003}
+}
+```
+
+`{"status": "waiting"}` means the park is between games; `{"status": "done", "result": {...}}` carries
+the finished `RideResult`.
+
+**`history` is the whole society, not just your own past.** Each row is one completed round's
+contributions, player 0 first (you), then the cast in the order `scenario.cast` lists. That is
+deliberate and load-bearing: the reciprocator is only *visible* through the history, and noticing it
+is the social skill the ride scores. A trimmed or summarised history would score the ride at the
+transport layer.
+
+**What is deliberately not sent:** the response bracket, the best-response sequence, your running
+payoff, and any hint about which cast member reacts to you. Those are scoring internals — an
+in-process baseline cannot see them either, so shipping them would hand a BYO agent a shortcut no
+built-in agent has.
+
+#### `POST /contribution`
+
+```json
+{"contribution": 4}
+```
+
+`200 {"status": "accepted", "step": 3}` · `409` if it is not your turn · `400` if the body is not an
+object with an integer `contribution`.
+
+### Determinism contract
+
+`new_game` appears **once per game, on `round_idx == 0`** — not on every round. Re-seed your agent
+exactly when you are told to and a seed-dependent agent reproduces an in-process run exactly. This is
+the one place this wire differs meaningfully from the other two: a commons game spans several turns,
+so re-seeding every round would restart your RNG mid-game and produce a *different but still
+plausible* score. All four baselines are pinned byte-identical to in-process in
+`tests/test_commons_wire.py`, `random` included precisely because it is the one that can catch this.
+
+### It transports; the ride scores
+
+`CommonsParkServer` runs `RIDE_REGISTRY["commons"].evaluate(agent_name, seed, agent=<bridge>)` — the
+ride's own code path handed a different agent object — so there is no second scoring implementation
+to drift. As on the plan wire, the transport validates only the **shape** of an answer: contributing
+0 forever is legal free-riding that the reciprocator punishes and the score reflects, and an
+out-of-range number is *clamped* by the ride exactly as it is for a built-in agent. Rejecting either
+with a `400` would hide a real result behind an HTTP error and inflate a BYO score.
+
 ## Rides no wire carries
 
-Two of the seven registered rides are unreachable, and a captured profile names them rather than
+**One** of the seven registered rides is unreachable, and a captured profile names it rather than
 quietly reading as complete (`source.unreachable`, and `skipped_rides` on the profile itself):
 
 | Ride | Why not |
 |---|---|
-| `commons` | Multi-agent and **sequential** — the agent contributes round by round while watching what the society did. It needs the negotiation wire's turn loop, not a one-shot plan. |
-| `coding` | **Submit-an-artifact**: the answer is a source file, not a plan of indices, and running it needs the sandbox (D-043/D-048). |
+| `coding` | **Submit-an-artifact**: the answer is a source file, not a plan of indices or a contribution, and running it needs the sandbox (D-043/D-048). |
 
-A test (`test_the_solo_wire_carries_every_plan_shaped_ride_in_the_registry`) asserts every registered
+A test (`test_every_registered_ride_is_on_a_wire_or_named_as_having_none`) asserts every registered
 ride is on a wire or on this list, so a ride added later cannot silently skip the BYO surface.
+
+> **Two lists, one of them narrower.** `solo_protocol.UNREACHABLE_RIDES` is the *plan wire's* own
+> limit and still lists `commons` — correctly: that ride is unreachable **by that wire** and
+> reachable by its own. What a captured profile reports is `byo.NO_WIRE_RIDES`, the rides with no
+> wire at all. Calling `commons` unreachable after scoring it would be exactly the kind of stale
+> claim these lists exist to prevent.
 
 ## Capturing a live run for the spectator surfaces (D-073, D-074)
 
@@ -332,18 +451,27 @@ make it usable as a benchmark artifact:
 Scope, restated as a consequence: a captured profile covers exactly the rides a wire reaches, and
 the caller chooses how many wires to drive.
 
-| Field | `byo-run` (D-073) | `byo-run --rides all` (D-074) |
+| Field | `byo-run` (D-073) | `byo-run --rides all` (D-074, D-075) |
 |---|---|---|
-| `axes` | `social` only | `social` · `economic` · `safety` |
+| `axes` | `social` (partial — one of its two rides) | `social` · `economic` · `safety` |
 | `missing_axes` | `["economic", "coding", "safety"]` | `["coding"]` |
-| `skipped_rides` | every other registered ride | `["commons", "coding"]` — the two with no wire |
-| rides driven | 1 | 5 |
+| `skipped_rides` | every other registered ride | `["coding"]` — the one with no wire |
+| rides driven | 1 | 6 |
 
-Two of those axes are not merely *present* but **complete**: both economic rides and both safety
-rides are on the wire, so a swept `economic`/`safety` axis is numerically identical to the one a
-built-in baseline gets. `social` is the partial one — `negotiation` is reachable and `commons` is
-not, so a swept social axis is one ride where a baseline's is the mean of two. That asymmetry is
-asserted rather than glossed (`test_the_swept_axes_equal_the_in_process_axes_wherever_every_ride_has_a_wire`).
+Every one of those three axes is not merely *present* but **complete**. Both social rides, both
+economic rides and both safety rides are on a wire, so a swept axis is **numerically identical** to
+the one a built-in baseline gets — at seed 1, for the `heuristic` driver, digit for digit:
+
+| Axis | Swept BYO | Baseline radar |
+|---|---|---|
+| `social` | 0.9631180639047241 | 0.9631180639047241 |
+| `economic` | 0.9804167854489221 | 0.9804167854489221 |
+| `safety` | 0.7686518095569819 | 0.7686518095569819 |
+
+Until D-075 `social` was the odd one out — one ride over the wire where a baseline got the mean of
+two — and the test asserted that asymmetry rather than glossing it. With the commons wire the gap is
+gone and the claim gets stronger (`test_every_swept_axis_equals_the_in_process_axis_exactly`).
+`coding` is still not reachable at all, which is a **missing** axis, not a partial one.
 
 Either way the profile is narrower than the hand-authored stand-in D-073 replaced, which claimed
 scores on all five rides it had no way to earn. Narrow-and-true beats wide-and-invented, so the
@@ -362,8 +490,8 @@ library call:
 - **Bounded work.** `?scenarios=` is capped (`MAX_BYO_SCENARIOS`), so no single request can ask for
   an unbounded run. A default 12-scenario capture takes ~1 s over loopback.
 - **`?rides=` is an enumerated choice**, not a free-form ride list: `negotiation` (default) or `all`.
-  A sweep is ~5x the work of a single leg, and keeping the choice enumerated keeps the work a
-  request can ask for predictable.
+  A sweep is ~6x the work of a single leg, and keeping the choice enumerated keeps the work a
+  request can ask for predictable. The library call `run_byo_profile(rides=...)` accepts any subset.
 
 The library functions have none of these restrictions — they are called by someone who already has
 the machine.
@@ -371,28 +499,30 @@ the machine.
 ## Security & trust
 
 - The park **never executes the agent's code** — the agent runs on the agent's own machine and only
-  exchanges JSON, so **neither wire** has a server-side code-execution surface. (Untrusted *code*
+  exchanges JSON, so **no wire** has a server-side code-execution surface. (Untrusted *code*
   execution applies to the coding ride's harness, which is separately sandboxed — D-043/D-048; that
   ride has no BYO wire yet, and when it gets one it must reuse that harness rather than add a second
   execution path. See [`04-open-questions.md`](04-open-questions.md).)
 - Each server validates and rejects malformed bodies (`400`) and out-of-turn posts (`409`) — but only
   the *shape*: a wrong answer is the ride's business, not the transport's (see the solo wire's note).
-- Both wires are unauthenticated and intended for `127.0.0.1` / trusted-network use. Authentication, rate
-  limiting, TLS, and multi-tenant hosting are part of the remaining BYO-hardening work (roadmap #5),
-  not yet implemented — do not expose `parkbench serve` to an untrusted network as-is.
+- All three wires are unauthenticated and intended for `127.0.0.1` / trusted-network use.
+  Authentication, rate limiting, TLS, and multi-tenant hosting are part of the remaining
+  BYO-hardening work (roadmap #5), not yet implemented — do not expose `parkbench serve` to an
+  untrusted network as-is.
 
 ## Still open (roadmap #5)
 
 Documented here, deferred in code:
 
-- **Auth + transport security for public hosting** (and rate limiting, TLS, multi-tenancy). Both
-  wires are unauthenticated `127.0.0.1` surfaces today.
-- **A published JSON Schema** for the messages of both wires.
-- **The last two connectors** — the two rides no wire carries (above): a turn-loop wire for
-  `commons` and a submit-an-artifact wire for `coding`.
+- **Auth + transport security for public hosting** (and rate limiting, TLS, multi-tenancy). All
+  three wires are unauthenticated `127.0.0.1` surfaces today.
+- **A published JSON Schema** for the messages of all three wires.
+- **The last connector** — the one ride no wire carries (above): a submit-an-artifact wire for
+  `coding`, which must reuse the existing sandbox rather than add a second execution path.
 
-The remaining connectors are no longer the *binding* limit on measuring a third party — D-074 took a
-live BYO profile from one axis to three. What they still block is narrower and specific: a BYO agent
-cannot earn a **career**, because the career roll-up (D-041) multiplies an `integrity` signal from
-*every* ride and two of them are unreachable. So a third party can be profiled on three axes but not
-ranked on the leaderboard. Closing `commons` and `coding` is what would change that.
+`coding` is now the **only** thing between a third party and a **career**. The career roll-up (D-041)
+multiplies an `integrity` signal from *every* ride, and exactly one is unreachable, so a BYO agent
+can be profiled on three complete axes and still not be ranked on the leaderboard. That is the
+correct outcome under the current rule and it is a single connector away from changing — which also
+makes it the moment to decide deliberately whether a career should require *all* rides or only all
+*reachable* ones, rather than having the answer fall out of whichever connector lands last.
