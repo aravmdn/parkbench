@@ -19,7 +19,7 @@ import pytest
 
 from parkbench import BENCHMARK_VERSION, cli
 from parkbench.axis import RideResult
-from parkbench.byo import run_byo_profile, run_byo_solo
+from parkbench.byo import NO_WIRE_RIDES, run_byo_profile, run_byo_solo
 from parkbench.radar import build_radar
 from parkbench.rides import RIDE_REGISTRY
 from parkbench.solo_client import drive_solo_agent
@@ -252,14 +252,16 @@ def test_a_ride_without_a_wire_cannot_be_hosted():
 
 
 def test_a_full_sweep_covers_three_axes_and_names_what_it_cannot_reach():
-    """The D-074 headline: three axes live, `coding` honestly missing, the two wireless rides named."""
+    """The D-075 headline: three axes live, `coding` honestly missing, the one wireless ride named."""
     run = run_byo_profile("heuristic", seed=1, byo_name="acme-bot")
 
     assert run.profile.covered_axes == ["social", "economic", "safety"]
     assert run.profile.missing_axes == ["coding"]
-    assert run.profile.skipped == ["commons", "coding"]
+    assert run.profile.skipped == ["coding"]
+    # Registry order, minus the one ride no wire carries.
     assert [r.ride for r in run.profile.results] == [
         "negotiation",
+        "commons",
         "economic",
         "exchange",
         "safety",
@@ -268,22 +270,25 @@ def test_a_full_sweep_covers_three_axes_and_names_what_it_cannot_reach():
     assert all(r.agent == "acme-bot" for r in run.profile.results)
 
 
-def test_the_swept_axes_equal_the_in_process_axes_wherever_every_ride_has_a_wire():
-    """Both economic rides and both safety rides are on the wire, so those axes must match exactly.
+def test_every_swept_axis_equals_the_in_process_axis_exactly():
+    """D-075 removes the last asymmetry: every axis a wire reaches is now *complete*.
 
-    `social` must NOT match: the commons ride has no wire, so a swept social axis is one ride where
-    a baseline's is the mean of two. That asymmetry is the honest content of this test — the wire is
-    complete on two axes and partial on a third, and the numbers say which is which.
+    Until this lap `social` was the odd one out — one ride over the wire where a baseline got the
+    mean of two — and the test asserted that gap rather than glossing it. With the commons wire the
+    gap is gone, so the claim gets stronger: for all three reachable axes a swept BYO profile and a
+    baseline radar agree to the last digit. `coding` is still not reachable at all, which is a
+    missing axis, not a partial one.
     """
     swept = run_byo_profile("heuristic", seed=1)
     baseline = build_radar("heuristic", seed=1)
 
-    assert swept.profile.axis_scores["economic"] == baseline.axis_scores["economic"]
-    assert swept.profile.axis_scores["safety"] == baseline.axis_scores["safety"]
-    assert swept.profile.axis_scores["social"] != baseline.axis_scores["social"]
-    assert swept.profile.axis_scores["social"] == RIDE_REGISTRY["negotiation"].evaluate(
-        "heuristic", 1
-    ).score
+    for axis in ("social", "economic", "safety"):
+        assert swept.profile.axis_scores[axis] == baseline.axis_scores[axis]
+    assert swept.profile.axis_scores["social"] == (
+        RIDE_REGISTRY["negotiation"].evaluate("heuristic", 1).score
+        + RIDE_REGISTRY["commons"].evaluate("heuristic", 1).score
+    ) / 2
+    assert "coding" not in swept.profile.axis_scores
 
 
 def test_a_sweep_is_deterministic_and_carries_no_clock_or_port():
@@ -299,7 +304,8 @@ def test_a_sweep_can_be_narrowed_to_a_subset_of_wires():
     run = run_byo_profile("heuristic", seed=1, n_scenarios=2, rides=("safety", "containment"))
     assert [r.ride for r in run.profile.results] == ["safety", "containment"]
     assert run.profile.covered_axes == ["safety"]
-    # Rides not driven are skipped alongside the two with no wire — the list is what was NOT scored.
+    # Rides not driven are skipped alongside the one with no wire — the list is what was NOT scored,
+    # which is a superset of what *could* not be scored.
     assert "economic" in run.profile.skipped and "commons" in run.profile.skipped
 
 
@@ -337,18 +343,24 @@ def test_the_sweep_records_its_own_wire_traffic():
     assert wire["protocol"] == "http/json"
     assert wire["spec"] == "docs/09-byo-protocol.md"
     assert [leg["ride"] for leg in wire["rides"]] == [r.ride for r in run.profile.results]
-    # 2 negotiation scenarios x 4 personas + 4 solo rides x 12 scenarios.
-    assert wire["matches"] == 8 + 4 * 12
+    # 2 negotiation scenarios x 4 personas + 12 commons games + 4 solo rides x 12 scenarios.
+    assert wire["matches"] == 8 + 12 + 4 * 12
     assert wire["turns"] > wire["matches"]
-    assert set(wire["unreachable"]) == set(UNREACHABLE_RIDES)
+    # A commons leg reports games and rounds separately, because on a turn wire they differ.
+    commons_leg = next(leg for leg in wire["rides"] if leg["ride"] == "commons")
+    assert commons_leg["games"] == 12 and commons_leg["rounds"] > commons_leg["games"]
+    # What a profile reports as out of reach is the rides with NO wire — not the plan wire's own
+    # limits, which still (correctly) list `commons`.
+    assert set(wire["unreachable"]) == set(NO_WIRE_RIDES) == {"coding"}
+    assert "commons" in UNREACHABLE_RIDES  # unreachable by *this* wire, reachable by its own
 
 
 def test_a_sweep_still_earns_no_career():
     """A three-axis agent is closer to a full profile but still has no career (D-041).
 
-    A career multiplies an integrity signal from *every* ride; two rides have no wire, so the
+    A career multiplies an integrity signal from *every* ride; one ride still has no wire, so the
     product does not exist. Being nearly-complete must not quietly promote a BYO agent onto the
-    leaderboard.
+    leaderboard — one missing factor is as disqualifying as two.
     """
     run = run_byo_profile("heuristic", seed=1, n_scenarios=2)
     assert run.profile.skipped, "a BYO sweep must still report unscored rides"
@@ -377,7 +389,7 @@ def test_cli_byo_run_all_sweeps_every_wire(capsys):
 def test_cli_byo_run_text_output_lists_every_leg(capsys):
     assert cli.main(["byo-run", "--rides", "all", "--scenarios", "2"]) == 0
     text = capsys.readouterr().out
-    for ride in ("negotiation", "economic", "exchange", "safety", "containment"):
+    for ride in ("negotiation", "commons", "economic", "exchange", "safety", "containment"):
         assert ride in text
     assert "no wire carries:" in text
     assert "docs/09-byo-protocol.md" in text
@@ -400,14 +412,16 @@ def test_the_byo_endpoint_refuses_an_unknown_rides_value():
         build_byo_payload(driver="heuristic", rides="negotiation,safety")
 
 
-def test_the_solo_wire_carries_every_plan_shaped_ride_in_the_registry():
-    """A guard against a new ride being added to the park and quietly skipping the BYO wire.
+def test_every_registered_ride_is_on_a_wire_or_named_as_having_none():
+    """A guard against a new ride being added to the park and quietly skipping the BYO surface.
 
-    Every registered ride must either be on the solo wire, be on the negotiation wire, or be named
-    in `UNREACHABLE_RIDES` with a reason. Adding a ride without doing one of those three fails here.
+    Every registered ride must be on the plan wire, the negotiation wire or the commons wire, or be
+    named in `NO_WIRE_RIDES` with a reason. Adding a ride without doing one of those four fails here.
     """
-    accounted = set(SOLO_RIDES) | {"negotiation"} | set(UNREACHABLE_RIDES)
+    accounted = set(SOLO_RIDES) | {"negotiation", "commons"} | set(NO_WIRE_RIDES)
     assert set(RIDE_REGISTRY) <= accounted
+    # And the two lists must not overlap: a ride cannot be both driven and reported unreachable.
+    assert not (set(SOLO_RIDES) | {"negotiation", "commons"}) & set(NO_WIRE_RIDES)
 
 
 def test_a_wired_result_is_a_real_ride_result():
