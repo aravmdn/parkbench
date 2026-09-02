@@ -34,12 +34,15 @@ scenario is a frozen dataclass of plain integers, so each round-trip is exact an
 ## The two rides this wire does *not* carry
 
 - **`commons`** is multi-agent and sequential — the agent contributes round by round while watching
-  what the society did — so it needs the negotiation wire's turn loop, not this one.
+  what the society did — so it needs a turn loop, not this one. It got its own third wire in D-075
+  (`commons_protocol.py`), so it is unreachable *here* but no longer unreachable *anywhere*.
 - **`coding`** is submit-an-artifact: the answer is a source file, not a plan of indices, and running
-  it needs the sandbox (D-043/D-048).
+  it needs the sandbox (D-043/D-048). It is the last ride with no wire at all.
 
-Both stay listed as unreachable on a captured BYO profile rather than being faked. See
-``docs/09-byo-protocol.md``.
+Neither is ever faked on a captured BYO profile. What a profile reports as out of reach is the
+narrower list in :data:`parkbench.byo.NO_WIRE_RIDES` — rides no wire carries — because calling
+`commons` unreachable after scoring it would be exactly the kind of stale claim these lists exist to
+prevent. See ``docs/09-byo-protocol.md``.
 """
 
 from __future__ import annotations
@@ -281,9 +284,12 @@ SOLO_RIDES: dict[str, SoloRideSpec] = {
     ),
 }
 
-#: Rides in the registry this wire deliberately does not carry, with the honest reason for each.
+#: Rides in the registry **this** wire deliberately does not carry, with the honest reason for each.
+#: Note the scope: `commons` is unreachable *by the plan wire* and reachable by its own (D-075), so
+#: this is not the same list as :data:`parkbench.byo.NO_WIRE_RIDES` — which is the one a captured
+#: profile reports, and holds only the rides no wire carries at all.
 UNREACHABLE_RIDES: dict[str, str] = {
-    "commons": "multi-agent and sequential - needs the negotiation wire's turn loop, not a one-shot plan",
+    "commons": "multi-agent and sequential - carried by the commons turn-loop wire (D-075), not by this one",
     "coding": "submit-an-artifact (a source file run in the sandbox), not a plan of indices",
 }
 

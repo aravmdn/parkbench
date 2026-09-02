@@ -7,11 +7,12 @@ ephemeral loopback ports, driven by the reference clients — and shapes the com
 same radar-shaped JSON the spectator surfaces already consume. Nothing is simulated: every
 observation, scenario, action, plan and ``done`` payload crosses a socket.
 
-Two wires, so three entry points:
+Three wires, so four entry points:
 
 - :func:`run_byo_negotiation` — one leg over the negotiation wire (D-027/D-073).
-- :func:`run_byo_solo` — one leg over the solo wire (D-074).
-- :func:`run_byo_profile` — sweep both, and roll the legs up into one radar.
+- :func:`run_byo_solo` — one leg over the solo/plan wire (D-074).
+- :func:`run_byo_commons` — one leg over the commons wire (D-075).
+- :func:`run_byo_profile` — sweep all three, and roll the legs up into one radar.
 
 > **Presentation-only in spirit (D-012), reuse-only in fact.** This module computes **no** score.
 > Each ride is played and scored by its own existing code — the negotiation by ``engine``/``suite``
@@ -25,31 +26,35 @@ Two wires, so three entry points:
 
 A baseline's radar covers all four axes because the engine can run it through all seven rides
 in-process. **A BYO agent reached over the wire covers only the rides a wire exists for**, and there
-are two (``docs/09``):
+are three (``docs/09``):
 
-- the **negotiation** wire (`server.py` / `client.py`, D-027) — one ride, the ``social`` axis;
-- the **solo** wire (`solo_server.py` / `solo_client.py`, D-074) — the four plan-shaped rides
+- the **negotiation** wire (`server.py` / `client.py`, D-027) — one ride on the ``social`` axis;
+- the **solo/plan** wire (`solo_server.py` / `solo_client.py`, D-074) — the four plan-shaped rides
   ``economic`` · ``exchange`` · ``safety`` · ``containment``, i.e. *both* rides on the ``economic``
-  axis and *both* rides on the ``safety`` axis.
+  axis and *both* rides on the ``safety`` axis;
+- the **commons** wire (`commons_server.py` / `commons_client.py`, D-075) — the second ``social``
+  ride, which is what completes that axis.
 
 So there are two honest live shapes, and the caller picks:
 
 - :func:`run_byo_negotiation` — the D-073 single-leg capture. ``axes`` = ``{"social": ...}``;
-  ``missing_axes`` = ``["economic", "coding", "safety"]``.
-- :func:`run_byo_profile` — the full wire sweep. ``axes`` = ``social`` · ``economic`` · ``safety``;
-  ``missing_axes`` = ``["coding"]``; ``skipped_rides`` = ``["commons", "coding"]``, the two rides no
-  wire carries (a sequential multi-agent game and a submit-an-artifact task — see
-  :data:`parkbench.solo_protocol.UNREACHABLE_RIDES`).
+  ``missing_axes`` = ``["economic", "coding", "safety"]``. Note this is now a *deliberately partial*
+  social axis, not the whole one — kept because it is the exact D-073 payload the world reads.
+- :func:`run_byo_profile` — the full wire sweep. ``axes`` = ``social`` · ``economic`` · ``safety``,
+  and **all three are now complete**: each is the same mean of the same rides a baseline's is.
+  ``missing_axes`` = ``["coding"]``; ``skipped_rides`` = ``["coding"]``, the one remaining ride no
+  wire carries (a submit-an-artifact task — see :data:`NO_WIRE_RIDES`).
 
 Either way the profile is a *narrower* one than the hand-authored stand-in D-073 replaced, which
 claimed scores on all five rides it had no way to earn. Narrow-and-true beats wide-and-invented: the
 front-end draws the missing axes as ``n/a`` rather than zero, so a spectator sees what was actually
-measured. What D-074 changes is only *how* narrow: three axes instead of one.
+measured. D-074 and D-075 change only *how* narrow: three complete axes instead of one partial one.
 
 Note what a three-axis profile still is **not**: a career. The career roll-up (D-041) multiplies an
-``integrity`` signal from *every* ride, so an agent that cannot be run on ``coding`` and ``commons``
-has no such product and stays off the leaderboard — correctly, and by the same rule that applies to
-a baseline.
+``integrity`` signal from *every* ride, so an agent that cannot be run on ``coding`` has no such
+product and stays off the leaderboard — correctly, and by the same rule that applies to a baseline.
+**One connector now stands between a BYO agent and a career**, where before this lap there were
+two.
 
 ## Determinism
 
@@ -81,6 +86,19 @@ RUN_TIMEOUT_S = 120.0
 WIRE_RIDE = "negotiation"
 WIRE_AXIS = "social"
 
+#: The one ride the *commons* BYO wire can score (D-075) — the second ride on the social axis.
+COMMONS_WIRE_RIDE = "commons"
+
+#: Rides **no** wire carries, with the honest reason. The single source of truth for the honesty
+#: report on a captured profile; a test asserts every registered ride is either wired or listed here,
+#: so a ride added later cannot silently vanish from the BYO surface.
+NO_WIRE_RIDES: dict[str, str] = {
+    "coding": (
+        "submit-an-artifact (a source file run in the sandbox), not a plan or a contribution"
+    ),
+}
+
+
 def _solo_wire_rides() -> tuple[str, ...]:
     """The rides the *solo* BYO wire can score, in registry order (D-074).
 
@@ -93,8 +111,15 @@ def _solo_wire_rides() -> tuple[str, ...]:
 
 
 def _all_wire_rides() -> tuple[str, ...]:
-    """Every ride reachable over some BYO wire, in the order a full sweep drives them."""
-    return (WIRE_RIDE,) + _solo_wire_rides()
+    """Every ride reachable over some BYO wire, in the order a full sweep drives them.
+
+    Derived from the **ride registry's** order minus the unwired rides, rather than from a list kept
+    here, so the sweep order is the park's own order and a newly registered ride is either driven or
+    named as unreachable — never quietly dropped.
+    """
+    from .rides import RIDE_REGISTRY
+
+    return tuple(name for name in RIDE_REGISTRY if name not in NO_WIRE_RIDES)
 
 
 class _WireCounter(Agent):
@@ -353,6 +378,51 @@ def run_byo_solo(
     }
 
 
+def run_byo_commons(
+    agent,
+    *,
+    seed: int = 1,
+    byo_name: str = DEFAULT_BYO_NAME,
+    host: str = "127.0.0.1",
+    timeout: float = RUN_TIMEOUT_S,
+) -> tuple[RideResult, dict]:
+    """Drive ``agent`` through the **commons** ride over the wire (D-075); return result + provenance.
+
+    The turn-loop analogue of :func:`run_byo_solo`. Binds a real
+    :class:`~parkbench.commons_server.CommonsParkServer` on an ephemeral loopback port, drives it
+    with the reference client :func:`~parkbench.commons_client.drive_commons_agent`, and returns the
+    :class:`~parkbench.axis.RideResult` the **ride itself** produced — the server runs
+    ``RIDE_REGISTRY["commons"].evaluate(..., agent=<bridge>)``, so nothing about the scoring is
+    re-implemented here and a wired leg equals an in-process leg exactly, ``detail`` included.
+
+    ``agent`` is any object with the commons agent shape (``reset(seed=...)`` +
+    ``contribute(round_idx, history, scenario)``).
+
+    Provenance counts *games* as the scored unit (12 by default, one per suite scenario) and *rounds*
+    as the turns answered — the same distinction the negotiation leg draws between matches and turns,
+    and the reason a commons leg reports both where a plan-wire leg reports one number twice.
+    """
+    # Imported lazily: the connector is an optional slice, and the core CLI should not pay for HTTP.
+    from .commons_client import drive_commons_agent
+    from .commons_protocol import COMMONS_TASK
+    from .commons_server import CommonsParkServer
+
+    server = CommonsParkServer(seed=seed, host=host, agent_name=byo_name).start()
+    try:
+        drive_commons_agent(server.base_url, agent, timeout=timeout)
+        result = server.wait(timeout=timeout)
+    finally:
+        server.stop()
+
+    return result, {
+        "ride": COMMONS_WIRE_RIDE,
+        "wire": "commons",
+        "task": COMMONS_TASK,
+        "games": server.agent.games,
+        "rounds": server.agent.steps,
+    }
+
+
 def run_byo_profile(
     agent_name: str = "heuristic",
     *,
@@ -367,11 +437,12 @@ def run_byo_profile(
 ) -> ByoRun:
     """Sweep a BYO agent across **every wire the park has** and capture the multi-axis profile (D-074).
 
-    Runs the negotiation wire (D-073) and then each solo ride's wire (D-074) in turn, each on its own
-    ephemeral loopback port, and rolls the legs up through the real
+    Runs the negotiation wire (D-073), the commons wire (D-075) and each solo ride's wire (D-074) in
+    turn, each on its own ephemeral loopback port, and rolls the legs up through the real
     :class:`~parkbench.radar.RadarProfile`. With the full default set of rides that is a **three-axis**
-    profile — ``social`` (negotiation) · ``economic`` (knapsack + exchange) · ``safety`` (red-line +
-    containment) — with ``coding`` honestly missing and ``commons``/``coding`` listed as skipped.
+    profile — ``social`` (negotiation + commons) · ``economic`` (knapsack + exchange) · ``safety``
+    (red-line + containment) — every one of them the same mean of the same rides a baseline gets, with
+    ``coding`` honestly missing and listed as skipped.
 
     ``agent_name`` is resolved **per ride from that ride's own roster** (D-035: each ride owns its
     agent interface), exactly as :func:`parkbench.radar.build_radar` does for a baseline. A real third
@@ -420,14 +491,19 @@ def run_byo_profile(
             driver = neg.wire["driver"]
             continue
 
-        result, leg = run_byo_solo(
-            ride,
-            agents[ride],
-            seed=seed,
-            byo_name=byo_name,
-            host=host,
-            timeout=timeout,
-        )
+        if ride == COMMONS_WIRE_RIDE:
+            result, leg = run_byo_commons(
+                agents[ride], seed=seed, byo_name=byo_name, host=host, timeout=timeout
+            )
+        else:
+            result, leg = run_byo_solo(
+                ride,
+                agents[ride],
+                seed=seed,
+                byo_name=byo_name,
+                host=host,
+                timeout=timeout,
+            )
         # The ride's own `evaluate` labels the result with the *roster name* it was asked for; the
         # run belongs to the BYO agent, so relabel it (and nothing else) for attribution.
         results.append(
@@ -440,8 +516,10 @@ def run_byo_profile(
             )
         )
         legs.append(leg)
-        matches += int(leg["steps"])
-        turns += int(leg["steps"])
+        # A scored unit is a game/scenario; a turn is one answer over the wire. They coincide on the
+        # plan wire (one plan per scenario) and diverge on the commons wire (several rounds a game).
+        matches += int(leg.get("games", leg.get("steps", 0)))
+        turns += int(leg.get("rounds", leg.get("steps", 0)))
 
     profile = _radar_from_results(byo_name, seed, results)
     identity = _byo_identity(byo_name, byo_version, agent_name)
@@ -474,8 +552,13 @@ def _negotiation_agent(agent_name: str):
     return make_agent(agent_name)
 
 
-def _solo_agent(ride: str, agent_name: str):
-    """The ``ride``-roster agent for ``agent_name`` (each ride owns its agent interface, D-035)."""
+def _ride_agent(ride: str, agent_name: str):
+    """The ``ride``-roster agent for ``agent_name`` (each ride owns its agent interface, D-035).
+
+    Works for every ride whose package exports ``make_agent`` — the four plan-shaped ones and
+    `commons` — because "which agent" is a question each ride answers for itself. Only the
+    negotiation ride is reached differently, since its roster lives in `parkbench.agents`.
+    """
     from importlib import import_module
 
     return import_module(f".{ride}", __package__).make_agent(agent_name)
@@ -489,15 +572,20 @@ def _agent_for_ride(ride: str, agent_name: str):
     `KeyError` a registry raises says neither the ride nor what it does have.
     """
     try:
-        return _negotiation_agent(agent_name) if ride == WIRE_RIDE else _solo_agent(ride, agent_name)
+        return _negotiation_agent(agent_name) if ride == WIRE_RIDE else _ride_agent(ride, agent_name)
     except (KeyError, ValueError):
         raise ValueError(f"ride {ride!r} has no agent named {agent_name!r} in its roster") from None
 
 
 def _unreachable_note() -> dict:
-    from .solo_protocol import UNREACHABLE_RIDES
+    """The rides no wire carries at all — what a captured profile reports as truly out of reach.
 
-    return dict(UNREACHABLE_RIDES)
+    Distinct from :data:`parkbench.solo_protocol.UNREACHABLE_RIDES`, which is the *plan wire's* own
+    limit and still (correctly) lists `commons`: that ride is unreachable **by that wire** and
+    reachable by its own (D-075). Only the intersection — rides with no wire at all — belongs in a
+    profile's honesty report, or a spectator would read "unreachable" about a ride that was scored.
+    """
+    return dict(NO_WIRE_RIDES)
 
 
 def _radar_from_results(byo_name: str, seed: int, results: list[RideResult]) -> RadarProfile:
