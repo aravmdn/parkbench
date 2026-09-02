@@ -22,8 +22,12 @@ class CommonsRide:
     name = "commons"
     axis: Axis = "social"
 
-    def evaluate(self, agent_name: str, seed: int = 1) -> RideResult:
-        result = run_suite(make_agent(agent_name), seed=seed)
+    def evaluate(self, agent_name: str, seed: int = 1, agent=None) -> RideResult:
+        # `agent=` is the BYO seam (D-074, extended to this ride by D-075): a caller may hand in the
+        # agent *object* instead of a roster name, so an agent driven over the commons wire is scored
+        # by this exact code path — no second scoring implementation to drift. Omitted everywhere
+        # else, so the registry path (and therefore every baseline score) is byte-for-byte untouched.
+        result = run_suite(agent if agent is not None else make_agent(agent_name), seed=seed)
         return RideResult(
             ride=self.name,
             axis=self.axis,
