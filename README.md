@@ -10,7 +10,7 @@ trust/deception, and robustness under pressure.
 > seeded scenario generator, objective-payoff scoring, scripted house cast (with per-persona
 > reservation floors), baseline/heuristic agents, and a `parkbench` CLI — plus an **HTTP/JSON
 > server** for external BYO agents, a **static replay viewer**, **nudge controls** (off-record), and
-> a real **LLM reference agent** via OpenRouter. Reproducible: **57 passing tests**.
+> a real **LLM reference agent** via OpenRouter. Reproducible: **440 passing tests**.
 
 ## What's here
 
@@ -25,7 +25,7 @@ trust/deception, and robustness under pressure.
 
 ```bash
 uv venv && uv pip install -e ".[dev]"       # or: python -m venv .venv && pip install -e ".[dev]"
-pytest                                       # 57 tests, incl. a reproducibility check
+pytest                                       # 440 tests, incl. a reproducibility check
 parkbench run --agent heuristic --seed 1     # run the negotiation suite, print a profile
 parkbench run --agent llm --seed 1           # the OpenRouter LLM agent (reads .env; see docs/06)
 parkbench analyze --seed 1                   # inspect one scenario's optimum

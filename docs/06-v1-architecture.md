@@ -372,7 +372,7 @@ fixture and `viewer/README.md` documents usage.
 
 ```bash
 uv venv && uv pip install -e ".[dev]"      # or: python -m venv .venv && pip install -e ".[dev]"
-pytest                                      # 57 tests
+pytest                                      # 440 tests
 parkbench doctor                            # diagnose the local setup + where every setting comes from
 parkbench doctor --live                     # ...and prove the llm agent is genuinely live (one API call)
 parkbench run --agent heuristic --seed 1    # run the suite, print a profile, write a run log
